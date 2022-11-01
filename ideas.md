@@ -1,0 +1,39 @@
+Some Ideas Based on the Cliches List
+====================================
+
+Source: <https://github.com/leereilly/list-of-english-cliches/blob/main/cliches.txt#L1585>
+
+- I heard that!
+	- Stealth
+- Give an inch, and he takes a mile
+	- refuling
+- Blow this pop stand / joint
+- It came like a bolt from the blue
+- Roll over in his grave
+- Jump down your throat
+- Cooking with gas (now)
+- Dig yourself into a hole
+	- Bergbau
+- Gold digger
+	- Bergbau
+- Burn the midnight oil
+	- Energie um mitternacht
+
+- Too much sail for a small craft
+	- Segle spiel, wind vs trimm (maybe collect fish
+- Big fish in a small pond
+- He's fishing for compliments
+- Fish or cut bait
+- Fish out of water
+- I've got other fish to fry,
+- Plenty of fish in the sea
+- Sleep with the fishes
+- Teach him to fish
+
+- It's an ill wind that blows no good
+- Know which way the wind blows
+- See which way the winds blow
+- Run like the wind
+- Take the wind out of your sails
+- That's a real stem-winder
+- Red sky in the morning, sailor's warning; red sky at night, sailor's delight
