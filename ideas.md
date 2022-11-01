@@ -1,26 +1,28 @@
-Some Ideas Based on the Cliches List
+Some Ideas Based on the Clichés List
 ====================================
 
-Source: <https://github.com/leereilly/list-of-english-cliches/blob/main/cliches.txt#L1585>
+Source: <https://github.com/leereilly/list-of-english-cliches/blob/main/cliches.txt>
 
 - I heard that!
-	- Stealth
+	- Stealth game
 - Give an inch, and he takes a mile
-	- refuling
+	- Expensive refueling
 - Blow this pop stand / joint
 - It came like a bolt from the blue
 - Roll over in his grave
 - Jump down your throat
 - Cooking with gas (now)
 - Dig yourself into a hole
-	- Bergbau
+	- "Bergbau" clone
 - Gold digger
-	- Bergbau
+	- "Bergbau" clone
 - Burn the midnight oil
-	- Energie um mitternacht
+	- Getting more energy out of burning oil at midnight
 
 - Too much sail for a small craft
-	- Segle spiel, wind vs trimm (maybe collect fish
+	- Sailing game
+	- mechanic: wind (strength & direction) vs trim
+	- goal: collect fish
 - Big fish in a small pond
 - He's fishing for compliments
 - Fish or cut bait
