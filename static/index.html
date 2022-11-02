@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>GWG Prep</title>
+    <style>
+        html,
+        body,
+        canvas {
+            margin: 0px;
+            padding: 0px;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: absolute;
+            background: black;
+            z-index: 0;
+        }
+    </style>
+    <link rel="icon" type="image/png" href="gwg.png">
+</head>
+
+<body>
+    <canvas id="glcanvas" tabindex='1'></canvas>
+	<!-- A copy of the Macroquad GL file:
+		https://github.com/not-fl3/macroquad/blob/master/js/mq_js_bundle.js
+
+		Notice that the miniquad version seems to be out-dated and playing a
+		sound causes a crash in WASM.
+	-->
+	<script src="mq_js_bundle.js"></script>
+    <script>load("gwg-prep.wasm");</script> <!-- Your compiled wasm file -->
+</body>
+
+</html>
