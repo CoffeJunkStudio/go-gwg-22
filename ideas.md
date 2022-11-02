@@ -39,3 +39,23 @@ Source: <https://github.com/leereilly/list-of-english-cliches/blob/main/cliches.
 - Take the wind out of your sails
 - That's a real stem-winder
 - Red sky in the morning, sailor's warning; red sky at night, sailor's delight
+
+
+Sailing Game
+------------
+
+- View: Top-down, Factorio-style
+- Fishing Mechanics
+	- Pole and line
+	- Dredging/Trawl
+	- Upgrades
+- Harbors
+	- Selling fishes
+	- Buying upgrades
+		- Newer fishing mechanics
+		- Bigger Boats/Sail
+- Fishes on the map: only shadows if deep below, somewhat colored higher up
+- Shores limits the water depth
+- Too much sail/wind (wind force beyond the angle of positive static stability) => capsize => not game over
+
+
