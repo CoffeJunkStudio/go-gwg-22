@@ -35,10 +35,28 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v3
       with:
-        name: "linux-native-$GITHUB_REF_NAME"
+        name: "linux-$GITHUB_REF_NAME"
         path: target/release/plenty-of-fish-in-the-sea
 
-  web:
+  cross-win:
+    runs-on: ubuntu-latest
+    container: rust:latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install prerequisites
+      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev gcc-mingw-w64-x86-64
+    - name: Install win target
+      run: rustup target add x86_64-pc-windows-gnu
+    - name: Build binary
+      run: cargo build --release --target x86_64-pc-windows-gnu --verbose
+    - name: Archive binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: "windows-$GITHUB_REF_NAME"
+        path: target/x86_64-pc-windows-gnu/release/plenty-of-fish-in-the-sea.exe
+
+  cross-web:
     runs-on: ubuntu-latest
     container: rust:latest
 
