@@ -1,0 +1,75 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "*" ]
+    tags:
+      - v**
+  pull_request:
+    branches: [ "*" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install prerequisites
+      run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+
+  native:
+    runs-on: ubuntu-latest
+    container: rust:latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install prerequisites
+      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+    - name: Build binary
+      run: cargo build --release --verbose
+    - name: Archive binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux #-${{ github.ref_name }}
+        path: target/release/plenty-of-fish-in-the-sea
+
+  cross-win:
+    runs-on: ubuntu-latest
+    container: rust:latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install prerequisites
+      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev gcc-mingw-w64-x86-64
+    - name: Install win target
+      run: rustup target add x86_64-pc-windows-gnu
+    - name: Build binary
+      run: cargo build --release --target x86_64-pc-windows-gnu --verbose
+    - name: Archive binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows #-${{ github.ref_name }}
+        path: target/x86_64-pc-windows-gnu/release/plenty-of-fish-in-the-sea.exe
+
+  cross-web:
+    runs-on: ubuntu-latest
+    container: rust:latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install web target
+      run: rustup target add wasm32-unknown-unknown
+    - name: Build binary
+      run: bash build-web.sh --release
+    - name: Archive web package
+      uses: actions/upload-artifact@v3
+      with:
+        name: web-package #-${{ github.ref_name }}
+        path: target/web-pkg
