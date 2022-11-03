@@ -11,12 +11,11 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
-    - name: prep
+    - name: Install prerequisites
       run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
     - name: Build
       run: cargo build --verbose
@@ -29,14 +28,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: prep
+    - name: Install prerequisites
       run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev
     - name: Build binary
       run: cargo build --release --verbose
     - name: Archive binary
       uses: actions/upload-artifact@v3
       with:
-        name: linux-native
+        name: "linux-native-$GITHUB_REF_NAME"
         path: target/release/plenty-of-fish-in-the-sea
 
   web:
@@ -45,12 +44,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: target
+    - name: Install web target
       run: rustup target add wasm32-unknown-unknown
     - name: Build binary
       run: bash build-web.sh --release
-    - name: Archive web
+    - name: Archive web package
       uses: actions/upload-artifact@v3
       with:
-        name: web-package
+        name: "web-package-$GITHUB_REF_NAME"
         path: target/web-pkg
