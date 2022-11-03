@@ -38,3 +38,19 @@ jobs:
       with:
         name: linux-native
         path: target/release/plenty-of-fish-in-the-sea
+
+  web:
+    runs-on: ubuntu-latest
+    container: rust:latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: target
+      run: rustup target add wasm32-unknown-unknown
+    - name: Build binary
+      run: bash build-web.sh --release
+    - name: Archive web
+      uses: actions/upload-artifact@v3
+      with:
+        name: web-package
+        path: target/web-pkg
