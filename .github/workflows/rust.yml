@@ -35,7 +35,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v3
       with:
-        name: linux-${{ github.ref_name }}
+        name: linux #-${{ github.ref_name }}
         path: target/release/plenty-of-fish-in-the-sea
 
   cross-win:
@@ -53,7 +53,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v3
       with:
-        name: windows-${{ github.ref_name }}
+        name: windows #-${{ github.ref_name }}
         path: target/x86_64-pc-windows-gnu/release/plenty-of-fish-in-the-sea.exe
 
   cross-web:
@@ -69,5 +69,5 @@ jobs:
     - name: Archive web package
       uses: actions/upload-artifact@v3
       with:
-        name: web-package-${{ github.ref_name }}
+        name: web-package #-${{ github.ref_name }}
         path: target/web-pkg
