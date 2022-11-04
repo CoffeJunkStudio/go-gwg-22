@@ -48,11 +48,11 @@ pub struct WorldState {
 	pub resources: Vec<ResourcePack>,
 }
 
-const TICKS_PER_SECOND: u16 = 20;
+pub const TICKS_PER_SECOND: u16 = 20;
 const DELTA: f32 = 1_f32 / TICKS_PER_SECOND as f32;
 
 impl WorldState {
-	fn update(&mut self, init: &WorldInit, inputs: &Input) -> Vec<Event> {
+	pub fn update(&mut self, init: &WorldInit, inputs: &Input) -> Vec<Event> {
 		// Incooperate inputs
 		self.player.vehicle.apply_input(inputs.clone());
 

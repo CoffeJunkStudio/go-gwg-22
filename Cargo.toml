@@ -11,8 +11,14 @@ description = "Our Game-Off 2022 game jam participation"
 [dependencies]
 good-web-game = "0.6.0"
 logic = {path = "logic"}
-
+rand = "0.8.5"
 num-rational = {version = "0.4"}
+mint = "0.5.9"
+
+[dependencies.nalgebra]
+version = "0.31.0"
+features = [ "mint" ]
+
 
 [build-dependencies]
 tar = "0.4"

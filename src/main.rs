@@ -5,13 +5,21 @@ use gwg::audio;
 use gwg::cgmath::Point2;
 use gwg::cgmath::Vector2;
 use gwg::graphics::Color;
+use gwg::graphics::DrawParam;
 use gwg::graphics::PxScale;
 use gwg::graphics::Rect;
 use gwg::graphics::Text;
+use gwg::graphics::Transform;
 use gwg::graphics::{self,};
 use gwg::miniquad::KeyCode;
 use gwg::timer;
 use gwg::GameResult;
+use logic::generator::Generator;
+use logic::generator::PerlinNoise;
+use logic::generator::Setting;
+use logic::state::TICKS_PER_SECOND;
+use logic::Input;
+use logic::World;
 
 // #[derive(Debug)] `audio::Source` dose not implement Debug!
 struct Game {
@@ -19,6 +27,8 @@ struct Game {
 	sound: audio::Source,
 	input_text: String,
 	full_screen: bool,
+	world: World,
+	input: Input,
 }
 
 impl Game {
@@ -31,11 +41,21 @@ impl Game {
 
 		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
 
+		// Generate world
+		let noise = PerlinNoise;
+		let settings = Setting {
+			edge_length: 32,
+			resource_density: 1.0,
+		};
+		let world = noise.generate(&settings, rand::thread_rng());
+
 		let s = Game {
 			sprite_batch: batch,
 			sound,
 			input_text: String::new(),
 			full_screen: false,
+			world,
+			input: Input::default(),
 		};
 
 		Ok(s)
@@ -88,15 +108,55 @@ impl Game {
 
 		Ok(())
 	}
-}
 
+	fn draw_text_with_halo(
+		&self,
+		ctx: &mut gwg::Context,
+		quad_ctx: &mut gwg::miniquad::Context,
+		text: &Text,
+		params: impl Into<DrawParam>,
+		halo_color: Color,
+	) -> gwg::GameResult<()> {
+		let params = params.into();
+
+		let mut halo_params = params;
+		halo_params.color = halo_color;
+
+		let base_matrix: logic::glm::Mat4 = params.trans.to_bare_matrix().into();
+
+		let offset_param = |offset: Point2<f32>| {
+			let glm_matrix: logic::glm::Mat4 =
+				DrawParam::from((offset,)).trans.to_bare_matrix().into();
+			let new_matrix = base_matrix * glm_matrix;
+
+			DrawParam {
+				trans: Transform::Matrix(new_matrix.into()),
+				color: halo_color,
+				..Default::default()
+			}
+		};
+
+		graphics::draw(ctx, quad_ctx, text, offset_param(Point2::new(-1., -1.)))?;
+		graphics::draw(ctx, quad_ctx, text, offset_param(Point2::new(1., -1.)))?;
+		graphics::draw(ctx, quad_ctx, text, offset_param(Point2::new(-1., 1.)))?;
+		graphics::draw(ctx, quad_ctx, text, offset_param(Point2::new(1., 1.)))?;
+
+		graphics::draw(ctx, quad_ctx, text, params)?;
+
+		Ok(())
+	}
+}
 
 impl gwg::event::EventHandler for Game {
 	fn update(
 		&mut self,
-		_ctx: &mut gwg::Context,
+		ctx: &mut gwg::Context,
 		_quad_ctx: &mut gwg::miniquad::Context,
 	) -> gwg::GameResult<()> {
+		while gwg::timer::check_update_time(ctx, TICKS_PER_SECOND.into()) {
+			let _ = self.world.state.update(&self.world.init, &self.input);
+		}
+
 		Ok(())
 	}
 
@@ -121,17 +181,12 @@ impl gwg::event::EventHandler for Game {
 		let fps = timer::fps(ctx);
 		let fps_display = Text::new(format!("FPS: {:.1}", fps));
 		// When drawing through these calls, `DrawParam` will work as they are documented.
-		graphics::draw(
+		self.draw_text_with_halo(
 			ctx,
 			quad_ctx,
 			&fps_display,
 			(Point2::new(100.0, 0.0), Color::WHITE),
-		)?;
-		graphics::draw(
-			ctx,
-			quad_ctx,
-			&fps_display,
-			(Point2::new(101.0, 1.0), Color::BLACK),
+			Color::BLACK,
 		)?;
 
 

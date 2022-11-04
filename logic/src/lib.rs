@@ -1,23 +1,22 @@
-use serde::Deserialize;
-use serde::Serialize;
-
-mod generator;
-
-type StdRng = rand_pcg::Pcg64;
-
-
-
-pub mod state;
-pub mod units;
-
 use enum_map::Enum;
 use nalgebra_glm::Vec2;
 use rand::Rng;
+use serde::Deserialize;
+use serde::Serialize;
+
+
+pub mod generator;
+pub mod state;
+pub mod units;
+
+pub use nalgebra_glm as glm;
 use state::Trim;
 use state::WorldState;
 use units::BiPolarFraction;
 use units::Fish;
 use units::Location;
+
+type StdRng = rand_pcg::Pcg64;
 
 
 
