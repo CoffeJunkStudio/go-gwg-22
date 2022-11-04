@@ -75,8 +75,8 @@ fn render_assets() {
 
 			println!("cargo:rerun-if-changed={}", blend_file_path.display());
 			let blender_out = Command::new(blender_exe())
-				.arg(&blend_file_path)
 				.arg("--background")
+				.arg(&blend_file_path)
 				.arg("--python")
 				.arg(&script_path)
 				.arg("--")
