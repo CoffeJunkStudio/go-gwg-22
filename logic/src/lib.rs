@@ -13,13 +13,11 @@ pub mod units;
 use enum_map::Enum;
 use nalgebra_glm::Vec2;
 use rand::Rng;
-use state::Gear;
+use state::Trim;
 use state::WorldState;
 use units::BiPolarFraction;
-use units::Fraction;
-use units::Fuel;
+use units::Fish;
 use units::Location;
-use units::Water;
 
 
 
@@ -32,16 +30,11 @@ pub const VEHICLE_SIZE: f32 = 1.3;
 /// The mass of a empty vehicle, in kilogram
 const VEHICLE_DEADWEIGHT: f32 = 100.0;
 
-/// The physical size ("diameter") of a fuel resource pack.
-pub const RESOURCE_PACK_FUEL_SIZE: f32 = 0.8;
 /// The physical size ("diameter") of a water resource pack.
-pub const RESOURCE_PACK_WATER_SIZE: f32 = 1.1;
+pub const RESOURCE_PACK_FISH_SIZE: f32 = 0.8;
 
 /// The amount of fuel in each fuel resource pack
-pub const RESOURCE_PACK_FUEL_AMOUNT: Fuel = Fuel(10.);
-
-/// The amount of water in each water resource pack
-pub const RESOURCE_PACK_WATER_AMOUNT: Water = Water(10.);
+pub const RESOURCE_PACK_FISH_AMOUNT: Fish = Fish(1.);
 
 /// The diameter of the tier, in meter
 const TIRE_DIAMETER: f32 = 0.4;
@@ -103,8 +96,7 @@ pub const MAX_TRACTION: f32 = 1.0;
 #[derive(strum::EnumIter)]
 #[derive(standard_dist::StandardDist)]
 pub enum ResourcePackContent {
-	Water,
-	Fuel,
+	Fish,
 }
 
 /// A collectable resource on the ground
@@ -125,26 +117,26 @@ pub struct ResourcePack {
 #[derive(strum::EnumIter)]
 #[derive(standard_dist::StandardDist)]
 pub enum TerrainType {
-	/// Standard traversable terrain
-	Flat,
-	/// Non-traversable terrain, with which a players collide
-	Mountain,
-	/// Non-traversable terrain, in which players can fall into
-	Ravine,
+	/// Traversable terrain, deep water
+	Deep,
+	/// Traversable terrain, shallow but still passable water
+	Shallow,
+	/// Non-traversable terrain, where a players will beach
+	Land,
 }
 // TODO: use enumeratis
 impl TerrainType {
 	pub fn is_passable(self) -> bool {
 		match self {
-			Self::Flat => true,
-			Self::Mountain => false,
-			Self::Ravine => false,
+			Self::Deep => true,
+			Self::Shallow => true,
+			Self::Land => false,
 		}
 	}
 }
 impl Default for TerrainType {
 	fn default() -> Self {
-		Self::Flat
+		Self::Shallow
 	}
 }
 
@@ -419,17 +411,13 @@ pub struct WorldInit {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 #[derive(Serialize, Deserialize)]
 pub struct Input {
-	/// The fractional depression of the throttle pedal (1.0 is full depression)
-	pub throttle: Fraction,
-	/// The fractional depression of the breaking pedal (1.0 is full depression)
-	pub breaking: Fraction,
 	/// The active gear
-	pub gear: Gear,
+	pub trim: Trim,
 	/// The current steering as fraction from -1.0 to +1.0.
 	///
 	/// The meaning is as follows:
 	/// * `-1.0` means full deflection towards the left
 	/// * `0.0` means neutral, straight ahead
 	/// * `+1.0` means full deflection towards the right
-	pub steering: BiPolarFraction,
+	pub rudder: BiPolarFraction,
 }

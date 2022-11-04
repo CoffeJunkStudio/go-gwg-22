@@ -1,34 +1,27 @@
-use std::collections::HashMap;
-
 use nalgebra_glm::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
 
 use crate::units::BiPolarFraction;
+use crate::units::Fish;
 use crate::units::Fraction;
-use crate::units::Fuel;
 use crate::units::Location;
 use crate::units::Tick;
-use crate::units::Water;
 use crate::Input;
 use crate::ResourcePack;
 use crate::ResourcePackContent;
-use crate::TerrainType;
 use crate::TileCoord;
 use crate::WorldInit;
-use crate::BREAKING_DEACCL;
 use crate::ENGINE_IDEAL_RPM;
 use crate::ENGINE_POWER;
 use crate::ENGINE_STALL_RPM;
-use crate::ENGINE_WORK_PER_FUEL;
 use crate::FRICTION_CROSS_SPEED_FACTOR;
 use crate::FRICTION_GROUND_SPEED_FACTOR;
 use crate::FRICTION_MOTOR_FACTOR;
 use crate::GEAR_BASE_RATION;
 use crate::GEAR_RATIO_PROGRESSION;
 use crate::MAX_TRACTION;
-use crate::RESOURCE_PACK_FUEL_SIZE;
-use crate::RESOURCE_PACK_WATER_SIZE;
+use crate::RESOURCE_PACK_FISH_SIZE;
 use crate::TIRE_SPEED_PER_RPM;
 use crate::VEHICLE_DEADWEIGHT;
 use crate::VEHICLE_SIZE;
@@ -68,16 +61,13 @@ impl WorldState {
 		//self.players.retain(|_, p| p.vehicle.water.0 > 0.0);
 		// TODO: what about a Game-Over condition
 
-		let water_consumption = crate::WATER_CONSUMPTION * DELTA;
+		//let water_consumption = crate::WATER_CONSUMPTION * DELTA;
 
 		{
 			let p = &mut self.player;
 
 			// in s
 			let duration = DELTA;
-
-			// Consume water
-			p.vehicle.water.0 -= water_consumption;
 
 			// in m/s²
 			let acceleration = if let Some(rpm) = p.vehicle.engine_rpm() {
@@ -89,38 +79,25 @@ impl WorldState {
 				let available_power = max_power * rpm / ENGINE_IDEAL_RPM;
 
 				// as fraction
-				let throttle = p.vehicle.engine.throttle.to_f32();
+				// TODO: introduce wind (strength and direction)
+				// TODO: use sail trim
+				let throttle = 1.0;
 				// in W
 				let power = throttle * available_power;
 				// in J
 				let work = power * duration;
 
-				// Fuel consumption
+				// Acceleration
 
+				// in m/s
+				let speed = p.vehicle.ground_speed();
 				// in kg
-				let fuel = work / ENGINE_WORK_PER_FUEL;
-				p.vehicle.fuel.0 -= fuel;
+				let mass = p.vehicle.mass();
 
-				if p.vehicle.fuel.0 > 0.0 {
-					// Acceleration
+				// in m/s²
+				let acceleration = (-speed + (speed * speed + 2.0 * work / mass).sqrt()) / duration;
 
-					// in m/s
-					let speed = p.vehicle.ground_speed();
-					// in kg
-					let mass = p.vehicle.mass();
-
-					// in m/s²
-					let acceleration =
-						(-speed + (speed * speed + 2.0 * work / mass).sqrt()) / duration;
-
-					match p.vehicle.engine.gear {
-						Gear::Forward(_) => acceleration,
-						Gear::Reverse(_) => -acceleration,
-					}
-				} else {
-					// out of fuel
-					0.0
-				}
+				acceleration
 			} else {
 				// No user input
 				0.0
@@ -156,16 +133,12 @@ impl WorldState {
 				if init.terrain.get(old_tile).is_passable() {
 					let new_tile: TileCoord = p.vehicle.pos.into();
 
-					match init.terrain.get(new_tile) {
-						TerrainType::Flat => {
+					match init.terrain.get(new_tile).is_passable() {
+						true => {
 							// Alright
 						},
-						TerrainType::Ravine => {
-							// Vehicles just fall into ravines
-							//kill_list.push(*pid);
-							// TODO: what do we do here?
-						},
-						TerrainType::Mountain => {
+						false => {
+							// TODO: maybe we want to handle this differently
 							// Vehicles bounce off mountains
 							p.vehicle.pos.0 -= distance;
 
@@ -188,11 +161,13 @@ impl WorldState {
 			}
 
 
+			/* TODO: how about a shore-based breaking
 			// Apply breaking
 			let wheel_speed = p.vehicle.wheel_speed();
 			let breaking_impulse = p.vehicle.engine.breaking.to_f32() * BREAKING_DEACCL * DELTA;
 			let breaking_impulse = breaking_impulse.min(wheel_speed.abs());
 			p.vehicle.velocity -= breaking_impulse * wheel_speed.signum() * p.vehicle.heading_vec();
+			*/
 
 
 			// Apply steering
@@ -200,14 +175,13 @@ impl WorldState {
 			// distance traveled by rolling wheels
 			let distance_norm = distance.dot(&p.vehicle.heading_vec());
 			// steering angle relative to the current roll direction (i.e. relative to the heading)
-			let steering_angle =
-				p.vehicle.steering.to_f32().abs() * crate::VEHICLE_MAX_STEERING_ANGLE;
+			let steering_angle = p.vehicle.ruder.to_f32().abs() * crate::VEHICLE_MAX_STEERING_ANGLE;
 			let turning_circle_radius = crate::VEHICLE_WHEEL_BASE / steering_angle.sin();
 
 			// Turning angle
 			let angle = distance_norm / turning_circle_radius;
 
-			p.vehicle.heading += angle * p.vehicle.steering.to_f32().signum();
+			p.vehicle.heading += angle * p.vehicle.ruder.to_f32().signum();
 
 			// Turning by traction
 
@@ -239,17 +213,13 @@ impl WorldState {
 			resources.retain(|r| {
 				let dist = VEHICLE_SIZE / 2.
 					+ match r.content {
-						ResourcePackContent::Water => RESOURCE_PACK_WATER_SIZE / 2.,
-						ResourcePackContent::Fuel => RESOURCE_PACK_FUEL_SIZE / 2.,
+						ResourcePackContent::Fish => RESOURCE_PACK_FISH_SIZE / 2.,
 					};
 
 				if r.loc.0.metric_distance(&p.vehicle.pos.0) < dist {
 					match r.content {
-						ResourcePackContent::Water => {
-							p.vehicle.water.0 += crate::RESOURCE_PACK_WATER_AMOUNT.0;
-						},
-						ResourcePackContent::Fuel => {
-							p.vehicle.fuel.0 += crate::RESOURCE_PACK_FUEL_AMOUNT.0;
+						ResourcePackContent::Fish => {
+							p.vehicle.fish.0 += crate::RESOURCE_PACK_FISH_AMOUNT.0;
 						},
 					}
 
@@ -285,20 +255,11 @@ pub struct Vehicle {
 	/// Steering is always relative to `heading`.
 	///
 	/// See [Input::steering]
-	pub steering: BiPolarFraction,
+	pub ruder: BiPolarFraction,
 	/// State of the engine
-	pub engine: Engine,
-	/// The amount of stored fuel in the car.
-	///
-	/// Fuel is one of the collectables that can be gathered from the map.
-	/// Fuel is needed to accelerate the car.
-	pub fuel: Fuel,
-	/// The amount of stored water in the car.
-	///
-	/// Water is one of the collectables that can be gathered from the map.
-	/// Water is constantly consumed by the player.
-	/// It is a critical resource, once the car runs out of water, the player dies.
-	pub water: Water,
+	pub engine: Sail,
+	//// Amount of fish on board
+	pub fish: Fish,
 }
 impl Vehicle {
 	/// Ground speed in m/s
@@ -340,9 +301,9 @@ impl Vehicle {
 		let axle_rpm = self.wheel_speed() / TIRE_SPEED_PER_RPM;
 
 		let (gear, gear_dir): (u8, i8) = {
-			match self.engine.gear {
-				Gear::Forward(n) => (n, 1),
-				Gear::Reverse(n) => (n, -1),
+			match self.engine.trim {
+				Trim::Forward(n) => (n, 1),
+				Trim::Reverse(n) => (n, -1),
 			}
 		};
 		let gear_translation =
@@ -358,7 +319,7 @@ impl Vehicle {
 		let rpm = self.engine_rpm_raw();
 
 		// The first gear(s) never disengage
-		if matches!(self.engine.gear, Gear::Forward(0) | Gear::Reverse(0)) {
+		if matches!(self.engine.trim, Trim::Forward(0) | Trim::Reverse(0)) {
 			return Some(rpm);
 		}
 
@@ -392,16 +353,14 @@ impl Vehicle {
 	/// Apply the given `input` to this vehicle
 	pub fn apply_input(&mut self, input: Input) {
 		Input {
-			throttle: self.engine.throttle,
-			breaking: self.engine.breaking,
-			gear: self.engine.gear,
-			steering: self.steering,
+			trim: self.engine.trim,
+			rudder: self.ruder,
 		} = input;
 	}
 
 	/// Returns the total mass of the vehicle (inclusive payloads) in kilogram
 	pub fn mass(&self) -> f32 {
-		VEHICLE_DEADWEIGHT + self.fuel.0 as f32 + self.water.0 as f32
+		VEHICLE_DEADWEIGHT + self.fish.0 as f32
 	}
 }
 
@@ -411,10 +370,9 @@ impl Default for Vehicle {
 			pos: Default::default(),
 			engine: Default::default(),
 			heading: Default::default(),
-			steering: Default::default(),
+			ruder: Default::default(),
 			velocity: Default::default(),
-			fuel: Fuel(10.0),
-			water: Water(10.0),
+			fish: Fish(10.0),
 		}
 	}
 }
@@ -422,13 +380,11 @@ impl Default for Vehicle {
 /// Represents the engine of a car
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(Serialize, Deserialize)]
-pub struct Engine {
-	/// Current engagement of the throttle pedal (1.0 is full throttle, 0.0 is idle)
-	pub throttle: Fraction,
+pub struct Sail {
 	/// Current engagement of the break pedal (1.0 is full breaking, 0.0 is no-breaking)
-	pub breaking: Fraction,
+	pub condition: Fraction,
 	/// Current state of the gear box.
-	pub gear: Gear,
+	pub trim: Trim,
 }
 
 /// Represents the dynamic state of a player
@@ -444,13 +400,13 @@ pub struct Player {
 /// Notice that gears are zero-indexed, thus `Gear::Forward(0)` is the first (and lowest) gear in forward direction.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(Serialize, Deserialize)]
-pub enum Gear {
+pub enum Trim {
 	/// Zero-indexed gear in forward direction (i.e. gives positive acceleration)
 	Forward(u8),
 	/// Zero-indexed gear in reverse direction (i.e. gives negative acceleration)
 	Reverse(u8),
 }
-impl Gear {
+impl Trim {
 	/// Shift up a gear, may switch to forward
 	pub fn shift_up(self) -> Self {
 		match self {
@@ -469,7 +425,7 @@ impl Gear {
 		}
 	}
 }
-impl Default for Gear {
+impl Default for Trim {
 	fn default() -> Self {
 		// first gear forward
 		Self::Forward(0)

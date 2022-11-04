@@ -159,16 +159,11 @@ impl Tick {
 }
 
 
-/// Amount of fuel in kilograms
+/// Amount of fish in kilograms
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
-pub struct Fuel(pub f32);
+pub struct Fish(pub f32);
 
-
-/// Amount of water in kilograms
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
-#[derive(Serialize, Deserialize)]
-pub struct Water(pub f32);
 
 
 /// A fractional value form in range `0.0..=1.0`

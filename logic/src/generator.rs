@@ -83,12 +83,12 @@ impl Generator for PerlinNoise {
 				cord.y as f64 * PERLIN_NOISE_FACTOR,
 			]);
 
-			*tt = if value < -0.6 {
-				TerrainType::Ravine
-			} else if value < 0.5 {
-				TerrainType::Flat
+			*tt = if value < 0.0 {
+				TerrainType::Deep
+			} else if value < 0.9 {
+				TerrainType::Shallow
 			} else {
-				TerrainType::Mountain
+				TerrainType::Land
 			};
 		}
 
