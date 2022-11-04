@@ -1,0 +1,31 @@
+[package]
+name = "logic"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+rand = "0.8.5"
+rand_pcg = "0.3.1"
+structopt = "0.3.26"
+lazy_static = "1.4"
+noise = "0.7.0"
+standard-dist = "1.0"
+
+uuid = "1.1"
+enum-map = "2.3"
+
+[dependencies.getrandom]
+version = "0.2"
+features = [ "js" ]
+[dependencies.nalgebra-glm]
+version = "0.17.0"
+features = [ "serde-serialize" ]
+
+[dependencies.serde]
+version = "1.0.137"
+features = [ "derive" ]
+
+[dependencies.strum]
+version = "0.24.0"
+features = [ "derive" ]
+

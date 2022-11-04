@@ -1,0 +1,198 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "*" ]
+    tags:
+      - v**
+  pull_request:
+    branches: [ "*" ]
+
+env:
+  CARGO_TERM_COLOR: always
+  ITCH_USERNAME: coffejunkstudio
+  ITCH_GAME_ID: plenty-of-fish-in-the-sea
+
+jobs:
+  # Preliminary compilation & tests
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install prerequisites
+      run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+
+  # Proper Linux release build
+  native-linux:
+    runs-on: ubuntu-latest
+    container: rust:latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install prerequisites
+      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+    - name: Build binary
+      run: cargo build --release --verbose
+    - name: Archive binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux #-${{ github.ref_name }}
+        path: target/release/plenty-of-fish-in-the-sea
+
+  # Cross windows release build
+  cross-win:
+    runs-on: ubuntu-latest
+    container: rust:latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install prerequisites
+      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev gcc-mingw-w64-x86-64
+    - name: Install win target
+      run: rustup target add x86_64-pc-windows-gnu
+    - name: Build binary
+      run: cargo build --release --target x86_64-pc-windows-gnu --verbose
+    - name: Archive binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows #-${{ github.ref_name }}
+        path: target/x86_64-pc-windows-gnu/release/plenty-of-fish-in-the-sea.exe
+
+  # Cross WASM release build
+  cross-web:
+    runs-on: ubuntu-latest
+    container: rust:latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install web target
+      run: rustup target add wasm32-unknown-unknown
+    - name: Build binary
+      run: bash build-web.sh --release
+    - name: Archive web package
+      uses: actions/upload-artifact@v3
+      with:
+        name: web-package #-${{ github.ref_name }}
+        path: target/web-pkg
+
+  # Cross Android release build
+  cross-android:
+    runs-on: ubuntu-latest
+    container: notfl3/cargo-apk
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install prerequisites
+      run: apt-get update && apt-get install -y --no-install-recommends libz-dev
+    - name: Build binary
+      run: cargo quad-apk build --release
+    - name: Archive web package
+      uses: actions/upload-artifact@v3
+      with:
+        name: android #-${{ github.ref_name }}
+        path: target/android-artifacts/release/apk/plenty-of-fish-in-the-sea.apk
+
+  # Deploy Linux binary to Itch.io
+  deploy-linux:
+    name: Upload linux binary to Itch
+    runs-on: ubuntu-latest
+    environment: itchio
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs: native-linux
+
+    steps:
+      - name: Fetch Linux binary
+        uses: actions/download-artifact@v3
+        with:
+          name: linux
+          path: '.'
+      - name: Upload artifact
+        uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{secrets.BUTLER_API_KEY}}
+          gameData: "."
+          itchUsername: ${{env.ITCH_USERNAME}}
+          itchGameId: ${{ env.ITCH_GAME_ID }}
+          buildChannel: linux-stable
+          buildNumber: ${{ github.ref_name }}
+
+  # Deploy windows binary to Itch.io
+  deploy-win:
+    name: Upload windows binary to Itch
+    runs-on: ubuntu-latest
+    environment: itchio
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs: cross-win
+
+    steps:
+      - name: Fetch windows binary
+        uses: actions/download-artifact@v3
+        with:
+          name: windows
+          path: '.'
+      - name: Upload artifact
+        uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{secrets.BUTLER_API_KEY}}
+          gameData: "."
+          itchUsername: ${{env.ITCH_USERNAME}}
+          itchGameId: ${{ env.ITCH_GAME_ID }}
+          buildChannel: windows-stable
+          buildNumber: ${{ github.ref_name }}
+
+  # Deploy WASM binary to Itch.io
+  deploy-web:
+    name: Upload web-package to Itch
+    runs-on: ubuntu-latest
+    environment: itchio
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs: cross-web
+
+    steps:
+      - name: Fetch web package
+        uses: actions/download-artifact@v3
+        with:
+          name: web-package
+          path: '.'
+      - name: Upload artifact
+        uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{secrets.BUTLER_API_KEY}}
+          gameData: "."
+          itchUsername: ${{env.ITCH_USERNAME}}
+          itchGameId: ${{ env.ITCH_GAME_ID }}
+          buildChannel: web-stable
+          buildNumber: ${{ github.ref_name }}
+
+  # Deploy Android binary to Itch.io
+  deploy-android:
+    name: Upload Android apk to Itch
+    runs-on: ubuntu-latest
+    environment: itchio
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs: cross-android
+
+    steps:
+      - name: Fetch android apk
+        uses: actions/download-artifact@v3
+        with:
+          name: android
+          path: '.'
+      - name: Upload artifact
+        uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{secrets.BUTLER_API_KEY}}
+          gameData: "."
+          itchUsername: ${{env.ITCH_USERNAME}}
+          itchGameId: ${{ env.ITCH_GAME_ID }}
+          buildChannel: android-stable
+          buildNumber: ${{ github.ref_name }}

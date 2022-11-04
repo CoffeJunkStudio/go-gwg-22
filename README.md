@@ -11,8 +11,12 @@ Our game is written in Rust with the [good-web-game] crate.
 It can be compiled as an HTML 5 game, natively to Linux and Windows, and for
 Android.
 
-[good-web-game]: https://crates.io/crates/good-web-game
+You can see a preview of the current `main` branch at our [Github Page][preview].
+Or get the "stable" version from our [itch.io page][itchio].
 
+[good-web-game]: https://crates.io/crates/good-web-game
+[preview]: https://coffejunkstudio.github.io/go-gwg-22/
+[itchio]: https://coffejunkstudio.itch.io/plenty-of-fish-in-the-sea
 
 
 Prerequisites
