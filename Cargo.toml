@@ -1,3 +1,6 @@
+[workspace]
+members = ["logic"]
+
 [package]
 name = "plenty-of-fish-in-the-sea"
 version = "0.0.0"
@@ -7,11 +10,15 @@ description = "Our Game-Off 2022 game jam participation"
 
 [dependencies]
 good-web-game = "0.6.0"
+logic = {path = "logic"}
 
+num-rational = {version = "0.4"}
 
 [build-dependencies]
 tar = "0.4"
 built = { version = "0.5", features = ["git2", "chrono"] }
+
+
 
 [profile.release]
 strip = true
