@@ -962,7 +962,9 @@ version = "0.0.0"
 dependencies = [
  "built",
  "good-web-game",
+ "serde",
  "tar",
+ "toml",
 ]
 
 [[package]]

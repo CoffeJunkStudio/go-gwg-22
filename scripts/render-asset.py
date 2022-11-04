@@ -1,13 +1,15 @@
 import sys
+import os
 import argparse
 import bpy
 import json
 import tempfile
-from PIL import Image
 import math
 
 from hashlib import sha1
 from collections import OrderedDict
+from PIL import Image
+from pathlib import Path
 
 def fail(message: str):
     print(f"Error: {message}", file=sys.stderr)
@@ -88,9 +90,11 @@ new_im = Image.new('RGBA', (total_width, max_height))
 
 x_offset = 0
 for im in images:
-  new_im.paste(im, (x_offset,0))
-  x_offset += im.size[0]
+    new_im.paste(im, (x_offset,0))
+    x_offset += im.size[0]
 
+os.makedirs(Path(args.output).parent, exist_ok=True)
 new_im.save(args.output)
+
 print(f"Merging complete. Image saved to {args.output}")
 

@@ -1,8 +1,32 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
+
+const fn default_asset_width() -> u32 {
+	256
+}
+const fn default_asset_n_frames() -> u32 {
+	32
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(serde::Serialize, serde::Deserialize)]
+struct AssetConfig {
+	#[serde(default = "default_asset_width")]
+	width: u32,
+
+	height: Option<u32>,
+
+	#[serde(default = "default_asset_n_frames")]
+	n_frames: u32,
+
+	output: Option<PathBuf>,
+}
 
 fn main() {
+	render_assets();
 	package_assets();
 
 	// Notice that because, the `package_assets` emits a `rerun-if-changed`,
@@ -11,6 +35,53 @@ fn main() {
 	//
 	// Therefore, release builds should be preceded with a `cargo clean`.
 	built_info();
+}
+
+fn render_assets() {
+	let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+	let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+	let render_config_path = manifest_dir.join("render_assets.toml");
+	let script_path = manifest_dir.join("scripts").join("render-asset.py");
+
+	println!("cargo:rerun-if-changed={}", render_config_path.display());
+	println!("cargo:rerun-if-changed={}", script_path.display());
+
+	let render_config_str = fs::read_to_string(&render_config_path).unwrap();
+	let render_config: HashMap<PathBuf, HashMap<String, AssetConfig>> =
+		toml::from_str(&render_config_str).unwrap();
+
+	for (blend_file_name, assets_config) in render_config {
+		let blend_file_path = manifest_dir.join(&blend_file_name);
+		for (asset_name, asset_config) in assets_config {
+			let out_filename = asset_config
+				.output
+				.unwrap_or_else(|| PathBuf::from(format!("{}.png", &asset_name)));
+			let out_path = out_dir.join("rendered_assets").join(out_filename);
+
+			println!("cargo:rerun-if-changed={}", blend_file_path.display());
+			let blender_out = Command::new("blender")
+				.arg(&blend_file_path)
+				.arg("--background")
+				.arg("--python")
+				.arg(&script_path)
+				.arg("--")
+				.arg("--output")
+				.arg(out_path)
+				.arg("--object-name")
+				.arg(&asset_name)
+				.output()
+				.unwrap_or_else(|err| panic!("Failed to render {}: {err}", &asset_name));
+
+			if !blender_out.status.success() {
+				eprintln!("Failed to render {asset_name}:");
+				eprintln!("-- blender stdout:");
+				eprintln!("{}", String::from_utf8_lossy(&blender_out.stdout));
+				eprintln!("-- blender stderr:");
+				eprintln!("{}", String::from_utf8_lossy(&blender_out.stderr));
+				panic!()
+			}
+		}
+	}
 }
 
 fn built_info() {
