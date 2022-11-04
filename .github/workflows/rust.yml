@@ -14,6 +14,7 @@ env:
   ITCH_GAME_ID: plenty-of-fish-in-the-sea
 
 jobs:
+  # Preliminary compilation & tests
   test:
     runs-on: ubuntu-latest
 
@@ -26,6 +27,7 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
 
+  # Proper Linux release build
   native-linux:
     runs-on: ubuntu-latest
     container: rust:latest
@@ -43,6 +45,7 @@ jobs:
         name: linux #-${{ github.ref_name }}
         path: target/release/plenty-of-fish-in-the-sea
 
+  # Cross windows release build
   cross-win:
     runs-on: ubuntu-latest
     container: rust:latest
@@ -62,6 +65,7 @@ jobs:
         name: windows #-${{ github.ref_name }}
         path: target/x86_64-pc-windows-gnu/release/plenty-of-fish-in-the-sea.exe
 
+  # Cross WASM release build
   cross-web:
     runs-on: ubuntu-latest
     container: rust:latest
@@ -79,6 +83,25 @@ jobs:
         name: web-package #-${{ github.ref_name }}
         path: target/web-pkg
 
+  # Cross Android release build
+  cross-android:
+    runs-on: ubuntu-latest
+    container: notfl3/cargo-apk
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install prerequisites
+      run: apt-get update && apt-get install -y --no-install-recommends libz-dev
+    - name: Build binary
+      run: cargo quad-apk build --release
+    - name: Archive web package
+      uses: actions/upload-artifact@v3
+      with:
+        name: android #-${{ github.ref_name }}
+        path: target/android-artifacts/release/apk/plenty-of-fish-in-the-sea.apk
+
+  # Deploy Linux binary to Itch.io
   deploy-linux:
     name: Upload linux binary to Itch
     runs-on: ubuntu-latest
@@ -87,7 +110,7 @@ jobs:
     needs: native-linux
 
     steps:
-      - name: Fetch web package
+      - name: Fetch Linux binary
         uses: actions/download-artifact@v3
         with:
           name: linux
@@ -102,6 +125,7 @@ jobs:
           buildChannel: linux-stable
           buildNumber: ${{ github.ref_name }}
 
+  # Deploy windows binary to Itch.io
   deploy-win:
     name: Upload windows binary to Itch
     runs-on: ubuntu-latest
@@ -110,7 +134,7 @@ jobs:
     needs: cross-win
 
     steps:
-      - name: Fetch web package
+      - name: Fetch windows binary
         uses: actions/download-artifact@v3
         with:
           name: windows
@@ -125,6 +149,7 @@ jobs:
           buildChannel: windows-stable
           buildNumber: ${{ github.ref_name }}
 
+  # Deploy WASM binary to Itch.io
   deploy-web:
     name: Upload web-package to Itch
     runs-on: ubuntu-latest
@@ -146,4 +171,28 @@ jobs:
           itchUsername: ${{env.ITCH_USERNAME}}
           itchGameId: ${{ env.ITCH_GAME_ID }}
           buildChannel: web-stable
+          buildNumber: ${{ github.ref_name }}
+
+  # Deploy Android binary to Itch.io
+  deploy-android:
+    name: Upload Android apk to Itch
+    runs-on: ubuntu-latest
+    environment: itchio
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs: cross-android
+
+    steps:
+      - name: Fetch android apk
+        uses: actions/download-artifact@v3
+        with:
+          name: android
+          path: '.'
+      - name: Upload artifact
+        uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{secrets.BUTLER_API_KEY}}
+          gameData: "."
+          itchUsername: ${{env.ITCH_USERNAME}}
+          itchGameId: ${{ env.ITCH_GAME_ID }}
+          buildChannel: android-stable
           buildNumber: ${{ github.ref_name }}
