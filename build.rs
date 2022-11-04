@@ -84,6 +84,10 @@ fn render_assets() {
 				.arg(out_path)
 				.arg("--object-name")
 				.arg(&asset_name)
+				.arg("--width")
+				.arg(asset_config.width.to_string())
+				.arg("--n-frames")
+				.arg(asset_config.n_frames.to_string())
 				.output()
 				.unwrap_or_else(|err| panic!("Failed to render {}: {err}", &asset_name));
 
@@ -93,7 +97,7 @@ fn render_assets() {
 				eprintln!("{}", String::from_utf8_lossy(&blender_out.stdout));
 				eprintln!("-- blender stderr:");
 				eprintln!("{}", String::from_utf8_lossy(&blender_out.stderr));
-				panic!()
+				panic!("Rendering failed")
 			}
 		}
 	}

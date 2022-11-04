@@ -1,4 +1,3 @@
 
-["blend/scene.blend"]
-Icosphere = {}
-Cube = {}
+["blend/fishes.blend"]
+"Fish.001" = { output = "fish-00.png", n_frames = 8, width = 32 }

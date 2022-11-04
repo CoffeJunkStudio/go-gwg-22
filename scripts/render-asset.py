@@ -35,7 +35,7 @@ parser.add_argument('--output', '-o', required=True)
 parser.add_argument('--object-name', '-n', required=True)
 parser.add_argument('--scene', '-s')
 parser.add_argument('--camera-name', '-c')
-parser.add_argument('--n-frames', '-f', default=32)
+parser.add_argument('--n-frames', '-f', type=int, default=32)
 parser.add_argument('--width', '-x', type=int, default=256)
 parser.add_argument('--height', '-y', type=int)
 
@@ -77,6 +77,7 @@ for step in range(args.n_frames):
     with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
         bpy.context.scene.render.filepath = tmp.name
         obj.rotation_euler[2] = init_angle + math.radians(step * 360 / args.n_frames)
+        tmp.close()
         bpy.ops.render.render(write_still = True)
         images.append(Image.open(tmp.name))
 print("Rendering complete.")
