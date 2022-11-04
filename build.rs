@@ -37,9 +37,24 @@ fn main() {
 	built_info();
 }
 
+#[cfg(target_family = "windows")]
+fn blender_exe() -> PathBuf {
+	PathBuf::from("C:")
+		.join("Program Files")
+		.join("Blender Foundation")
+		.join("Blender 3.0")
+		.join("blender.exe")
+}
+
+#[cfg(not(target_family = "windows"))]
+fn blender_exe() -> PathBuf {
+	PathBuf::from("blender")
+}
+
 fn render_assets() {
 	let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 	let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+
 	let render_config_path = manifest_dir.join("render_assets.toml");
 	let script_path = manifest_dir.join("scripts").join("render-asset.py");
 
@@ -59,7 +74,7 @@ fn render_assets() {
 			let out_path = out_dir.join("rendered_assets").join(out_filename);
 
 			println!("cargo:rerun-if-changed={}", blend_file_path.display());
-			let blender_out = Command::new("blender")
+			let blender_out = Command::new(blender_exe())
 				.arg(&blend_file_path)
 				.arg("--background")
 				.arg("--python")
