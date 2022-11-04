@@ -12,7 +12,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,9 +24,10 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
 
-  native:
+  native-linux:
     runs-on: ubuntu-latest
     container: rust:latest
+    needs: test
 
     steps:
     - uses: actions/checkout@v3
@@ -43,6 +44,7 @@ jobs:
   cross-win:
     runs-on: ubuntu-latest
     container: rust:latest
+    needs: test
 
     steps:
     - uses: actions/checkout@v3
@@ -61,6 +63,7 @@ jobs:
   cross-web:
     runs-on: ubuntu-latest
     container: rust:latest
+    needs: test
 
     steps:
     - uses: actions/checkout@v3
@@ -73,3 +76,72 @@ jobs:
       with:
         name: web-package #-${{ github.ref_name }}
         path: target/web-pkg
+
+  deploy-linux:
+    name: Upload linux binary to Itch
+    runs-on: ubuntu-latest
+    environment: itchio
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs: native-linux
+
+    steps:
+      - name: Fetch web package
+        uses: actions/download-artifact@v3
+        with:
+          name: linux
+          path: '.'
+      - name: Upload artifact
+        uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{secrets.BUTLER_API_KEY}}
+          gameData: "."
+          itchUsername: ${{env.ITCH_USERNAME}}
+          itchGameId: ${{ env.ITCH_GAME_ID }}
+          buildChannel: linux-stable
+          buildNumber: ${{ github.ref_name }}
+
+  deploy-win:
+    name: Upload windows binary to Itch
+    runs-on: ubuntu-latest
+    environment: itchio
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs: cross-win
+
+    steps:
+      - name: Fetch web package
+        uses: actions/download-artifact@v3
+        with:
+          name: windows
+          path: '.'
+      - name: Upload artifact
+        uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{secrets.BUTLER_API_KEY}}
+          gameData: "."
+          itchUsername: ${{env.ITCH_USERNAME}}
+          itchGameId: ${{ env.ITCH_GAME_ID }}
+          buildChannel: windows-stable
+          buildNumber: ${{ github.ref_name }}
+
+  deploy-web:
+    name: Upload web-package to Itch
+    runs-on: ubuntu-latest
+    environment: itchio
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs: cross-web
+
+    steps:
+      - name: Fetch web package
+        uses: actions/download-artifact@v3
+        with:
+          name: web-package
+          path: '.'
+      - name: Upload artifact
+        uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{secrets.BUTLER_API_KEY}}
+          gameData: "."
+          itchUsername: ${{env.ITCH_USERNAME}}
+          itchGameId: ${{ env.ITCH_GAME_ID }}
+          buildChannel: web-stable
+          buildNumber: ${{ github.ref_name }}
