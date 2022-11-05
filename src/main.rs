@@ -117,8 +117,12 @@ fn draw_and_clear<'a>(
 	batches: impl IntoIterator<Item = &'a mut SpriteBatch>,
 ) -> GameResult<()> {
 	for batch in batches {
-		gwg::graphics::draw(ctx, quad_ctx, batch, (Point2::new(0.0, 0.0),))?;
-		batch.clear();
+		// For some ridiculous, empty sprite batches cause sever glitches (UB-like) on windows.
+		// Thus we will only draw those that aren't empty.
+		if !batch.get_sprites().is_empty() {
+			gwg::graphics::draw(ctx, quad_ctx, batch, (Point2::new(0.0, 0.0),))?;
+			batch.clear();
+		}
 	}
 
 	Ok(())
