@@ -1,8 +1,10 @@
 use std::env;
+use std::path::Path;
 
 use good_web_game as gwg;
 use gwg::audio;
 use gwg::cgmath::Point2;
+use gwg::graphics::spritebatch::SpriteBatch;
 use gwg::graphics::Color;
 use gwg::graphics::DrawParam;
 use gwg::graphics::PxScale;
@@ -25,9 +27,25 @@ use logic::units::Location;
 use logic::Input;
 use logic::World;
 
+struct TerrainBatches {
+	deep: SpriteBatch,
+	shallow: SpriteBatch,
+	land: SpriteBatch,
+}
+
+fn image_batch(
+	ctx: &mut gwg::Context,
+	quad_ctx: &mut gwg::miniquad::Context,
+	path: impl AsRef<Path>,
+) -> SpriteBatch {
+	let image = graphics::Image::new(ctx, quad_ctx, path).unwrap();
+	graphics::spritebatch::SpriteBatch::new(image)
+}
+
 // #[derive(Debug)] `audio::Source` dose not implement Debug!
 struct Game {
 	sprite_batch: graphics::spritebatch::SpriteBatch,
+	terrain_batches: TerrainBatches,
 	sound: audio::Source,
 	input_text: String,
 	full_screen: bool,
@@ -45,8 +63,13 @@ impl Game {
 		//       or implement both.
 		let seed: u64 = 42;
 
-		let image = graphics::Image::new(ctx, quad_ctx, "img/gwg.png").unwrap();
-		let batch = graphics::spritebatch::SpriteBatch::new(image);
+		let batch = image_batch(ctx, quad_ctx, "img/gwg.png");
+
+		let terrain_batches = TerrainBatches {
+			deep: image_batch(ctx, quad_ctx, "img/deepwater0.png"),
+			shallow: image_batch(ctx, quad_ctx, "img/shallowwater.png"),
+			land: image_batch(ctx, quad_ctx, "img/gwg.png"),
+		};
 
 		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
 
@@ -61,10 +84,11 @@ impl Game {
 		let mut world = noise.generate(&settings, rng);
 		world.state.player.vehicle.heading = 1.0;
 
-		let meters_per_pixel = 200.0 / 1920.0;
+		let meters_per_pixel = 50.0 / 1920.0;
 
 		let s = Game {
 			sprite_batch: batch,
+			terrain_batches,
 			sound,
 			input_text: String::new(),
 			full_screen: false,
@@ -157,10 +181,10 @@ impl gwg::event::EventHandler for Game {
 			for y in left_top.y..(right_bottom.y + 1) {
 				let tc = TileCoord::new(x, y);
 				if let Some(tile) = self.world.init.terrain.try_get(tc) {
-					let color = match tile {
-						TerrainType::Deep => Color::new(0.0, 0.0, 0.2, 1.0),
-						TerrainType::Shallow => Color::new(0.0, 0.3, 0.8, 1.0),
-						TerrainType::Land => Color::new(0.0, 0.8, 0.2, 1.0),
+					let batch = match tile {
+						TerrainType::Deep => &mut self.terrain_batches.deep,
+						TerrainType::Shallow => &mut self.terrain_batches.shallow,
+						TerrainType::Land => &mut self.terrain_batches.land,
 					};
 
 					let loc = tc.to_location() - player_pos;
@@ -170,13 +194,34 @@ impl gwg::event::EventHandler for Game {
 					let scale = logic::TILE_SIZE as f32 / self.meters_per_pixel / 256.0;
 					let param = DrawParam::new()
 						.dest(nalgebra::Point2::new(sprite_pos.x, sprite_pos.y))
-						.color(color)
 						.scale(logic::glm::vec2(scale, scale));
 
-					self.sprite_batch.add(param);
+					batch.add(param);
 				}
 			}
 		}
+
+		gwg::graphics::draw(
+			ctx,
+			quad_ctx,
+			&self.terrain_batches.deep,
+			(Point2::new(0.0, 0.0),),
+		)?;
+		self.terrain_batches.deep.clear();
+		gwg::graphics::draw(
+			ctx,
+			quad_ctx,
+			&self.terrain_batches.shallow,
+			(Point2::new(0.0, 0.0),),
+		)?;
+		self.terrain_batches.shallow.clear();
+		gwg::graphics::draw(
+			ctx,
+			quad_ctx,
+			&self.terrain_batches.land,
+			(Point2::new(0.0, 0.0),),
+		)?;
+		self.terrain_batches.land.clear();
 
 		gwg::graphics::draw(ctx, quad_ctx, &self.sprite_batch, (Point2::new(0.0, 0.0),))?;
 		self.sprite_batch.clear();
