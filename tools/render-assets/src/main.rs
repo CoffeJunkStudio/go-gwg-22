@@ -72,8 +72,10 @@ fn main() {
 				.arg(&asset_config.object)
 				.arg("--width")
 				.arg(asset_config.width.to_string())
-				.arg("--n-frames")
+				.arg("--z-frames")
 				.arg(asset_config.z_frames.to_string())
+				.arg("--x-frames")
+				.arg(asset_config.x_frames.to_string())
 				.output()
 				.unwrap_or_else(|err| panic!("Failed to render {}: {err}", &asset_config.object));
 

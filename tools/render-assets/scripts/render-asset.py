@@ -5,6 +5,7 @@ import bpy
 import json
 import tempfile
 import math
+import traceback
 
 from hashlib import sha1
 from collections import OrderedDict
@@ -41,7 +42,8 @@ def main():
     parser.add_argument('--object-name', '-n', required=True)
     parser.add_argument('--scene', '-s')
     parser.add_argument('--camera-name', '-c')
-    parser.add_argument('--n-frames', '-f', type=int, default=32)
+    parser.add_argument('--z-frames', type=int, default=1)
+    parser.add_argument('--x-frames', type=int, default=1)
     parser.add_argument('--width', '-x', type=int, default=256)
     parser.add_argument('--height', '-y', type=int)
 
@@ -78,30 +80,46 @@ def main():
     init_angle = obj.rotation_euler[2]
     images = list()
 
-    bpy.context.scene.render.resolution_x = args.width
-    bpy.context.scene.render.resolution_y = args.height if args.height is not None else args.width
+    target_width = args.width
+    target_height = args.height if args.height is not None else args.width
+
+    bpy.context.scene.render.resolution_x = target_width
+    bpy.context.scene.render.resolution_y = target_height
+
+    x_angle_per_step = 0
+    x_rot_offset = 0
+    if args.x_frames > 1:
+        x_angle_per_step = 180 / (args.x_frames - 1)
+        x_rot_offset = -90
 
     print("Rendering...")
-    for step in range(args.n_frames):
-        with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
-            bpy.context.scene.render.filepath = tmp.name
-            obj.rotation_euler[2] = init_angle + math.radians(step * 360 / args.n_frames)
-            tmp.close()
-            bpy.ops.render.render(write_still = True)
-            images.append(Image.open(tmp.name))
+    for x_step in range(args.x_frames):
+        z_images = list()
+        obj.rotation_euler[0] = init_angle + math.radians(x_step * x_angle_per_step + x_rot_offset)
+        for z_step in range(args.z_frames):
+            with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
+                bpy.context.scene.render.filepath = tmp.name
+                obj.rotation_euler[2] = init_angle + math.radians(z_step * 360 / args.z_frames)
+                tmp.close()
+                bpy.ops.render.render(write_still = True)
+                z_images.append(Image.open(tmp.name))
+        print("Line rendered")
+        images.append(z_images)
     print("Rendering complete.")
     print("Merging...")
-    widths, heights = zip(*(i.size for i in images))
 
-    total_width = sum(widths)
-    max_height = max(heights)
+    total_width = args.z_frames * target_width
+    total_height = args.x_frames * target_height
 
-    new_im = Image.new('RGBA', (total_width, max_height))
+    new_im = Image.new('RGBA', (total_width, total_height))
 
-    x_offset = 0
-    for im in images:
-        new_im.paste(im, (x_offset,0))
-        x_offset += im.size[0]
+    y_offset = 0
+    for z_images in images:
+        x_offset = 0
+        for im in z_images:
+            new_im.paste(im, (x_offset, y_offset))
+            x_offset += target_width
+        y_offset += target_height
 
     os.makedirs(Path(args.output).parent, exist_ok=True)
     new_im.save(args.output)
@@ -111,4 +129,5 @@ def main():
 try:
     main()
 except Exception as e:
+    traceback.print_exc()
     fail(str(e))

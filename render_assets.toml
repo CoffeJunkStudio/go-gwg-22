@@ -19,7 +19,7 @@
 "starfish-04" = { object = "starfish-4", z_frames = 8, width = 64, optical_size = 1.9 }
 
 [file."blend/ships.blend"]
-"ship-00" = { object = "ships", z_frames = 32, width = 256, optical_size = 1.4 }
+"ship-00" = { object = "ships", z_frames = 32, x_frames = 7, width = 256, optical_size = 1.4 }
 "ship-01" = { object = "ships.001", z_frames = 32, width = 256, optical_size = 2.1 }
 "sail-00-0" = { object = "sail-00-0", z_frames = 32, width = 256, optical_size = 1.6 }
 "sail-00-1" = { object = "sail-00-1", z_frames = 32, width = 256, optical_size = 1.6 }
