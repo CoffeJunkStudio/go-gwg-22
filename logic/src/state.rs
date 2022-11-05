@@ -27,6 +27,7 @@ use crate::FRICTION_MOTOR_FACTOR;
 use crate::GEAR_BASE_RATION;
 use crate::GEAR_RATIO_PROGRESSION;
 use crate::MAX_TRACTION;
+use crate::MAX_WIND_SPEED;
 use crate::RESOURCE_PACK_FISH_SIZE;
 use crate::TIRE_SPEED_PER_RPM;
 use crate::VEHICLE_DEADWEIGHT;
@@ -73,22 +74,36 @@ impl WorldState {
 
 		// Update wind
 		self.wind = {
-			let earlier =
-				self.timestamp.0 / u64::from(TICKS_PER_SECOND) / u64::from(WIND_CHANGE_INTERVAL);
-			let mut early_rng = StdRng::new(
-				0xcafef00dd15ea5e5,
-				0xa02bdbf7bb3c0a7ac28fa16a64abf96 ^ u128::from(init.seed) ^ u128::from(earlier),
-			);
-			let angle = early_rng.gen::<f32>() * std::f32::consts::TAU;
-			let magnitude = early_rng.gen();
+			let interval = u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL);
+			let earlier = self.timestamp.0 / interval;
+			let later = earlier + 1;
+			let offset = self.timestamp.0 - earlier * interval;
 
-			Wind::from_polar(angle, magnitude)
+			let early = {
+				let mut rng = StdRng::new(
+					0xcafef00dd15ea5e5,
+					0xa02bdbf7bb3c0a7ac28fa16a64abf96 ^ u128::from(init.seed) ^ u128::from(earlier),
+				);
+
+				let angle = rng.gen::<f32>() * std::f32::consts::TAU;
+				let magnitude = rng.gen::<f32>() * MAX_WIND_SPEED;
+				Wind::from_polar(angle, magnitude)
+			};
+			let late = {
+				let mut rng = StdRng::new(
+					0xcafef00dd15ea5e5,
+					0xa02bdbf7bb3c0a7ac28fa16a64abf96 ^ u128::from(init.seed) ^ u128::from(later),
+				);
+
+				let angle = rng.gen::<f32>() * std::f32::consts::TAU;
+				let magnitude = rng.gen::<f32>() * MAX_WIND_SPEED;
+				Wind::from_polar(angle, magnitude)
+			};
+
+
+			let lerpy = nalgebra_glm::lerp(&early.0, &late.0, offset as f32 / interval as f32);
+			Wind(lerpy)
 		};
-
-
-		// Remove dead players, i.e. those who don't have any water
-		//self.players.retain(|_, p| p.vehicle.water.0 > 0.0);
-		// TODO: what about a Game-Over condition
 
 		//let water_consumption = crate::WATER_CONSUMPTION * DELTA;
 
@@ -99,7 +114,7 @@ impl WorldState {
 			let duration = DELTA;
 
 			// in m/s²
-			let acceleration = if let Some(rpm) = p.vehicle.engine_rpm() {
+			let acceleration = {
 				let true_wind = self.wind.0;
 				let apparent_wind = true_wind - p.vehicle.velocity;
 
@@ -109,13 +124,15 @@ impl WorldState {
 
 				// TODO: here is a feed-back loop during acceleration, when den RPMs rise and thus the power increases.
 				let max_power = ENGINE_POWER;
-				let rpm = rpm.clamp(ENGINE_STALL_RPM, ENGINE_IDEAL_RPM);
+				let rpm = ENGINE_IDEAL_RPM; //rpm.clamp(ENGINE_STALL_RPM, ENGINE_IDEAL_RPM);
 				let available_power = max_power * rpm / ENGINE_IDEAL_RPM;
 
 				// as fraction
 				// TODO: introduce wind (strength and direction)
 				// TODO: use sail trim
-				let throttle = 1.0;
+				let throttle = match p.vehicle.sail.reefing {
+					Reefing::Reefed(n) => f32::from(n) / 8.,
+				};
 				// in W
 				let power = throttle * available_power;
 				// in J
@@ -132,9 +149,6 @@ impl WorldState {
 				let acceleration = (-speed + (speed * speed + 2.0 * work / mass).sqrt()) / duration;
 
 				acceleration
-			} else {
-				// No user input
-				0.0
 			};
 
 			/* debugging

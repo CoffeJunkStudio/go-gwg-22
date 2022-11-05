@@ -61,10 +61,10 @@ pub const ENGINE_WORK_PER_FUEL: f32 = 25_000.0;
 /// Scalar factor influencing the strength of ground based friction.
 ///
 /// This kind of friction gets stronger if the vehicle moves faster over ground.
-pub const FRICTION_GROUND_SPEED_FACTOR: f32 = 0.02;
+pub const FRICTION_GROUND_SPEED_FACTOR: f32 = 0.1;
 
 /// Scalar factor influencing the strength of gronud based friction when sliding
-pub const FRICTION_CROSS_SPEED_FACTOR: f32 = 0.05;
+pub const FRICTION_CROSS_SPEED_FACTOR: f32 = 0.8;
 
 /// Scalar factor influencing the strength of motor friction.
 ///
@@ -88,6 +88,9 @@ pub const MAX_TRACTION: f32 = 1.0;
 
 /// The interval between wind changes in seconds
 pub const WIND_CHANGE_INTERVAL: u16 = 10;
+
+/// The maximum wind speed in m/s
+pub const MAX_WIND_SPEED: f32 = 15.0;
 
 
 
