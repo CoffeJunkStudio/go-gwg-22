@@ -1,6 +1,4 @@
 use enum_map::Enum;
-use nalgebra_glm::Vec2;
-use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -11,7 +9,7 @@ pub mod terrain;
 pub mod units;
 
 pub use nalgebra_glm as glm;
-use state::Trim;
+use state::Reefing;
 use state::WorldState;
 use terrain::Terrain;
 use units::BiPolarFraction;
@@ -132,7 +130,7 @@ pub struct WorldInit {
 #[derive(Serialize, Deserialize)]
 pub struct Input {
 	/// The active gear
-	pub trim: Trim,
+	pub reefing: Reefing,
 	/// The current steering as fraction from -1.0 to +1.0.
 	///
 	/// The meaning is as follows:

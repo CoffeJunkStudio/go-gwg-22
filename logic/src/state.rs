@@ -257,7 +257,7 @@ pub struct Vehicle {
 	/// See [Input::steering]
 	pub ruder: BiPolarFraction,
 	/// State of the engine
-	pub engine: Sail,
+	pub sail: Sail,
 	//// Amount of fish on board
 	pub fish: Fish,
 }
@@ -297,13 +297,13 @@ impl Vehicle {
 	/// The raw engine RPM as if the engine never stalls.
 	///
 	/// Notice these RPMs can become negative.
+	#[deprecated]
 	fn engine_rpm_raw(&self) -> f32 {
 		let axle_rpm = self.wheel_speed() / TIRE_SPEED_PER_RPM;
 
 		let (gear, gear_dir): (u8, i8) = {
-			match self.engine.trim {
-				Trim::Forward(n) => (n, 1),
-				Trim::Reverse(n) => (n, -1),
+			match self.sail.reefing {
+				Reefing::Reefed(n) => (n, 1),
 			}
 		};
 		let gear_translation =
@@ -315,11 +315,12 @@ impl Vehicle {
 	/// The current RPM of the engine
 	///
 	/// Returns `None` if the engine is stalling
+	#[deprecated]
 	pub fn engine_rpm(&self) -> Option<f32> {
 		let rpm = self.engine_rpm_raw();
 
 		// The first gear(s) never disengage
-		if matches!(self.engine.trim, Trim::Forward(0) | Trim::Reverse(0)) {
+		if matches!(self.sail.reefing, Reefing::Reefed(0)) {
 			return Some(rpm);
 		}
 
@@ -353,7 +354,7 @@ impl Vehicle {
 	/// Apply the given `input` to this vehicle
 	pub fn apply_input(&mut self, input: Input) {
 		Input {
-			trim: self.engine.trim,
+			reefing: self.sail.reefing,
 			rudder: self.ruder,
 		} = input;
 	}
@@ -368,7 +369,7 @@ impl Default for Vehicle {
 	fn default() -> Self {
 		Self {
 			pos: Default::default(),
-			engine: Default::default(),
+			sail: Default::default(),
 			heading: Default::default(),
 			ruder: Default::default(),
 			velocity: Default::default(),
@@ -384,7 +385,7 @@ pub struct Sail {
 	/// Current engagement of the break pedal (1.0 is full breaking, 0.0 is no-breaking)
 	pub condition: Fraction,
 	/// Current state of the gear box.
-	pub trim: Trim,
+	pub reefing: Reefing,
 }
 
 /// Represents the dynamic state of a player
@@ -395,39 +396,36 @@ pub struct Player {
 }
 
 
-/// Represents the current gear.
+/// Represents the currently deployed sail amount.
+///
+/// It influences the proportion of the wind that can be
 ///
 /// Notice that gears are zero-indexed, thus `Gear::Forward(0)` is the first (and lowest) gear in forward direction.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(Serialize, Deserialize)]
-pub enum Trim {
-	/// Zero-indexed gear in forward direction (i.e. gives positive acceleration)
-	Forward(u8),
-	/// Zero-indexed gear in reverse direction (i.e. gives negative acceleration)
-	Reverse(u8),
+pub enum Reefing {
+	/// Reefing level from zero (no sail) to some ship specific maximum.
+	Reefed(u8),
 }
-impl Trim {
+impl Reefing {
 	/// Shift up a gear, may switch to forward
-	pub fn shift_up(self) -> Self {
+	pub fn increase(self) -> Self {
 		match self {
-			Self::Forward(n) => Self::Forward(n + 1),
-			Self::Reverse(0) => Self::Forward(0),
-			Self::Reverse(n) => Self::Reverse(n - 1),
+			Self::Reefed(n) => Self::Reefed(n + 1),
 		}
 	}
 
 	/// Shift down a gear, may switch to reverse
-	pub fn shift_down(self) -> Self {
+	pub fn decrease(self) -> Self {
 		match self {
-			Self::Forward(0) => Self::Reverse(0),
-			Self::Forward(n) => Self::Forward(n - 1),
-			Self::Reverse(n) => Self::Reverse(n + 1),
+			Self::Reefed(0) => Self::Reefed(0),
+			Self::Reefed(n) => Self::Reefed(n - 1),
 		}
 	}
 }
-impl Default for Trim {
+impl Default for Reefing {
 	fn default() -> Self {
 		// first gear forward
-		Self::Forward(0)
+		Self::Reefed(0)
 	}
 }
