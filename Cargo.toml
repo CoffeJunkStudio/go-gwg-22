@@ -1,5 +1,6 @@
 [workspace]
 members = ["logic"]
+exclude = ["tools/render-assets"]
 
 [package]
 name = "plenty-of-fish-in-the-sea"
@@ -22,7 +23,6 @@ features = [ "mint" ]
 [build-dependencies]
 tar = "0.4"
 built = { version = "0.5", features = ["git2", "chrono"] }
-
 
 
 [profile.release]

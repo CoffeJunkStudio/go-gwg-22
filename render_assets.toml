@@ -1,0 +1,18 @@
+
+["blend/fishes.blend"]
+"Fish.001" = { output = "fish-00.png", n_frames = 8, width = 64 }
+"Fish.002" = { output = "fish-01.png", n_frames = 8, width = 64 }
+"Fish.003" = { output = "fish-02.png", n_frames = 8, width = 64 }
+"Fish.004" = { output = "fish-03.png", n_frames = 8, width = 64 }
+"Fish.005" = { output = "fish-04.png", n_frames = 8, width = 64 }
+"Fish.006" = { output = "fish-05.png", n_frames = 8, width = 64 }
+"Fish.007" = { output = "fish-06.png", n_frames = 8, width = 64 }
+"Fish.008" = { output = "fish-07.png", n_frames = 8, width = 64 }
+
+["blend/ships.blend"]
+"ships" = { output = "ship-00.png", n_frames = 32, width = 256}
+"ships.001" = { output = "ship-01.png", n_frames = 32, width = 256}
+"sail" = { output = "sail-00.png", n_frames = 32, width = 256}
+
+["blend/harbour.blend"]
+"harbour" = { output = "harbour-00.png", n_frames = 6, width = 512}
