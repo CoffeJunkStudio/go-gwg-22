@@ -53,9 +53,12 @@ impl Generator for WhiteNoise {
 			})
 			.collect();
 
+		let seed: u64 = rng.gen();
+
 		World {
 			init: WorldInit {
 				terrain,
+				seed,
 			},
 			state: WorldState {
 				resources,
@@ -105,9 +108,12 @@ impl Generator for PerlinNoise {
 			})
 			.collect();
 
+		let seed: u64 = rng.gen();
+
 		World {
 			init: WorldInit {
 				terrain,
+				seed,
 			},
 			state: WorldState {
 				resources,

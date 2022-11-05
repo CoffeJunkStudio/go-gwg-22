@@ -41,6 +41,10 @@ impl Game {
 		ctx: &mut gwg::Context,
 		quad_ctx: &mut gwg::miniquad::GraphicsContext,
 	) -> gwg::GameResult<Self> {
+		// TODO: make it configurable or randomize (e.g. use an timestamp),
+		//       or implement both.
+		let seed: u64 = 42;
+
 		let image = graphics::Image::new(ctx, quad_ctx, "img/gwg.png").unwrap();
 		let batch = graphics::spritebatch::SpriteBatch::new(image);
 
@@ -53,7 +57,7 @@ impl Game {
 			resource_density: 1.0,
 		};
 
-		let rng = logic::StdRng::new(1, 42);
+		let rng = logic::StdRng::new(0xcafef00dd15ea5e5, seed.into());
 		let mut world = noise.generate(&settings, rng);
 		world.state.player.vehicle.heading = 1.0;
 
@@ -149,8 +153,8 @@ impl gwg::event::EventHandler for Game {
 		let blue = (1.13 * elapsed + 0.7).sin() * 0.5 + 0.5;
 		gwg::graphics::clear(ctx, quad_ctx, [red, green, blue, 1.0].into());
 
-		for x in left_top.x.saturating_sub(1)..(right_bottom.x + 1) {
-			for y in left_top.y.saturating_sub(1)..(right_bottom.y + 1) {
+		for x in left_top.x..(right_bottom.x + 1) {
+			for y in left_top.y..(right_bottom.y + 1) {
 				let tc = TileCoord::new(x, y);
 				if let Some(tile) = self.world.init.terrain.try_get(tc) {
 					let color = match tile {
@@ -198,6 +202,32 @@ impl gwg::event::EventHandler for Game {
 			quad_ctx,
 			&input_text,
 			(Point2::new(100.0, 20.0), Color::WHITE),
+			Color::BLACK,
+		)?;
+
+		// Current Wind
+		let input_text = Text::new(format!(
+			"Wind: {:.2} bf, {:.0}° {:?}",
+			self.world.state.wind.magnitude(),
+			self.world.state.wind.angle().to_degrees(),
+			self.world.state.wind
+		));
+		self.draw_text_with_halo(
+			ctx,
+			quad_ctx,
+			&input_text,
+			(Point2::new(100.0, 40.0), Color::WHITE),
+			Color::BLACK,
+		)?;
+		self.draw_text_with_halo(
+			ctx,
+			quad_ctx,
+			&Text::new("↑"),
+			(
+				Point2::new(70.0, 40.0),
+				self.world.state.wind.angle(),
+				Color::WHITE,
+			),
 			Color::BLACK,
 		)?;
 

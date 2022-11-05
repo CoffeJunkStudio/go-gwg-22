@@ -86,6 +86,9 @@ pub const WATER_CONSUMPTION: f32 = 0.01;
 /// Maximum amount of traction
 pub const MAX_TRACTION: f32 = 1.0;
 
+/// The interval between wind changes in seconds
+pub const WIND_CHANGE_INTERVAL: u16 = 10;
+
 
 
 /// Gives the resource type that can be in a resource pack
@@ -121,6 +124,7 @@ pub struct World {
 #[derive(Serialize, Deserialize)]
 pub struct WorldInit {
 	pub terrain: Terrain,
+	pub seed: u64,
 }
 
 

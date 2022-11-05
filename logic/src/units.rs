@@ -89,6 +89,23 @@ impl DivAssign<f32> for Distance {
 	}
 }
 
+/// Represents wind conditions
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
+#[derive(Serialize, Deserialize)]
+pub struct Wind(pub Vec2);
+impl Wind {
+	pub fn angle(self) -> f32 {
+		f32::atan2(self.0.y, self.0.x)
+	}
+
+	pub fn magnitude(self) -> f32 {
+		self.0.magnitude()
+	}
+
+	pub fn from_polar(angle: f32, magnitude: f32) -> Self {
+		Self(Vec2::new(angle.cos(), angle.sin()) * magnitude)
+	}
+}
 
 /// An arbitrary location on the map given in meters
 #[derive(Debug, Copy, Clone, PartialEq, Default)]

@@ -1,4 +1,6 @@
 use nalgebra_glm::Vec2;
+use rand::Rng;
+use rand::SeedableRng;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -8,9 +10,11 @@ use crate::units::Fish;
 use crate::units::Fraction;
 use crate::units::Location;
 use crate::units::Tick;
+use crate::units::Wind;
 use crate::Input;
 use crate::ResourcePack;
 use crate::ResourcePackContent;
+use crate::StdRng;
 use crate::WorldInit;
 use crate::ENGINE_IDEAL_RPM;
 use crate::ENGINE_POWER;
@@ -25,6 +29,7 @@ use crate::RESOURCE_PACK_FISH_SIZE;
 use crate::TIRE_SPEED_PER_RPM;
 use crate::VEHICLE_DEADWEIGHT;
 use crate::VEHICLE_SIZE;
+use crate::WIND_CHANGE_INTERVAL;
 
 
 
@@ -46,15 +51,34 @@ pub struct WorldState {
 	pub player: Player,
 	/// The full list of collectables on the map
 	pub resources: Vec<ResourcePack>,
+	/// The currently prevailing wind condition
+	pub wind: Wind,
 }
 
-pub const TICKS_PER_SECOND: u16 = 20;
+pub const TICKS_PER_SECOND: u16 = 60;
 const DELTA: f32 = 1_f32 / TICKS_PER_SECOND as f32;
 
 impl WorldState {
 	pub fn update(&mut self, init: &WorldInit, inputs: &Input) -> Vec<Event> {
-		// Incooperate inputs
+		// Increment timestamp
+		self.timestamp = self.timestamp.next();
+
+		// Apply user inputs
 		self.player.vehicle.apply_input(inputs.clone());
+
+		// Update wind
+		self.wind = {
+			let earlier =
+				self.timestamp.0 / u64::from(TICKS_PER_SECOND) / u64::from(WIND_CHANGE_INTERVAL);
+			let mut early_rng = StdRng::new(
+				0xcafef00dd15ea5e5,
+				0xa02bdbf7bb3c0a7ac28fa16a64abf96 ^ u128::from(init.seed) ^ u128::from(earlier),
+			);
+			let angle = early_rng.gen::<f32>() * std::f32::consts::TAU;
+			let magnitude = early_rng.gen();
+
+			Wind::from_polar(angle, magnitude)
+		};
 
 
 		// Remove dead players, i.e. those who don't have any water
