@@ -2,6 +2,7 @@ use nalgebra_glm::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::terrain::TileCoord;
 use crate::units::BiPolarFraction;
 use crate::units::Fish;
 use crate::units::Fraction;
@@ -10,7 +11,6 @@ use crate::units::Tick;
 use crate::Input;
 use crate::ResourcePack;
 use crate::ResourcePackContent;
-use crate::TileCoord;
 use crate::WorldInit;
 use crate::ENGINE_IDEAL_RPM;
 use crate::ENGINE_POWER;
@@ -48,11 +48,11 @@ pub struct WorldState {
 	pub resources: Vec<ResourcePack>,
 }
 
-const TICKS_PER_SECOND: u16 = 20;
+pub const TICKS_PER_SECOND: u16 = 20;
 const DELTA: f32 = 1_f32 / TICKS_PER_SECOND as f32;
 
 impl WorldState {
-	fn update(&mut self, init: &WorldInit, inputs: &Input) -> Vec<Event> {
+	pub fn update(&mut self, init: &WorldInit, inputs: &Input) -> Vec<Event> {
 		// Incooperate inputs
 		self.player.vehicle.apply_input(inputs.clone());
 

@@ -3,15 +3,26 @@ use std::env;
 use good_web_game as gwg;
 use gwg::audio;
 use gwg::cgmath::Point2;
-use gwg::cgmath::Vector2;
 use gwg::graphics::Color;
+use gwg::graphics::DrawParam;
 use gwg::graphics::PxScale;
 use gwg::graphics::Rect;
 use gwg::graphics::Text;
+use gwg::graphics::Transform;
 use gwg::graphics::{self,};
 use gwg::miniquad::KeyCode;
 use gwg::timer;
 use gwg::GameResult;
+use logic::generator::Generator;
+use logic::generator::PerlinNoise;
+use logic::generator::Setting;
+use logic::state::TICKS_PER_SECOND;
+use logic::terrain::TerrainType;
+use logic::terrain::TileCoord;
+use logic::units::Distance;
+use logic::units::Location;
+use logic::Input;
+use logic::World;
 
 // #[derive(Debug)] `audio::Source` dose not implement Debug!
 struct Game {
@@ -19,6 +30,9 @@ struct Game {
 	sound: audio::Source,
 	input_text: String,
 	full_screen: bool,
+	world: World,
+	input: Input,
+	meters_per_pixel: f32,
 }
 
 impl Game {
@@ -31,72 +45,80 @@ impl Game {
 
 		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
 
+		// Generate world
+		let noise = PerlinNoise;
+		let settings = Setting {
+			edge_length: 32,
+			resource_density: 1.0,
+		};
+
+		let rng = logic::StdRng::new(1, 42);
+		let mut world = noise.generate(&settings, rng);
+		world.state.player.vehicle.heading = 1.0;
+
+		let meters_per_pixel = 200.0 / 1920.0;
+
 		let s = Game {
 			sprite_batch: batch,
 			sound,
 			input_text: String::new(),
 			full_screen: false,
+			world,
+			input: Input::default(),
+			meters_per_pixel,
 		};
 
 		Ok(s)
 	}
 
-	// From the sprites batch example
-	// Source: https://github.com/ggez/good-web-game/blob/master/examples/spritebatch.rs
-	fn sprites_batches(
-		&mut self,
+	fn draw_text_with_halo(
+		&self,
 		ctx: &mut gwg::Context,
 		quad_ctx: &mut gwg::miniquad::Context,
+		text: &Text,
+		params: impl Into<DrawParam>,
+		halo_color: Color,
 	) -> gwg::GameResult<()> {
-		let time = (timer::duration_to_f64(timer::time_since_start(ctx)) * 1000.0) as u32;
-		let cycle = 10_000;
-		for x in 0..100 {
-			for y in 0..100 {
-				let x = x as f32;
-				let y = y as f32;
-				let p = graphics::DrawParam::new()
-					.dest(Point2::new(x * 10.0, y * 10.0))
-					.scale(Vector2::new(
-						((time % cycle * 2) as f32 / cycle as f32 * 6.28)
-							.cos()
-							.abs() * 0.0625,
-						((time % cycle * 2) as f32 / cycle as f32 * 6.28)
-							.cos()
-							.abs() * 0.0625,
-					))
-					.rotation(-2.0 * ((time % cycle) as f32 / cycle as f32 * 6.28));
-				self.sprite_batch.add(p);
+		let params = params.into();
+
+		let mut halo_params = params;
+		halo_params.color = halo_color;
+
+		let base_matrix: logic::glm::Mat4 = params.trans.to_bare_matrix().into();
+
+		let offset_param = |offset: Point2<f32>| {
+			let glm_matrix: logic::glm::Mat4 =
+				DrawParam::from((offset,)).trans.to_bare_matrix().into();
+			let new_matrix = base_matrix * glm_matrix;
+
+			DrawParam {
+				trans: Transform::Matrix(new_matrix.into()),
+				color: halo_color,
+				..Default::default()
 			}
-		}
+		};
 
-		let param = graphics::DrawParam::new()
-			.dest(Point2::new(
-				((time % cycle) as f32 / cycle as f32 * 6.28).cos() * 50.0 + 150.0,
-				((time % cycle) as f32 / cycle as f32 * 6.28).sin() * 50.0 - 150.0,
-			))
-			.scale(Vector2::new(
-				((time % cycle) as f32 / cycle as f32 * 6.28).sin().abs() * 2.0 + 1.0,
-				((time % cycle) as f32 / cycle as f32 * 6.28).sin().abs() * 2.0 + 1.0,
-			))
-			.rotation((time % cycle) as f32 / cycle as f32 * 6.28)
-			// applying a src parameter to a sprite batch globally has no effect
-			//.src([0.25,0.25,0.5,0.5].into())
-			.offset(Point2::new(750.0, 750.0));
+		graphics::draw(ctx, quad_ctx, text, offset_param(Point2::new(-1., -1.)))?;
+		graphics::draw(ctx, quad_ctx, text, offset_param(Point2::new(1., -1.)))?;
+		graphics::draw(ctx, quad_ctx, text, offset_param(Point2::new(-1., 1.)))?;
+		graphics::draw(ctx, quad_ctx, text, offset_param(Point2::new(1., 1.)))?;
 
-		graphics::draw(ctx, quad_ctx, &self.sprite_batch, param)?;
-		self.sprite_batch.clear();
+		graphics::draw(ctx, quad_ctx, text, params)?;
 
 		Ok(())
 	}
 }
 
-
 impl gwg::event::EventHandler for Game {
 	fn update(
 		&mut self,
-		_ctx: &mut gwg::Context,
+		ctx: &mut gwg::Context,
 		_quad_ctx: &mut gwg::miniquad::Context,
 	) -> gwg::GameResult<()> {
+		while gwg::timer::check_update_time(ctx, TICKS_PER_SECOND.into()) {
+			let _ = self.world.state.update(&self.world.init, &self.input);
+		}
+
 		Ok(())
 	}
 
@@ -107,13 +129,52 @@ impl gwg::event::EventHandler for Game {
 	) -> gwg::GameResult<()> {
 		let elapsed = gwg::timer::time_since_start(ctx).as_secs_f32();
 
+		let player_pos = self.world.state.player.vehicle.pos;
+		let screen_coords = gwg::graphics::screen_coordinates(ctx);
+
+		let (left_top, right_bottom) = {
+			let scm_x = screen_coords.w * self.meters_per_pixel;
+			let scm_y = screen_coords.h * self.meters_per_pixel;
+			let dst = Distance::new(scm_x * 0.5, scm_y * 0.5);
+
+			let lt = TileCoord::from((player_pos - dst).max(Location::ORIGIN));
+			let rb = TileCoord::from(player_pos + dst);
+
+			(lt, rb)
+		};
+
 		let red = elapsed.sin() * 0.5 + 0.5;
 		let green = (1.3 + elapsed + 0.3).sin() * 0.5 + 0.5;
 		let blue = (1.13 * elapsed + 0.7).sin() * 0.5 + 0.5;
 		gwg::graphics::clear(ctx, quad_ctx, [red, green, blue, 1.0].into());
 
+		for x in left_top.x..(right_bottom.x + 1) {
+			for y in left_top.y..(right_bottom.y + 1) {
+				let tc = TileCoord::new(x, y);
+				if let Some(tile) = self.world.init.terrain.try_get(tc) {
+					let color = match tile {
+						TerrainType::Deep => Color::new(0.0, 0.0, 0.2, 1.0),
+						TerrainType::Shallow => Color::new(0.0, 0.3, 0.8, 1.0),
+						TerrainType::Land => Color::new(0.0, 0.8, 0.2, 1.0),
+					};
 
-		self.sprites_batches(ctx, quad_ctx)?;
+					let loc = tc.to_location() - player_pos;
+					let sprite_pos = loc.0 / self.meters_per_pixel
+						+ logic::glm::vec2(screen_coords.w, screen_coords.h) * 0.5;
+
+					let scale = logic::TILE_SIZE as f32 / self.meters_per_pixel / 256.0;
+					let param = DrawParam::new()
+						.dest(nalgebra::Point2::new(sprite_pos.x, sprite_pos.y))
+						.color(color)
+						.scale(logic::glm::vec2(scale, scale));
+
+					self.sprite_batch.add(param);
+				}
+			}
+		}
+
+		gwg::graphics::draw(ctx, quad_ctx, &self.sprite_batch, (Point2::new(0.0, 0.0),))?;
+		self.sprite_batch.clear();
 
 
 		// From the text example
@@ -121,17 +182,12 @@ impl gwg::event::EventHandler for Game {
 		let fps = timer::fps(ctx);
 		let fps_display = Text::new(format!("FPS: {:.1}", fps));
 		// When drawing through these calls, `DrawParam` will work as they are documented.
-		graphics::draw(
+		self.draw_text_with_halo(
 			ctx,
 			quad_ctx,
 			&fps_display,
 			(Point2::new(100.0, 0.0), Color::WHITE),
-		)?;
-		graphics::draw(
-			ctx,
-			quad_ctx,
-			&fps_display,
-			(Point2::new(101.0, 1.0), Color::BLACK),
+			Color::BLACK,
 		)?;
 
 
