@@ -379,13 +379,15 @@ impl Default for Vehicle {
 }
 
 /// Represents the engine of a car
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Default, Copy, Clone)]
 #[derive(Serialize, Deserialize)]
 pub struct Sail {
 	/// Current engagement of the break pedal (1.0 is full breaking, 0.0 is no-breaking)
 	pub condition: Fraction,
 	/// Current state of the gear box.
 	pub reefing: Reefing,
+	/// Absolute sail orientation in radians, zero is word-X.
+	pub orientation: f32,
 }
 
 /// Represents the dynamic state of a player
