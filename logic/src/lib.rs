@@ -24,7 +24,7 @@ pub type StdRng = rand_pcg::Pcg64;
 pub const TILE_SIZE: u32 = 4;
 
 /// The "diameter" of the player's car.
-pub const VEHICLE_SIZE: f32 = 1.3;
+pub const VEHICLE_SIZE: f32 = 5.0;
 
 /// The mass of a empty vehicle, in kilogram
 const VEHICLE_DEADWEIGHT: f32 = 100.0;
@@ -38,7 +38,7 @@ pub const RESOURCE_PACK_FISH_AMOUNT: Fish = Fish(1.);
 /// The diameter of the tier, in meter
 const TIRE_DIAMETER: f32 = 0.4;
 /// Gives the speed in m/s per axle rpm
-const TIRE_SPEED_PER_RPM: f32 = core::f32::consts::PI * TIRE_DIAMETER / 60.0;
+const TIRE_SPEED_PER_RPM: f32 = core::f32::consts::PI * TIRE_DIAMETER / 6000.0;
 
 /// Gives the engine rpm per axle rpm
 const GEAR_BASE_RATION: f32 = 0.1;

@@ -1,11 +1,9 @@
 [package]
-name = "render-assets"
+name = "asset-config"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-asset-config = { path = "../../libs/asset-config" }
-toml = "0.5"
-indicatif = "0.17.1"
+serde = { version = "1.0", features = ["derive"] }

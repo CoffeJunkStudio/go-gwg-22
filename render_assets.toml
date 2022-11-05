@@ -1,22 +1,22 @@
 
 ["blend/fishes.blend"]
-"Fish.001" = { output = "fish-00.png", n_frames = 8, width = 64 }
-"Fish.002" = { output = "fish-01.png", n_frames = 8, width = 64 }
-"Fish.003" = { output = "fish-02.png", n_frames = 8, width = 64 }
-"Fish.004" = { output = "fish-03.png", n_frames = 8, width = 64 }
-"Fish.005" = { output = "fish-04.png", n_frames = 8, width = 64 }
-"Fish.006" = { output = "fish-05.png", n_frames = 8, width = 64 }
-"Fish.007" = { output = "fish-06.png", n_frames = 8, width = 64 }
-"Fish.008" = { output = "fish-07.png", n_frames = 8, width = 64 }
+"fish-00.png" = { object = "Fish.001", n_frames = 8, width = 64 }
+"fish-01.png" = { object = "Fish.002", n_frames = 8, width = 64 }
+"fish-02.png" = { object = "Fish.003", n_frames = 8, width = 64 }
+"fish-03.png" = { object = "Fish.004", n_frames = 8, width = 64 }
+"fish-04.png" = { object = "Fish.005", n_frames = 8, width = 64 }
+"fish-05.png" = { object = "Fish.006", n_frames = 8, width = 64 }
+"fish-06.png" = { object = "Fish.007", n_frames = 8, width = 64 }
+"fish-07.png" = { object = "Fish.008", n_frames = 8, width = 64 }
 
 ["blend/ships.blend"]
-"ships" = { output = "ship-00.png", n_frames = 32, width = 256}
-"ships.001" = { output = "ship-01.png", n_frames = 32, width = 256}
-"sail-00-0" = { n_frames = 32, width = 256}
-"sail-00-1" = { n_frames = 32, width = 256}
-"sail-00-2" = { n_frames = 32, width = 256}
-"sail-00-3" = { n_frames = 32, width = 256}
-"sail-00-4" = { n_frames = 32, width = 256}
+"ship-00.png" = { object = "ships", n_frames = 32, width = 256 }
+"ship-01.png" = { object = "ships", n_frames = 32, width = 256 }
+"sail-00-0.png" = { object = "sail-00-0", n_frames = 32, width = 256 }
+"sail-00-1.png" = { object = "sail-00-1", n_frames = 32, width = 256 }
+"sail-00-2.png" = { object = "sail-00-2", n_frames = 32, width = 256 }
+"sail-00-3.png" = { object = "sail-00-3", n_frames = 32, width = 256 }
+"sail-00-4.png" = { object = "sail-00-4", n_frames = 32, width = 256 }
 
 ["blend/harbour.blend"]
-"harbour" = { output = "harbour-00.png", n_frames = 6, width = 512}
+"harbour-00.png" = { object = "harbour", n_frames = 6, width = 512 }

@@ -1,6 +1,7 @@
 use std::env;
 use std::path::Path;
 
+use asset_config::AssetConfig;
 use good_web_game as gwg;
 use gwg::audio;
 use gwg::cgmath::Point2;
@@ -27,6 +28,9 @@ use logic::units::Distance;
 use logic::units::Location;
 use logic::Input;
 use logic::World;
+
+const ASSET_CONFIG_STR: &str =
+	include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/render_assets.toml"));
 
 fn norm_angle(angle: f64) -> f64 {
 	angle.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU
@@ -140,6 +144,8 @@ impl Game {
 		// TODO: make it configurable or randomize (e.g. use an timestamp),
 		//       or implement both.
 		let seed: u64 = 42;
+
+		let render_config: AssetConfig = toml::from_str(ASSET_CONFIG_STR).unwrap();
 
 		let batch = image_batch(ctx, quad_ctx, "img/gwg.png")?;
 
