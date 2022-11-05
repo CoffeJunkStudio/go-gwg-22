@@ -149,8 +149,8 @@ impl gwg::event::EventHandler for Game {
 		let blue = (1.13 * elapsed + 0.7).sin() * 0.5 + 0.5;
 		gwg::graphics::clear(ctx, quad_ctx, [red, green, blue, 1.0].into());
 
-		for x in left_top.x..(right_bottom.x + 1) {
-			for y in left_top.y..(right_bottom.y + 1) {
+		for x in left_top.x.saturating_sub(1)..(right_bottom.x + 1) {
+			for y in left_top.y.saturating_sub(1)..(right_bottom.y + 1) {
 				let tc = TileCoord::new(x, y);
 				if let Some(tile) = self.world.init.terrain.try_get(tc) {
 					let color = match tile {
