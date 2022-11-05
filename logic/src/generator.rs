@@ -1,13 +1,13 @@
-//! Terrain sub module
+//! World generator sub module
 //!
 
 use noise::Seedable;
 use rand::Rng;
 
 use crate::state::WorldState;
+use crate::terrain::TerrainType;
 use crate::ResourcePack;
 use crate::Terrain;
-use crate::TerrainType;
 use crate::World;
 use crate::WorldInit;
 

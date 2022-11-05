@@ -2,6 +2,7 @@ use nalgebra_glm::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::terrain::TileCoord;
 use crate::units::BiPolarFraction;
 use crate::units::Fish;
 use crate::units::Fraction;
@@ -10,7 +11,6 @@ use crate::units::Tick;
 use crate::Input;
 use crate::ResourcePack;
 use crate::ResourcePackContent;
-use crate::TileCoord;
 use crate::WorldInit;
 use crate::ENGINE_IDEAL_RPM;
 use crate::ENGINE_POWER;

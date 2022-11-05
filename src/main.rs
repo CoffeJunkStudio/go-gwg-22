@@ -17,11 +17,11 @@ use logic::generator::Generator;
 use logic::generator::PerlinNoise;
 use logic::generator::Setting;
 use logic::state::TICKS_PER_SECOND;
+use logic::terrain::TerrainType;
+use logic::terrain::TileCoord;
 use logic::units::Distance;
 use logic::units::Location;
 use logic::Input;
-use logic::TerrainType;
-use logic::TileCoord;
 use logic::World;
 
 // #[derive(Debug)] `audio::Source` dose not implement Debug!
