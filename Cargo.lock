@@ -1251,9 +1251,7 @@ dependencies = [
  "good-web-game",
  "logic",
  "num-rational 0.4.1",
- "serde",
  "tar",
- "toml",
 ]
 
 [[package]]
