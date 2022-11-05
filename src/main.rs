@@ -191,6 +191,16 @@ impl gwg::event::EventHandler for Game {
 			Color::BLACK,
 		)?;
 
+		// Current input state
+		let input_text = Text::new(format!("Input: {:?}", self.input));
+		self.draw_text_with_halo(
+			ctx,
+			quad_ctx,
+			&input_text,
+			(Point2::new(100.0, 20.0), Color::WHITE),
+			Color::BLACK,
+		)?;
+
 
 		let mut text = Text::new("Press 'A' for a sound, and Enter to clear");
 		text.set_font(Default::default(), PxScale::from(32.));
@@ -227,6 +237,13 @@ impl gwg::event::EventHandler for Game {
 
 		if keycode == KeyCode::A {
 			self.sound.play(ctx).unwrap()
+		}
+
+		// Reefing input
+		if keycode == KeyCode::Up {
+			self.input.reefing = self.input.reefing.increase();
+		} else if keycode == KeyCode::Down {
+			self.input.reefing = self.input.reefing.decrease();
 		}
 
 		// Rudder input
