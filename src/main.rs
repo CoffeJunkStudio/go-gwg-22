@@ -3,7 +3,6 @@ use std::env;
 use good_web_game as gwg;
 use gwg::audio;
 use gwg::cgmath::Point2;
-use gwg::cgmath::Vector2;
 use gwg::graphics::Color;
 use gwg::graphics::DrawParam;
 use gwg::graphics::PxScale;
@@ -52,7 +51,9 @@ impl Game {
 			edge_length: 32,
 			resource_density: 1.0,
 		};
-		let mut world = noise.generate(&settings, rand::thread_rng());
+
+		let rng = logic::StdRng::new(1, 42);
+		let mut world = noise.generate(&settings, rng);
 		world.state.player.vehicle.heading = 1.0;
 
 		let meters_per_pixel = 200.0 / 1920.0;

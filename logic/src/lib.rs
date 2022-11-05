@@ -16,7 +16,7 @@ use units::BiPolarFraction;
 use units::Fish;
 use units::Location;
 
-type StdRng = rand_pcg::Pcg64;
+pub type StdRng = rand_pcg::Pcg64;
 
 
 
