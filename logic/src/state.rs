@@ -39,6 +39,7 @@ use crate::WIND_CHANGE_INTERVAL;
 #[derive(Debug, Clone)]
 pub enum Event {
 	// TODO add stuff
+	Fishy,
 }
 
 
@@ -62,6 +63,8 @@ const DELTA: f32 = 1_f32 / TICKS_PER_SECOND as f32;
 
 impl WorldState {
 	pub fn update(&mut self, init: &WorldInit, inputs: &Input) -> Vec<Event> {
+		let mut events = Vec::new();
+
 		// Increment timestamp
 		self.timestamp = self.timestamp.next();
 
@@ -251,6 +254,7 @@ impl WorldState {
 					match r.content {
 						ResourcePackContent::Fish => {
 							p.vehicle.fish.0 += crate::RESOURCE_PACK_FISH_AMOUNT.0;
+							events.push(Event::Fishy);
 						},
 					}
 
@@ -261,7 +265,7 @@ impl WorldState {
 			});
 		}
 
-		Vec::new()
+		events
 	}
 }
 
@@ -408,7 +412,7 @@ impl Default for Vehicle {
 			heading: Default::default(),
 			ruder: Default::default(),
 			velocity: Default::default(),
-			fish: Fish(10.0),
+			fish: Fish(0.0),
 			angle_of_list: 0.0,
 		}
 	}

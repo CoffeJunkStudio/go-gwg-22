@@ -20,6 +20,7 @@ use gwg::GameResult;
 use logic::generator::Generator;
 use logic::generator::PerlinNoise;
 use logic::generator::Setting;
+use logic::state::Event;
 use logic::state::TICKS_PER_SECOND;
 use logic::terrain::TerrainType;
 use logic::terrain::TileCoord;
@@ -129,6 +130,7 @@ struct Game {
 	terrain_batches: TerrainBatches,
 	ship_batches: ShipBatches,
 	sound: audio::Source,
+	sound_fishy: audio::Source,
 	input_text: String,
 	full_screen: bool,
 	world: World,
@@ -163,6 +165,7 @@ impl Game {
 		};
 
 		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
+		let sound_fishy = audio::Source::new(ctx, "/sound/fischie.ogg")?;
 
 		// Generate world
 		let noise = PerlinNoise;
@@ -182,6 +185,7 @@ impl Game {
 			terrain_batches,
 			ship_batches,
 			sound,
+			sound_fishy,
 			input_text: String::new(),
 			full_screen: false,
 			world,
@@ -250,7 +254,12 @@ impl gwg::event::EventHandler for Game {
 		_quad_ctx: &mut gwg::miniquad::Context,
 	) -> gwg::GameResult<()> {
 		while gwg::timer::check_update_time(ctx, TICKS_PER_SECOND.into()) {
-			let _ = self.world.state.update(&self.world.init, &self.input);
+			let events = self.world.state.update(&self.world.init, &self.input);
+			for ev in events {
+				match ev {
+					Event::Fishy => self.sound_fishy.play(ctx).unwrap(),
+				}
+			}
 		}
 
 		Ok(())
