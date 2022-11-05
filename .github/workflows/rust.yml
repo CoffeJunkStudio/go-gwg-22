@@ -20,7 +20,7 @@ jobs:
 
     steps:
     - name: Install prerequisites
-      run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev blender git-lfs
+      run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev git-lfs
     - name: Check out git repo
       uses: actions/checkout@v3
     - name: Resolve LFS references
@@ -38,7 +38,7 @@ jobs:
 
     steps:
     - name: Install prerequisites
-      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev blender git-lfs
+      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev git-lfs
     - name: Check out git repo
       uses: actions/checkout@v3
     - name: Resolve LFS references
@@ -59,7 +59,7 @@ jobs:
 
     steps:
     - name: Install prerequisites
-      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev gcc-mingw-w64-x86-64 blender git-lfs
+      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev gcc-mingw-w64-x86-64 git-lfs
     - name: Check out git repo
       uses: actions/checkout@v3
     - name: Resolve LFS references
@@ -82,7 +82,7 @@ jobs:
 
     steps:
     - name: Install prerequisites
-      run: apt-get update && apt-get install -y --no-install-recommends blender git-lfs
+      run: apt-get update && apt-get install -y --no-install-recommends git-lfs
     - name: Check out git repo
       uses: actions/checkout@v3
     - name: Resolve LFS references
@@ -105,7 +105,7 @@ jobs:
 
     steps:
     - name: Install prerequisites
-      run: apt-get update && apt-get install -y --no-install-recommends libz-dev blender git-lfs
+      run: apt-get update && apt-get install -y --no-install-recommends libz-dev git-lfs
     # Intentionally checking out git repo AFTER installing the prerequisites as actions/checkout@v3 seems to do some weird checkout if git is not installed
     - name: Check out git repo
       uses: actions/checkout@v3
