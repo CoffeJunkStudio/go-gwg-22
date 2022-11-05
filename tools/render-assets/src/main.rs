@@ -35,7 +35,8 @@ fn main() {
 	let render_config_str = fs::read_to_string(&render_config_path).unwrap();
 	let render_config: AssetConfig = toml::from_str(&render_config_str).unwrap();
 
-	let progress = ProgressBar::new(render_config.values().flat_map(|v| v.iter()).count() as u64);
+	let progress =
+		ProgressBar::new(render_config.file.values().flat_map(|v| v.iter()).count() as u64);
 	progress.set_style(
 		ProgressStyle::with_template("{spinner:.green} {msg} [{wide_bar}] {pos}/{len} {percent}%")
 			.unwrap()
@@ -44,16 +45,20 @@ fn main() {
 	progress.enable_steady_tick(Duration::from_millis(200));
 	progress.inc(0);
 
-	for (blend_file_name, assets_config) in render_config {
+	for (blend_file_name, assets_config) in render_config.file {
 		let blend_file_path = render_config_dir.join(&blend_file_name);
-		for (out_filepath, asset_config) in assets_config {
+		for (asset_name, asset_config) in assets_config {
+			let out_filename = asset_config
+				.output
+				.unwrap_or_else(|| PathBuf::from(format!("{asset_name}.png")));
+
 			progress.set_message(format!(
 				"Rendering {} | {} > {}",
 				blend_file_path.file_name().unwrap().to_string_lossy(),
 				&asset_config.object,
-				out_filepath.file_name().unwrap().to_string_lossy()
+				out_filename.file_name().unwrap().to_string_lossy()
 			));
-			let out_path = out_dir.join(out_filepath);
+			let out_path = out_dir.join(out_filename);
 
 			let blender_out = Command::new(blender_exe())
 				.arg("--background")
@@ -68,7 +73,7 @@ fn main() {
 				.arg("--width")
 				.arg(asset_config.width.to_string())
 				.arg("--n-frames")
-				.arg(asset_config.n_frames.to_string())
+				.arg(asset_config.z_frames.to_string())
 				.output()
 				.unwrap_or_else(|err| panic!("Failed to render {}: {err}", &asset_config.object));
 
