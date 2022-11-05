@@ -31,6 +31,7 @@ On Linux you need at least the following additional libraries:
 
 - `libasound2-dev`
 - `libudev-dev`
+- `blender`
 
 _This list omits "default" libraries._
 
@@ -130,8 +131,8 @@ For some reason it all just happen to work, let's see when it breaks.
 ### Android
 
 In order to build for Android, we use a `cargo-apk` variation from notfl3,
-which is just a Docker image with all the build tools. Well actually, we also
-need the libz.
+which is just a Docker image with all the build tools. Well actually, we
+additionally need the `libz` and `blender`.
 
 Anyway, you can build the game for Android via using the following Docker container:
 
@@ -143,7 +144,7 @@ And executing the following sequence of command therein
 
 ```sh
 apt update
-apt install libz-dev
+apt install libz-dev blender
 cargo quad-apk build --release
 ```
 
