@@ -1,0 +1,3 @@
+
+[alias]
+render-assets = "run --release --manifest-path tools/render-assets/Cargo.toml"
