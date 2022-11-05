@@ -18,6 +18,11 @@ def fail(message: str):
 def find(lst, predicate):
     return next((x for x in lst if predicate(x)), None)
 
+def query_children(obj, children):
+    for c in obj.children:
+        children.append(c) 
+        query_children(c, children)
+
 class ArgumentParserBlender(argparse.ArgumentParser):
 
     def _get_argv_after_doubledash(self):
@@ -64,7 +69,10 @@ if obj == None:
 for o in filter(lambda x: x.type == 'MESH', bpy.data.objects):
     o.hide_render = True
 
-obj.hide_render = False
+to_hide = [obj]
+query_children(obj, to_hide)
+for x in to_hide:
+    x.hide_render = False
 
 init_angle = obj.rotation_euler[2]
 images = list()
