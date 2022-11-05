@@ -19,6 +19,7 @@ use logic::generator::Setting;
 use logic::state::TICKS_PER_SECOND;
 use logic::terrain::TerrainType;
 use logic::terrain::TileCoord;
+use logic::units::BiPolarFraction;
 use logic::units::Distance;
 use logic::units::Location;
 use logic::Input;
@@ -226,6 +227,13 @@ impl gwg::event::EventHandler for Game {
 
 		if keycode == KeyCode::A {
 			self.sound.play(ctx).unwrap()
+		}
+
+		// Rudder input
+		if keycode == KeyCode::Left {
+			self.input.rudder = BiPolarFraction::from_f32(-1.).unwrap();
+		} else if keycode == KeyCode::Right {
+			self.input.rudder = BiPolarFraction::from_f32(1.).unwrap();
 		}
 
 		if keycode == KeyCode::F11 {
