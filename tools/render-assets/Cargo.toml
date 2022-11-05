@@ -9,3 +9,4 @@ edition = "2021"
 asset-config = { path = "../../libs/asset-config" }
 toml = "0.5"
 indicatif = "0.17.1"
+structopt = "0.3.26"

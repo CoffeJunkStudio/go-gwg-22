@@ -9,7 +9,7 @@
 "fish-06" = { object = "Fish.007", z_frames = 8, width = 64, optical_size = 3.7 }
 "fish-07" = { object = "Fish.008", z_frames = 8, width = 64, optical_size = 2.8 }
 
-["blend/fishes2.blend"]
+[file."blend/fishes2.blend"]
 "grass-00" = { object = "grass", z_frames = 8, width = 64, optical_size = 2.3 }
 "shoe" = { object = "shoe", z_frames = 8, width = 64, optical_size = 1.7 }
 "starfish-00" = { object = "starfish-0", z_frames = 8, width = 64, optical_size = 2.1 }

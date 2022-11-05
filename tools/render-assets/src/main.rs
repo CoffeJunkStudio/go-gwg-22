@@ -6,11 +6,20 @@ use std::time::Duration;
 use asset_config::AssetConfig;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
+use structopt::StructOpt;
 
 const RENDER_ASSET_SCRIPT: &str = include_str!(concat!(
 	env!("CARGO_MANIFEST_DIR"),
 	"/scripts/render-asset.py"
 ));
+
+#[derive(Debug, Copy, Clone, Hash)]
+#[derive(StructOpt)]
+#[structopt(rename_all = "kebab-case")]
+pub struct Opts {
+	#[structopt(long)]
+	no_override: bool,
+}
 
 #[cfg(target_family = "windows")]
 fn blender_exe() -> PathBuf {
@@ -27,6 +36,8 @@ fn blender_exe() -> PathBuf {
 }
 
 fn main() {
+	let opts = Opts::from_args();
+
 	let out_dir = PathBuf::from("assets").join("rendered");
 
 	let render_config_path = PathBuf::from("render_assets.toml");
@@ -60,7 +71,8 @@ fn main() {
 			));
 			let out_path = out_dir.join(out_filename);
 
-			let blender_out = Command::new(blender_exe())
+			let mut blender_cmd = Command::new(blender_exe());
+			blender_cmd
 				.arg("--background")
 				.arg(&blend_file_path)
 				.arg("--python-expr")
@@ -75,17 +87,23 @@ fn main() {
 				.arg("--z-frames")
 				.arg(asset_config.z_frames.to_string())
 				.arg("--x-frames")
-				.arg(asset_config.x_frames.to_string())
+				.arg(asset_config.x_frames.to_string());
+
+			if opts.no_override {
+				blender_cmd.arg("--no-override");
+			}
+
+			let blender_out = blender_cmd
 				.output()
 				.unwrap_or_else(|err| panic!("Failed to render {}: {err}", &asset_config.object));
 
+			eprintln!("-- blender stdout:");
+			eprintln!("{}", String::from_utf8_lossy(&blender_out.stdout));
+			eprintln!("-- blender stderr:");
+			eprintln!("{}", String::from_utf8_lossy(&blender_out.stderr));
+
 			if !blender_out.status.success() {
-				eprintln!("Failed to render {}:", &asset_config.object);
-				eprintln!("-- blender stdout:");
-				eprintln!("{}", String::from_utf8_lossy(&blender_out.stdout));
-				eprintln!("-- blender stderr:");
-				eprintln!("{}", String::from_utf8_lossy(&blender_out.stderr));
-				panic!("Rendering failed")
+				panic!("Failed to render {}:", &asset_config.object)
 			}
 
 			progress.inc(1);

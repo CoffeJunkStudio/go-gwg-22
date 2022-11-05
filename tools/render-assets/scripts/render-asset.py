@@ -46,8 +46,13 @@ def main():
     parser.add_argument('--x-frames', type=int, default=1)
     parser.add_argument('--width', '-x', type=int, default=256)
     parser.add_argument('--height', '-y', type=int)
+    parser.add_argument('--no-override', action='store_true')
 
     args = parser.parse_args()
+
+    if args.no_override and os.path.exists(args.output):
+        print(f"Skipping {args.object_name} as {args.output} already exists");
+        sys.exit(0)
 
     if args.scene is not None:
         if args.scene not in bpy.data.scenes:
@@ -77,7 +82,12 @@ def main():
     for x in to_hide:
         x.hide_render = False
 
-    init_angle = obj.rotation_euler[2]
+    obj.location[0] = 0
+    obj.location[1] = 0
+    obj.location[2] = 0
+
+    init_angle_x = obj.rotation_euler[0]
+    init_angle_z = obj.rotation_euler[2]
     images = list()
 
     target_width = args.width
@@ -95,11 +105,11 @@ def main():
     print("Rendering...")
     for x_step in range(args.x_frames):
         z_images = list()
-        obj.rotation_euler[0] = init_angle + math.radians(x_step * x_angle_per_step + x_rot_offset)
+        obj.rotation_euler[0] = init_angle_x + math.radians(x_step * x_angle_per_step + x_rot_offset)
         for z_step in range(args.z_frames):
             with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
                 bpy.context.scene.render.filepath = tmp.name
-                obj.rotation_euler[2] = init_angle + math.radians(z_step * 360 / args.z_frames)
+                obj.rotation_euler[2] = init_angle_z + math.radians(z_step * 360 / args.z_frames)
                 tmp.close()
                 bpy.ops.render.render(write_still = True)
                 z_images.append(Image.open(tmp.name))
