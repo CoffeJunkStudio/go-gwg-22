@@ -12,7 +12,6 @@ use serde::Deserialize;
 use serde::Serialize;
 
 
-
 /// An arbitrary distance on the map given in meters
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 #[derive(Serialize, Deserialize)]
@@ -98,8 +97,25 @@ pub struct Location(pub Vec2);
 
 
 impl Location {
-	pub fn new(x: f32, y: f32) -> Self {
+	pub const ORIGIN: Self = Self::new(0.0, 0.0);
+
+	pub const fn new(x: f32, y: f32) -> Self {
 		Self(Vec2::new(x, y))
+	}
+
+	pub fn min(mut self, other: Location) -> Self {
+		self.0 = nalgebra_glm::min2(&self.0, &other.0);
+		self
+	}
+
+	pub fn max(mut self, other: Location) -> Self {
+		self.0 = nalgebra_glm::max2(&self.0, &other.0);
+		self
+	}
+
+	pub fn clamp(mut self, min: Location, max: Location) -> Self {
+		self.0 = nalgebra_glm::clamp_vec(&self.0, &min.0, &max.0);
+		self
 	}
 }
 impl From<Vec2> for Location {
