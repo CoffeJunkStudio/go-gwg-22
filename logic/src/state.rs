@@ -279,8 +279,12 @@ pub struct Vehicle {
 	/// `heading` if drifting, or it could be anti-parallel
 	/// if driving in reverse.
 	pub velocity: Vec2,
-	/// Current heading in radians. 0 is world x
+	/// Current heading in radians, zero is world x
 	pub heading: f32,
+	/// Current angle of list in radians, zero in upright
+	///
+	/// A negative values means a tilt to the left, positive values tilt to the right.
+	pub angle_of_list: f32,
 	/// Gives the current steering.
 	///
 	/// Steering is always relative to `heading`.
@@ -405,6 +409,7 @@ impl Default for Vehicle {
 			ruder: Default::default(),
 			velocity: Default::default(),
 			fish: Fish(10.0),
+			angle_of_list: 0.0,
 		}
 	}
 }
