@@ -53,7 +53,8 @@ fn main() {
 		toml::from_str(&render_config_str).unwrap();
 	
 	let progress = ProgressBar::new(render_config.values().flat_map(|v| v.iter()).count() as u64);
-	progress.set_style(ProgressStyle::with_template("{spinner:.green} {msg} {wide_bar} {pos}/{len} {percent}%").unwrap());
+	progress.set_style(ProgressStyle::with_template("{spinner:.green} {msg} [{wide_bar}] {pos}/{len} {percent}%").unwrap()
+		.progress_chars("=> "));
 	progress.enable_steady_tick(Duration::from_millis(200));
 	progress.inc(0);
 
