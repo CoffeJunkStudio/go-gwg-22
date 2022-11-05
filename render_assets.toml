@@ -9,6 +9,15 @@
 "fish-06.png" = { object = "Fish.007", n_frames = 8, width = 64 }
 "fish-07.png" = { object = "Fish.008", n_frames = 8, width = 64 }
 
+["blend/fishes2.blend"]
+"grass-00.png" = { object = "grass", n_frames = 8, width = 64 }
+"shoe.png" = { object = "shoe", n_frames = 8, width = 64 }
+"starfish-00.png" = { object = "starfish-0", n_frames = 8, width = 64 }
+"starfish-01.png" = { object = "starfish-1", n_frames = 8, width = 64 }
+"starfish-02.png" = { object = "starfish-2", n_frames = 8, width = 64 }
+"starfish-03.png" = { object = "starfish-3", n_frames = 8, width = 64 }
+"starfish-04.png" = { object = "starfish-4", n_frames = 8, width = 64 }
+
 ["blend/ships.blend"]
 "ship-00.png" = { object = "ships", n_frames = 32, width = 256 }
 "ship-01.png" = { object = "ships", n_frames = 32, width = 256 }
