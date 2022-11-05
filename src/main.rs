@@ -324,7 +324,7 @@ impl gwg::event::EventHandler for Game {
 		self.ship_batches
 			.basic
 			.sail
-			.add_rot_frame(-sail_orient + std::f64::consts::PI, param);
+			.add_rot_frame(sail_orient + std::f64::consts::PI, param);
 
 		draw_and_clear(
 			ctx,
@@ -363,10 +363,9 @@ impl gwg::event::EventHandler for Game {
 
 		// Current Wind
 		let input_text = Text::new(format!(
-			"Wind: {:.2} bf, {:.0}° {:?}",
+			"Wind: {:.2} bf, {:.0}°",
 			self.world.state.wind.magnitude(),
 			self.world.state.wind.angle().to_degrees(),
-			self.world.state.wind
 		));
 		self.draw_text_with_halo(
 			ctx,
@@ -378,7 +377,7 @@ impl gwg::event::EventHandler for Game {
 		self.draw_text_with_halo(
 			ctx,
 			quad_ctx,
-			&Text::new("↑"),
+			&Text::new("→"),
 			(
 				Point2::new(70.0, 40.0),
 				self.world.state.wind.angle(),
@@ -386,14 +385,43 @@ impl gwg::event::EventHandler for Game {
 			),
 			Color::BLACK,
 		)?;
+		// Current Ship states
+		let input_text = Text::new(format!(
+			"Ship: {:.2} m/s, fish {:.0} kg",
+			self.world.state.player.vehicle.ground_speed(),
+			self.world.state.player.vehicle.fish.0
+		));
+		self.draw_text_with_halo(
+			ctx,
+			quad_ctx,
+			&input_text,
+			(Point2::new(100.0, 60.0), Color::WHITE),
+			Color::BLACK,
+		)?;
+		// Current Ship states
+		let input_text = Text::new(format!(
+			"Ori: {:.2}, {:.2}",
+			self.world.state.player.vehicle.heading,
+			f32::atan2(
+				self.world.state.player.vehicle.heading_vec().y,
+				self.world.state.player.vehicle.heading_vec().x
+			)
+		));
+		self.draw_text_with_halo(
+			ctx,
+			quad_ctx,
+			&input_text,
+			(Point2::new(100.0, 80.0), Color::WHITE),
+			Color::BLACK,
+		)?;
 
 
 		let mut text = Text::new("Press 'A' for a sound, and Enter to clear");
 		text.set_font(Default::default(), PxScale::from(32.));
-		graphics::draw(ctx, quad_ctx, &text, (Point2::new(0.0, 30.0), Color::BLACK))?;
+		graphics::draw(ctx, quad_ctx, &text, (Point2::new(0.0, 300.), Color::BLACK))?;
 		let mut text = Text::new(format!("»{}«", self.input_text.as_str()));
 		text.set_font(Default::default(), PxScale::from(64.));
-		graphics::draw(ctx, quad_ctx, &text, (Point2::new(0.0, 50.0), Color::BLACK))?;
+		graphics::draw(ctx, quad_ctx, &text, (Point2::new(0.0, 350.), Color::BLACK))?;
 
 		// Print version info
 		draw_version(ctx, quad_ctx)?;

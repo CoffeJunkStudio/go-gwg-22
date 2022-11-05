@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use nalgebra_glm::Vec2;
 use rand::Rng;
 use rand::SeedableRng;
@@ -95,6 +97,11 @@ impl WorldState {
 
 			// in m/s²
 			let acceleration = if let Some(rpm) = p.vehicle.engine_rpm() {
+				let true_wind = self.wind.0;
+				let apparent_wind = true_wind - p.vehicle.velocity;
+
+				p.vehicle.sail.orientation = -f32::atan2(apparent_wind.y, apparent_wind.x) + PI;
+
 				// Engine power
 
 				// TODO: here is a feed-back loop during acceleration, when den RPMs rise and thus the power increases.
