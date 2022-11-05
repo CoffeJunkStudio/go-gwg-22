@@ -272,7 +272,7 @@ pub struct Vehicle {
 	/// `heading` if drifting, or it could be anti-parallel
 	/// if driving in reverse.
 	pub velocity: Vec2,
-	/// Current heading as unit vector in world coordinates
+	/// Current heading in radians. 0 is world x
 	pub heading: f32,
 	/// Gives the current steering.
 	///

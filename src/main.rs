@@ -5,6 +5,7 @@ use good_web_game as gwg;
 use gwg::audio;
 use gwg::cgmath::Point2;
 use gwg::graphics::spritebatch::SpriteBatch;
+use gwg::graphics::spritebatch::SpriteIdx;
 use gwg::graphics::Color;
 use gwg::graphics::DrawParam;
 use gwg::graphics::PxScale;
@@ -27,25 +28,102 @@ use logic::units::Location;
 use logic::Input;
 use logic::World;
 
+fn norm_angle(angle: f64) -> f64 {
+	angle.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU
+}
+
+struct AnimBatch {
+	batch: SpriteBatch,
+	n_frames: u32,
+}
+
+impl AnimBatch {
+	fn new(batch: SpriteBatch, n_frames: u32) -> Self {
+		Self {
+			batch,
+			n_frames,
+		}
+	}
+
+	fn from_image_file(
+		ctx: &mut gwg::Context,
+		quad_ctx: &mut gwg::miniquad::Context,
+		path: impl AsRef<Path>,
+		n_frames: u32,
+	) -> GameResult<Self> {
+		let batch = image_batch(ctx, quad_ctx, path)?;
+		Ok(Self {
+			batch,
+			n_frames,
+		})
+	}
+
+	fn compute_offset(&self, anim_progress: f64) -> f32 {
+		let frame = ((f64::from(self.n_frames - 1) * anim_progress.clamp(0.0, 1.0)).round() as u32)
+			.min(self.n_frames - 1);
+		frame as f32 / self.n_frames as f32
+	}
+
+	fn add_rot_frame(&mut self, angle: f64, into_param: impl Into<DrawParam>) -> SpriteIdx {
+		let anim_progress = norm_angle(angle);
+		self.add_frame(anim_progress, into_param)
+	}
+
+	fn add_frame(&mut self, anim_progress: f64, into_param: impl Into<DrawParam>) -> SpriteIdx {
+		let offs = self.compute_offset(anim_progress);
+		let src = Rect {
+			x: offs,
+			y: 0.0,
+			w: 1.0 / self.n_frames as f32,
+			h: 1.0,
+		};
+		let param = into_param.into().src(src);
+		self.batch.add(param)
+	}
+}
+
 struct TerrainBatches {
 	deep: SpriteBatch,
 	shallow: SpriteBatch,
 	land: SpriteBatch,
 }
 
+struct ShipSprites {
+	body: AnimBatch,
+	sail: AnimBatch,
+}
+
+struct ShipBatches {
+	basic: ShipSprites,
+}
+
 fn image_batch(
 	ctx: &mut gwg::Context,
 	quad_ctx: &mut gwg::miniquad::Context,
 	path: impl AsRef<Path>,
-) -> SpriteBatch {
-	let image = graphics::Image::new(ctx, quad_ctx, path).unwrap();
-	graphics::spritebatch::SpriteBatch::new(image)
+) -> GameResult<SpriteBatch> {
+	let image = graphics::Image::new(ctx, quad_ctx, path)?;
+	Ok(graphics::spritebatch::SpriteBatch::new(image))
+}
+
+fn draw_and_clear<'a>(
+	ctx: &mut gwg::Context,
+	quad_ctx: &mut gwg::miniquad::Context,
+	batches: impl IntoIterator<Item = &'a mut SpriteBatch>,
+) -> GameResult<()> {
+	for batch in batches {
+		gwg::graphics::draw(ctx, quad_ctx, batch, (Point2::new(0.0, 0.0),))?;
+		batch.clear();
+	}
+
+	Ok(())
 }
 
 // #[derive(Debug)] `audio::Source` dose not implement Debug!
 struct Game {
-	sprite_batch: graphics::spritebatch::SpriteBatch,
+	sprite_batch: SpriteBatch,
 	terrain_batches: TerrainBatches,
+	ship_batches: ShipBatches,
 	sound: audio::Source,
 	input_text: String,
 	full_screen: bool,
@@ -63,12 +141,19 @@ impl Game {
 		//       or implement both.
 		let seed: u64 = 42;
 
-		let batch = image_batch(ctx, quad_ctx, "img/gwg.png");
+		let batch = image_batch(ctx, quad_ctx, "img/gwg.png")?;
 
 		let terrain_batches = TerrainBatches {
-			deep: image_batch(ctx, quad_ctx, "img/deepwater0.png"),
-			shallow: image_batch(ctx, quad_ctx, "img/shallowwater.png"),
-			land: image_batch(ctx, quad_ctx, "img/gwg.png"),
+			deep: image_batch(ctx, quad_ctx, "img/deepwater0.png")?,
+			shallow: image_batch(ctx, quad_ctx, "img/shallowwater.png")?,
+			land: image_batch(ctx, quad_ctx, "img/gwg.png")?,
+		};
+
+		let ship_batches = ShipBatches {
+			basic: ShipSprites {
+				body: AnimBatch::from_image_file(ctx, quad_ctx, "rendered/ship-00.png", 32)?,
+				sail: AnimBatch::from_image_file(ctx, quad_ctx, "rendered/sail-00.png", 32)?,
+			},
 		};
 
 		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
@@ -89,6 +174,7 @@ impl Game {
 		let s = Game {
 			sprite_batch: batch,
 			terrain_batches,
+			ship_batches,
 			sound,
 			input_text: String::new(),
 			full_screen: false,
@@ -136,6 +222,19 @@ impl Game {
 
 		Ok(())
 	}
+
+	fn location_to_screen_coords(
+		&self,
+		ctx: &gwg::Context,
+		pos: Location,
+	) -> nalgebra::Point2<f32> {
+		let screen_coords = gwg::graphics::screen_coordinates(ctx);
+		let loc = pos - self.world.state.player.vehicle.pos;
+		let sprite_pos = loc.0 / self.meters_per_pixel
+			+ logic::glm::vec2(screen_coords.w, screen_coords.h) * 0.5;
+
+		nalgebra::Point2::new(sprite_pos.x, sprite_pos.y)
+	}
 }
 
 impl gwg::event::EventHandler for Game {
@@ -181,51 +280,57 @@ impl gwg::event::EventHandler for Game {
 			for y in left_top.y..(right_bottom.y + 1) {
 				let tc = TileCoord::new(x, y);
 				if let Some(tile) = self.world.init.terrain.try_get(tc) {
+					// if TileCoord::from(self.world.state.player.vehicle.pos) == tc {
+					// 	continue;
+					// }
+
+
+					let scale = logic::TILE_SIZE as f32 / self.meters_per_pixel / 256.0;
+					let loc = tc.to_location().0; // - logic::glm::vec1(logic::TILE_SIZE as f32).xx() * 0.5;
+					let param = DrawParam::new()
+						.dest(self.location_to_screen_coords(ctx, Location(loc)))
+						.scale(logic::glm::vec2(scale, scale));
+
 					let batch = match tile {
 						TerrainType::Deep => &mut self.terrain_batches.deep,
 						TerrainType::Shallow => &mut self.terrain_batches.shallow,
 						TerrainType::Land => &mut self.terrain_batches.land,
 					};
 
-					let loc = tc.to_location() - player_pos;
-					let sprite_pos = loc.0 / self.meters_per_pixel
-						+ logic::glm::vec2(screen_coords.w, screen_coords.h) * 0.5;
-
-					let scale = logic::TILE_SIZE as f32 / self.meters_per_pixel / 256.0;
-					let param = DrawParam::new()
-						.dest(nalgebra::Point2::new(sprite_pos.x, sprite_pos.y))
-						.scale(logic::glm::vec2(scale, scale));
-
 					batch.add(param);
 				}
 			}
 		}
 
-		gwg::graphics::draw(
-			ctx,
-			quad_ctx,
-			&self.terrain_batches.deep,
-			(Point2::new(0.0, 0.0),),
-		)?;
-		self.terrain_batches.deep.clear();
-		gwg::graphics::draw(
-			ctx,
-			quad_ctx,
-			&self.terrain_batches.shallow,
-			(Point2::new(0.0, 0.0),),
-		)?;
-		self.terrain_batches.shallow.clear();
-		gwg::graphics::draw(
-			ctx,
-			quad_ctx,
-			&self.terrain_batches.land,
-			(Point2::new(0.0, 0.0),),
-		)?;
-		self.terrain_batches.land.clear();
+		let ship_scale =
+			logic::glm::vec1(2.5 * logic::VEHICLE_SIZE / self.meters_per_pixel / 256.0).xx();
+		let ship_pos = self.world.state.player.vehicle.pos.0
+			- logic::glm::vec1(2.5 * logic::VEHICLE_SIZE as f32).xx() * 0.5;
+		let param = DrawParam::new()
+			.dest(self.location_to_screen_coords(ctx, Location(ship_pos)))
+			.scale(ship_scale);
+		let heading = f64::from(self.world.state.player.vehicle.heading);
+		self.ship_batches
+			.basic
+			.body
+			.add_rot_frame(-heading + std::f64::consts::PI, param);
+		let sail_orient = f64::from(self.world.state.player.vehicle.sail.orientation);
+		self.ship_batches
+			.basic
+			.sail
+			.add_rot_frame(-sail_orient + std::f64::consts::PI, param);
 
-		gwg::graphics::draw(ctx, quad_ctx, &self.sprite_batch, (Point2::new(0.0, 0.0),))?;
-		self.sprite_batch.clear();
-
+		draw_and_clear(
+			ctx,
+			quad_ctx,
+			[
+				&mut self.terrain_batches.deep,
+				&mut self.terrain_batches.shallow,
+				&mut self.terrain_batches.land,
+				&mut self.ship_batches.basic.body.batch,
+				&mut self.ship_batches.basic.sail.batch,
+			],
+		)?;
 
 		// From the text example
 		// Source: https://github.com/ggez/good-web-game/blob/master/examples/text.rs
