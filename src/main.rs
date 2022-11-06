@@ -22,7 +22,6 @@ use logic::generator::PerlinNoise;
 use logic::generator::Setting;
 use logic::state::Event;
 use logic::state::TICKS_PER_SECOND;
-use logic::terrain::TerrainType;
 use logic::terrain::TileCoord;
 use logic::units::BiPolarFraction;
 use logic::units::Distance;
@@ -310,10 +309,14 @@ impl gwg::event::EventHandler for Game {
 						.dest(self.location_to_screen_coords(ctx, Location(loc)))
 						.scale(logic::glm::vec2(scale, scale));
 
-					let batch = match tile {
-						TerrainType::Deep => &mut self.terrain_batches.deep,
-						TerrainType::Shallow => &mut self.terrain_batches.shallow,
-						TerrainType::Land => &mut self.terrain_batches.land,
+					let batch = {
+						if tile.0 < -5 {
+							&mut self.terrain_batches.deep
+						} else if tile.0 < 0 {
+							&mut self.terrain_batches.shallow
+						} else {
+							&mut self.terrain_batches.land
+						}
 					};
 
 					batch.add(param);

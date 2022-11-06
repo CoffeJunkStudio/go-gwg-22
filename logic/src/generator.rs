@@ -5,7 +5,7 @@ use noise::Seedable;
 use rand::Rng;
 
 use crate::state::WorldState;
-use crate::terrain::TerrainType;
+use crate::units::Elevation;
 use crate::ResourcePack;
 use crate::Terrain;
 use crate::World;
@@ -37,7 +37,7 @@ impl Generator for WhiteNoise {
 		let mut terrain = Terrain::new(setting.edge_length);
 
 		for tt in terrain.iter_mut() {
-			*tt.1 = rng.gen()
+			*tt.1 = Elevation(rng.gen_range(-10..10));
 		}
 
 		// One resource per tile (on average)
@@ -86,13 +86,7 @@ impl Generator for PerlinNoise {
 				cord.y as f64 * PERLIN_NOISE_FACTOR,
 			]);
 
-			*tt = if value < 0.0 {
-				TerrainType::Deep
-			} else if value < 0.9 {
-				TerrainType::Shallow
-			} else {
-				TerrainType::Land
-			};
+			*tt = Elevation(((value - 0.8) * 10.) as i16);
 		}
 
 		// One resource per tile (on average)

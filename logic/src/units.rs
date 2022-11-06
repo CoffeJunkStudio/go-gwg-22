@@ -294,3 +294,12 @@ impl DivAssign for BiPolarFraction {
 		*self = self.div(rhs);
 	}
 }
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(Serialize, Deserialize)]
+pub struct Elevation(pub i16);
+impl Elevation {
+	pub fn is_passable(self) -> bool {
+		self.0 < 0
+	}
+}

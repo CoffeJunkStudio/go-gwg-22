@@ -4,39 +4,11 @@ use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::units::Elevation;
 use crate::units::Location;
 use crate::TILE_SIZE;
 
 
-/// The type of a terrain tile
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[derive(Serialize, Deserialize)]
-#[derive(Enum)]
-#[derive(strum::EnumIter)]
-#[derive(standard_dist::StandardDist)]
-pub enum TerrainType {
-	/// Traversable terrain, deep water
-	Deep,
-	/// Traversable terrain, shallow but still passable water
-	Shallow,
-	/// Non-traversable terrain, where a players will beach
-	Land,
-}
-// TODO: use enumeratis
-impl TerrainType {
-	pub fn is_passable(self) -> bool {
-		match self {
-			Self::Deep => true,
-			Self::Shallow => true,
-			Self::Land => false,
-		}
-	}
-}
-impl Default for TerrainType {
-	fn default() -> Self {
-		Self::Shallow
-	}
-}
 
 /// The coordinates of a tile of the map, given by its tile axial indices
 ///
@@ -167,7 +139,7 @@ pub struct Terrain {
 	/// This `Vec` has exactly `edge_length * edge_length` elements.
 	/// Only use this to iterate over this if you need just the terrain types.
 	/// Prefer using [get](Self::get) and [get_mut](Self::get_mut)
-	pub playground: Vec<TerrainType>,
+	pub playground: Vec<Elevation>,
 }
 impl Terrain {
 	/// Creates a new "flat" terrain with given edge length in tiles
@@ -197,18 +169,18 @@ impl Terrain {
 		coord(self.edge_length, index)
 	}
 
-	pub fn try_get(&self, tc: TileCoord) -> Option<&TerrainType> {
+	pub fn try_get(&self, tc: TileCoord) -> Option<&Elevation> {
 		self.playground.get(self.index(tc))
 	}
 
 	/// Gets tile type at given coordinate
-	pub fn get(&self, tc: TileCoord) -> &TerrainType {
+	pub fn get(&self, tc: TileCoord) -> &Elevation {
 		let idx = self.index(tc);
 		&self.playground[idx]
 	}
 
 	/// Gets mutably the tile type at given coordinate
-	pub fn get_mut(&mut self, tc: TileCoord) -> &mut TerrainType {
+	pub fn get_mut(&mut self, tc: TileCoord) -> &mut Elevation {
 		let idx = self.index(tc);
 		&mut self.playground[idx]
 	}
@@ -216,7 +188,7 @@ impl Terrain {
 	/// Creates a terrain from an array of rows.
 	///
 	/// I.e. a tile at (x,y) would be represented by `array[x][y]`
-	pub fn from_array<const N: usize>(array: [[TerrainType; N]; N]) -> Self {
+	pub fn from_array<const N: usize>(array: [[Elevation; N]; N]) -> Self {
 		assert!(N > 0);
 		let edge_length: u16 = N.try_into().unwrap();
 
@@ -239,7 +211,7 @@ impl Terrain {
 	}
 
 	/// Returns all tiles
-	pub fn iter(&self) -> impl Iterator<Item = (TileCoord, &TerrainType)> {
+	pub fn iter(&self) -> impl Iterator<Item = (TileCoord, &Elevation)> {
 		self.playground
 			.iter()
 			.enumerate()
@@ -247,7 +219,7 @@ impl Terrain {
 	}
 
 	/// Returns all tiles mutably
-	pub fn iter_mut(&mut self) -> impl Iterator<Item = (TileCoord, &mut TerrainType)> {
+	pub fn iter_mut(&mut self) -> impl Iterator<Item = (TileCoord, &mut Elevation)> {
 		self.playground
 			.iter_mut()
 			.enumerate()
