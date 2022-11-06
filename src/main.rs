@@ -218,7 +218,7 @@ impl Game {
 		let mut world = noise.generate(&settings, rng);
 		world.state.player.vehicle.heading = 1.0;
 
-		let meters_per_pixel = 15.0 / 1920.0;
+		let meters_per_pixel = 50.0 / 1920.0;
 
 		let s = Game {
 			sprite_batch: batch,

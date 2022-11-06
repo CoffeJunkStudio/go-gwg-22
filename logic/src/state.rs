@@ -1,4 +1,6 @@
 use std::f32::consts::PI;
+use std::f32::consts::TAU;
+use std::ops::Rem;
 
 use nalgebra_glm::Vec2;
 use rand::Rng;
@@ -100,16 +102,17 @@ impl WorldState {
 				Wind::from_polar(angle, magnitude)
 			};
 
+			let lerpy = nalgebra_glm::lerp(&early.0, &late.0, offset as f32 / interval as f32);
+			Wind(lerpy)
 
+			/*
 			Wind::from_polar(
 				(self.timestamp.0 % (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL)))
 					as f32 / (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL)) as f32
 					* std::f32::consts::TAU,
 				1.0,
 			)
-
-			// let lerpy = nalgebra_glm::lerp(&early.0, &late.0, offset as f32 / interval as f32);
-			// Wind(lerpy)
+			*/
 		};
 
 		//let water_consumption = crate::WATER_CONSUMPTION * DELTA;
@@ -124,24 +127,37 @@ impl WorldState {
 			let acceleration = {
 				let true_wind = self.wind.0;
 				let apparent_wind = true_wind - p.vehicle.velocity;
+				let ship_angle = p.vehicle.heading;
 
-				p.vehicle.sail.orientation = -f32::atan2(apparent_wind.y, apparent_wind.x) + PI;
+				let local_wind_angle = (f32::atan2(apparent_wind.y, apparent_wind.x) - ship_angle
+					+ PI)
+					.rem_euclid(TAU);
+				let local_wind_angle = if local_wind_angle > PI {
+					local_wind_angle - TAU
+				} else {
+					local_wind_angle
+				};
+				let local_sail_angle = local_wind_angle.clamp(-PI / 2., PI / 2.);
 
-				// Engine power
+				let useful_drag = (local_wind_angle.abs() - PI / 2.).max(0.0);
 
-				// TODO: here is a feed-back loop during acceleration, when den RPMs rise and thus the power increases.
-				let max_power = ENGINE_POWER;
-				let rpm = ENGINE_IDEAL_RPM; //rpm.clamp(ENGINE_STALL_RPM, ENGINE_IDEAL_RPM);
-				let available_power = max_power * rpm / ENGINE_IDEAL_RPM;
+
+				p.vehicle.sail.orientation = -(local_sail_angle + ship_angle - PI) + PI;
+
+				let max_sail_area = 30.;
+				let rel_area = match p.vehicle.sail.reefing {
+					Reefing::Reefed(n) => (f32::from(n) / 4.).min(1.0),
+				};
+				let sail_area = max_sail_area * rel_area;
+
+				let prop = useful_drag * sail_area * self.wind.magnitude();
+
 
 				// as fraction
 				// TODO: introduce wind (strength and direction)
 				// TODO: use sail trim
-				let throttle = match p.vehicle.sail.reefing {
-					Reefing::Reefed(n) => f32::from(n) / 8.,
-				};
 				// in W
-				let power = throttle * available_power;
+				let power = prop;
 				// in J
 				let work = power * duration;
 
