@@ -230,7 +230,9 @@ impl WorldState {
 				}
 			} else {
 				// Player off map
-				// TODO: what do we do here?
+				// Clamp
+				p.vehicle.pos.0 -= distance;
+				p.vehicle.velocity = Vec2::new(0., 0.);
 			}
 
 
