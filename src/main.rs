@@ -1,10 +1,13 @@
 use std::env;
 use std::path::Path;
+use std::path::PathBuf;
 
 use asset_config::AssetConfig;
+use asset_config::SingleAssetConfig;
 use good_web_game as gwg;
 use gwg::audio;
 use gwg::cgmath::Point2;
+use gwg::graphics;
 use gwg::graphics::spritebatch::SpriteBatch;
 use gwg::graphics::spritebatch::SpriteIdx;
 use gwg::graphics::Color;
@@ -13,7 +16,6 @@ use gwg::graphics::PxScale;
 use gwg::graphics::Rect;
 use gwg::graphics::Text;
 use gwg::graphics::Transform;
-use gwg::graphics::{self,};
 use gwg::miniquad::KeyCode;
 use gwg::timer;
 use gwg::GameResult;
@@ -36,16 +38,20 @@ fn norm_angle(angle: f64) -> f64 {
 	angle.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU
 }
 
-struct AnimBatch {
+struct RotationBatch {
 	batch: SpriteBatch,
-	n_frames: u32,
+	z_local_frames: u32,
+	z_frames: u32,
+	x_frames: u32,
 }
 
-impl AnimBatch {
-	fn new(batch: SpriteBatch, n_frames: u32) -> Self {
+impl RotationBatch {
+	fn new(batch: SpriteBatch, z_local_frames: u32, z_frames: u32, x_frames: u32) -> Self {
 		Self {
 			batch,
-			n_frames,
+			z_local_frames,
+			z_frames,
+			x_frames,
 		}
 	}
 
@@ -53,33 +59,64 @@ impl AnimBatch {
 		ctx: &mut gwg::Context,
 		quad_ctx: &mut gwg::miniquad::Context,
 		path: impl AsRef<Path>,
-		n_frames: u32,
+		z_local_frames: u32,
+		z_frames: u32,
+		x_frames: u32,
 	) -> GameResult<Self> {
 		let batch = image_batch(ctx, quad_ctx, path)?;
 		Ok(Self {
 			batch,
-			n_frames,
+			z_local_frames,
+			z_frames,
+			x_frames,
 		})
 	}
 
-	fn compute_offset(&self, anim_progress: f64) -> f32 {
-		let frame = ((f64::from(self.n_frames - 1) * anim_progress.clamp(0.0, 1.0)).round() as u32)
-			.min(self.n_frames - 1);
-		frame as f32 / self.n_frames as f32
+	fn from_config(
+		ctx: &mut gwg::Context,
+		quad_ctx: &mut gwg::miniquad::Context,
+		config: &AssetConfig,
+		asset_name: &str,
+	) -> GameResult<Self> {
+		let asset = config.find_asset(asset_name).unwrap();
+		let asset_filename = config.get_asset_output(asset_name).unwrap();
+		let asset_filepath = PathBuf::from("assets")
+			.join("rendered")
+			.join(asset_filename);
+
+		Self::from_image_file(
+			ctx,
+			quad_ctx,
+			asset_filepath,
+			asset.z_local_frames,
+			asset.z_frames,
+			asset.x_frames,
+		)
 	}
 
-	fn add_rot_frame(&mut self, angle: f64, into_param: impl Into<DrawParam>) -> SpriteIdx {
-		let anim_progress = norm_angle(angle);
-		self.add_frame(anim_progress, into_param)
-	}
+	fn add_frame(
+		&mut self,
+		angle_z_local: f64,
+		angle_z: f64,
+		angle_x: f64,
+		into_param: impl Into<DrawParam>,
+	) -> SpriteIdx {
+		fn compute_offset(frames: u32, angle: f64) -> f32 {
+			let anim_progress = norm_angle(angle);
+			let frame = ((f64::from(frames - 1) * anim_progress.clamp(0.0, 1.0)).round() as u32)
+				.min(frames - 1);
+			frame as f32 / frames as f32
+		}
 
-	fn add_frame(&mut self, anim_progress: f64, into_param: impl Into<DrawParam>) -> SpriteIdx {
-		let offs = self.compute_offset(anim_progress);
+		let offs_z_local = compute_offset(self.z_local_frames, angle_z_local);
+		let offs_z = compute_offset(self.z_frames, angle_z);
+		let offs_x = compute_offset(self.x_frames, (angle_x + std::f64::consts::FRAC_PI_2) * 2.0);
+
 		let src = Rect {
-			x: offs,
-			y: 0.0,
-			w: 1.0 / self.n_frames as f32,
-			h: 1.0,
+			x: offs_z,
+			y: offs_z_local + offs_x / self.z_local_frames as f32,
+			w: 1.0 / self.z_frames as f32,
+			h: 1.0 / self.x_frames as f32 / self.z_local_frames as f32,
 		};
 		let param = into_param.into().src(src);
 		self.batch.add(param)
@@ -93,8 +130,8 @@ struct TerrainBatches {
 }
 
 struct ShipSprites {
-	body: AnimBatch,
-	sail: AnimBatch,
+	body: RotationBatch,
+	sail: RotationBatch,
 }
 
 struct ShipBatches {
@@ -160,10 +197,10 @@ impl Game {
 			land: image_batch(ctx, quad_ctx, "img/gwg.png")?,
 		};
 
-		let ship_batches = ShipBatches {
+		let mut ship_batches = ShipBatches {
 			basic: ShipSprites {
-				body: AnimBatch::from_image_file(ctx, quad_ctx, "rendered/ship-00.png", 32)?,
-				sail: AnimBatch::from_image_file(ctx, quad_ctx, "rendered/sail-00.png", 32)?,
+				body: RotationBatch::from_config(ctx, quad_ctx, &render_config, "ship-00")?,
+				sail: RotationBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-4")?,
 			},
 		};
 
@@ -181,7 +218,7 @@ impl Game {
 		let mut world = noise.generate(&settings, rng);
 		world.state.player.vehicle.heading = 1.0;
 
-		let meters_per_pixel = 50.0 / 1920.0;
+		let meters_per_pixel = 15.0 / 1920.0;
 
 		let s = Game {
 			sprite_batch: batch,
@@ -294,8 +331,8 @@ impl gwg::event::EventHandler for Game {
 		let blue = (1.13 * elapsed + 0.7).sin() * 0.5 + 0.5;
 		gwg::graphics::clear(ctx, quad_ctx, [red, green, blue, 1.0].into());
 
-		for x in left_top.x..(right_bottom.x + 1) {
-			for y in left_top.y..(right_bottom.y + 1) {
+		for x in left_top.x.saturating_sub(1)..(right_bottom.x + 1) {
+			for y in left_top.y.saturating_sub(1)..(right_bottom.y + 1) {
 				let tc = TileCoord::new(x, y);
 				if let Some(tile) = self.world.init.terrain.try_get(tc) {
 					// if TileCoord::from(self.world.state.player.vehicle.pos) == tc {
@@ -325,22 +362,32 @@ impl gwg::event::EventHandler for Game {
 		}
 
 		let ship_scale =
-			logic::glm::vec1(2.5 * logic::VEHICLE_SIZE / self.meters_per_pixel / 256.0).xx();
+			logic::glm::vec1(2.5 * logic::VEHICLE_SIZE / self.meters_per_pixel / 32.0).xx();
 		let ship_pos = self.world.state.player.vehicle.pos.0
 			- logic::glm::vec1(2.5 * logic::VEHICLE_SIZE as f32).xx() * 0.5;
 		let param = DrawParam::new()
 			.dest(self.location_to_screen_coords(ctx, Location(ship_pos)))
 			.scale(ship_scale);
 		let heading = f64::from(self.world.state.player.vehicle.heading);
-		self.ship_batches
-			.basic
-			.body
-			.add_rot_frame(-heading + std::f64::consts::PI, param);
+		self.ship_batches.basic.body.add_frame(
+			0.0,
+			-heading + std::f64::consts::PI,
+			f64::from(self.world.state.player.vehicle.angle_of_list),
+			param,
+		);
+
+		let sail_scale =
+			logic::glm::vec1(2.5 * logic::VEHICLE_SIZE / self.meters_per_pixel / 32.0).xx();
+		let sail_param = DrawParam::new()
+			.dest(self.location_to_screen_coords(ctx, Location(ship_pos)))
+			.scale(sail_scale);
 		let sail_orient = f64::from(self.world.state.player.vehicle.sail.orientation);
-		self.ship_batches
-			.basic
-			.sail
-			.add_rot_frame(sail_orient + std::f64::consts::PI, param);
+		self.ship_batches.basic.sail.add_frame(
+			heading + sail_orient,
+			-heading + std::f64::consts::PI,
+			f64::from(self.world.state.player.vehicle.angle_of_list),
+			sail_param,
+		);
 
 		draw_and_clear(
 			ctx,

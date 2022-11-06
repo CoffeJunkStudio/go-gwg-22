@@ -56,12 +56,11 @@ fn main() {
 	progress.enable_steady_tick(Duration::from_millis(200));
 	progress.inc(0);
 
-	for (blend_file_name, assets_config) in render_config.file {
+	for (blend_file_name, assets_config) in &render_config.file {
 		let blend_file_path = render_config_dir.join(&blend_file_name);
 		for (asset_name, asset_config) in assets_config {
-			let out_filename = asset_config
-				.output
-				.unwrap_or_else(|| PathBuf::from(format!("{asset_name}.png")));
+			let out_filename = render_config.get_asset_output(asset_name).unwrap();
+			let out_path = out_dir.join(&out_filename);
 
 			progress.set_message(format!(
 				"Rendering {} | {} > {}",
@@ -69,41 +68,40 @@ fn main() {
 				&asset_config.object,
 				out_filename.file_name().unwrap().to_string_lossy()
 			));
-			let out_path = out_dir.join(out_filename);
 
-			let mut blender_cmd = Command::new(blender_exe());
-			blender_cmd
-				.arg("--background")
-				.arg(&blend_file_path)
-				.arg("--python-expr")
-				.arg(RENDER_ASSET_SCRIPT)
-				.arg("--")
-				.arg("--output")
-				.arg(out_path)
-				.arg("--object-name")
-				.arg(&asset_config.object)
-				.arg("--width")
-				.arg(asset_config.width.to_string())
-				.arg("--z-frames")
-				.arg(asset_config.z_frames.to_string())
-				.arg("--x-frames")
-				.arg(asset_config.x_frames.to_string());
+			if !(opts.no_override && out_path.exists()) {
+				let mut blender_cmd = Command::new(blender_exe());
+				blender_cmd
+					.arg("--background")
+					.arg(&blend_file_path)
+					.arg("--python-expr")
+					.arg(RENDER_ASSET_SCRIPT)
+					.arg("--")
+					.arg("--output")
+					.arg(out_path)
+					.arg("--object-name")
+					.arg(&asset_config.object)
+					.arg("--width")
+					.arg(asset_config.width.to_string())
+					.arg("--z-local-frames")
+					.arg(asset_config.z_local_frames.to_string())
+					.arg("--z-frames")
+					.arg(asset_config.z_frames.to_string())
+					.arg("--x-frames")
+					.arg(asset_config.x_frames.to_string());
 
-			if opts.no_override {
-				blender_cmd.arg("--no-override");
-			}
+				let blender_out = blender_cmd.output().unwrap_or_else(|err| {
+					panic!("Failed to render {}: {err}", &asset_config.object)
+				});
 
-			let blender_out = blender_cmd
-				.output()
-				.unwrap_or_else(|err| panic!("Failed to render {}: {err}", &asset_config.object));
+				eprintln!("-- blender stdout:");
+				eprintln!("{}", String::from_utf8_lossy(&blender_out.stdout));
+				eprintln!("-- blender stderr:");
+				eprintln!("{}", String::from_utf8_lossy(&blender_out.stderr));
 
-			eprintln!("-- blender stdout:");
-			eprintln!("{}", String::from_utf8_lossy(&blender_out.stdout));
-			eprintln!("-- blender stderr:");
-			eprintln!("{}", String::from_utf8_lossy(&blender_out.stderr));
-
-			if !blender_out.status.success() {
-				panic!("Failed to render {}:", &asset_config.object)
+				if !blender_out.status.success() {
+					panic!("Failed to render {}:", &asset_config.object)
+				}
 			}
 
 			progress.inc(1);

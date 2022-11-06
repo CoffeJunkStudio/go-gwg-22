@@ -19,13 +19,13 @@
 "starfish-04" = { object = "starfish-4", z_frames = 8, width = 64, optical_size = 1.9 }
 
 [file."blend/ships.blend"]
-"ship-00" = { object = "ships", z_frames = 32, x_frames = 7, width = 256, optical_size = 1.4 }
+"ship-00" = { object = "ships", z_frames = 16, x_frames = 5, width = 32, optical_size = 1.4 }
 "ship-01" = { object = "ships.001", z_frames = 32, width = 256, optical_size = 2.1 }
-"sail-00-0" = { object = "sail-00-0", z_frames = 32, width = 256, optical_size = 1.6 }
-"sail-00-1" = { object = "sail-00-1", z_frames = 32, width = 256, optical_size = 1.6 }
-"sail-00-2" = { object = "sail-00-2", z_frames = 32, width = 256, optical_size = 1.6 }
-"sail-00-3" = { object = "sail-00-3", z_frames = 32, width = 256, optical_size = 1.6 }
-"sail-00-4" = { object = "sail-00-4", z_frames = 32, width = 256, optical_size = 1.6 }
+"sail-00-0" = { object = "sail-00-0", z_frames = 32, width = 256, optical_size = 1.4 }
+"sail-00-1" = { object = "sail-00-1", z_frames = 32, width = 256, optical_size = 1.4 }
+"sail-00-2" = { object = "sail-00-2", z_frames = 32, width = 256, optical_size = 1.4 }
+"sail-00-3" = { object = "sail-00-3", z_frames = 32, width = 256, optical_size = 1.4 }
+"sail-00-4" = { object = "sail-00-4", z_local_frames = 16, z_frames = 16, x_frames = 5, width = 32, optical_size = 1.4 }
 
 [file."blend/harbour.blend"]
 "harbour-00" = { object = "harbour", z_frames = 6, width = 512, optical_size = 3.5 }

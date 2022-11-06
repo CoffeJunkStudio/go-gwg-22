@@ -8,13 +8,24 @@ pub struct AssetConfig {
 	pub sail: HashMap<String, SailParams>,
 }
 
+impl AssetConfig {
+	pub fn find_asset(&self, name: &str) -> Option<&SingleAssetConfig> {
+		self.file.values().find_map(|assets| assets.get(name))
+	}
+
+	pub fn get_asset_output(&self, asset_name: &str) -> Option<PathBuf> {
+		self.find_asset(asset_name).map(|conf| {
+			conf.output
+				.to_owned()
+				.unwrap_or_else(|| PathBuf::from(format!("{asset_name}.png")))
+		})
+	}
+}
+
 const fn default_asset_width() -> u32 {
 	256
 }
-const fn default_asset_z_frames() -> u32 {
-	1
-}
-const fn default_asset_x_frames() -> u32 {
+const fn default_asset_frames() -> u32 {
 	1
 }
 
@@ -26,10 +37,13 @@ pub struct SingleAssetConfig {
 
 	pub height: Option<u32>,
 
-	#[serde(default = "default_asset_z_frames")]
+	#[serde(default = "default_asset_frames")]
+	pub z_local_frames: u32,
+
+	#[serde(default = "default_asset_frames")]
 	pub z_frames: u32,
 
-	#[serde(default = "default_asset_x_frames")]
+	#[serde(default = "default_asset_frames")]
 	pub x_frames: u32,
 
 	pub object: String,

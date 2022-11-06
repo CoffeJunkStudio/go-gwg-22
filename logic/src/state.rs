@@ -101,8 +101,15 @@ impl WorldState {
 			};
 
 
-			let lerpy = nalgebra_glm::lerp(&early.0, &late.0, offset as f32 / interval as f32);
-			Wind(lerpy)
+			Wind::from_polar(
+				(self.timestamp.0 % (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL)))
+					as f32 / (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL)) as f32
+					* std::f32::consts::TAU,
+				1.0,
+			)
+
+			// let lerpy = nalgebra_glm::lerp(&early.0, &late.0, offset as f32 / interval as f32);
+			// Wind(lerpy)
 		};
 
 		//let water_consumption = crate::WATER_CONSUMPTION * DELTA;

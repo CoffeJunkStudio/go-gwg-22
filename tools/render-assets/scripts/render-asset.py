@@ -11,6 +11,8 @@ from hashlib import sha1
 from collections import OrderedDict
 from PIL import Image
 from pathlib import Path
+from mathutils import Matrix
+from mathutils import Euler
 
 def fail(message: str):
     print(f"Error: {message}", file=sys.stderr)
@@ -42,6 +44,7 @@ def main():
     parser.add_argument('--object-name', '-n', required=True)
     parser.add_argument('--scene', '-s')
     parser.add_argument('--camera-name', '-c')
+    parser.add_argument('--z-local-frames', type=int, default=1)
     parser.add_argument('--z-frames', type=int, default=1)
     parser.add_argument('--x-frames', type=int, default=1)
     parser.add_argument('--width', '-x', type=int, default=256)
@@ -84,11 +87,9 @@ def main():
 
     obj.location[0] = 0
     obj.location[1] = 0
-    obj.location[2] = 0
 
     init_angle_x = obj.rotation_euler[0]
     init_angle_z = obj.rotation_euler[2]
-    images = list()
 
     target_width = args.width
     target_height = args.height if args.height is not None else args.width
@@ -101,35 +102,65 @@ def main():
     if args.x_frames > 1:
         x_angle_per_step = 180 / (args.x_frames - 1)
         x_rot_offset = -90
+    
+    ex = obj.rotation_euler[0]
+    ey = obj.rotation_euler[1]
+    ez = obj.rotation_euler[2]
+
+    images = list()
+    bpy.ops.object.select_all(action='DESELECT')
 
     print("Rendering...")
-    for x_step in range(args.x_frames):
-        z_images = list()
-        obj.rotation_euler[0] = init_angle_x + math.radians(x_step * x_angle_per_step + x_rot_offset)
-        for z_step in range(args.z_frames):
-            with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
-                bpy.context.scene.render.filepath = tmp.name
-                obj.rotation_euler[2] = init_angle_z + math.radians(z_step * 360 / args.z_frames)
-                tmp.close()
-                bpy.ops.render.render(write_still = True)
-                z_images.append(Image.open(tmp.name))
-        print("Line rendered")
-        images.append(z_images)
+    for z_local_step in range(args.z_local_frames):
+        x_images = list()
+        z_local_angle = math.radians(z_local_step * 360 / args.z_local_frames)
+        for x_step in range(args.x_frames):
+            z_images = list()
+            x_angle = math.radians(x_step * x_angle_per_step + x_rot_offset)
+            for z_step in range(args.z_frames):
+                with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
+                    z_angle = math.radians(z_step * 360 / args.z_frames)
+
+                    obj.rotation_euler[0] = ex
+                    obj.rotation_euler[1] = ey
+                    obj.rotation_euler[2] = ez
+
+                    obj.select_set(state=True)
+
+                    rot_mat = Matrix.Identity(3)
+                    rot_mat.rotate(Euler((ex, ey, ez)))
+                    rot_mat.rotate(Euler((0.0, 0.0, z_local_angle)))
+                    rot_mat.rotate(Euler((x_angle, 0.0, 0.0)))
+                    rot_mat.rotate(Euler((0.0, 0.0, z_angle)))
+                    # bpy.ops.transform.rotate(value=z_local_angle, orient_axis='Z')
+                    # bpy.ops.transform.rotate(value=x_angle, orient_axis='X')
+                    # bpy.ops.transform.rotate(value=z_angle, orient_axis='Z')
+                    obj.rotation_euler = rot_mat.to_euler()
+
+                    bpy.context.scene.render.filepath = tmp.name
+                    tmp.close()
+                    bpy.ops.render.render(write_still = True)
+                    z_images.append(Image.open(tmp.name))
+            x_images.append(z_images)
+        images.append(x_images)
     print("Rendering complete.")
     print("Merging...")
 
     total_width = args.z_frames * target_width
-    total_height = args.x_frames * target_height
+    total_height = args.x_frames * target_height * args.z_local_frames
 
     new_im = Image.new('RGBA', (total_width, total_height))
 
-    y_offset = 0
-    for z_images in images:
-        x_offset = 0
-        for im in z_images:
-            new_im.paste(im, (x_offset, y_offset))
-            x_offset += target_width
-        y_offset += target_height
+    block_offset = 0
+    for x_images in images:
+        y_offset = 0
+        for z_images in x_images:
+            x_offset = 0
+            for im in z_images:
+                new_im.paste(im, (x_offset, block_offset + y_offset))
+                x_offset += target_width
+            y_offset += target_height
+        block_offset += target_height * args.x_frames
 
     os.makedirs(Path(args.output).parent, exist_ok=True)
     new_im.save(args.output)
