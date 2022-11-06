@@ -207,8 +207,23 @@ impl gwg::event::EventHandler for Game {
 		ctx: &mut gwg::Context,
 		_quad_ctx: &mut gwg::miniquad::Context,
 	) -> gwg::GameResult<()> {
+		use gwg::input::keyboard::is_key_pressed;
+
 		while gwg::timer::check_update_time(ctx, TICKS_PER_SECOND.into()) {
+			let mut rudder = 0.0;
+
+			// Rudder input
+			if is_key_pressed(ctx, KeyCode::Left) {
+				rudder -= 1.0;
+			}
+			if is_key_pressed(ctx, KeyCode::Right) {
+				rudder += 1.0;
+			}
+
+			self.input.rudder = BiPolarFraction::from_f32(rudder).unwrap();
 			let events = self.world.state.update(&self.world.init, &self.input);
+			self.input.rudder = BiPolarFraction::default();
+
 			for ev in events {
 				match ev {
 					Event::Fishy => self.sound_fishy.play(ctx).unwrap(),
@@ -440,16 +455,10 @@ impl gwg::event::EventHandler for Game {
 
 		// Reefing input
 		if keycode == KeyCode::Up {
+			// TODO: limit reefing
 			self.input.reefing = self.input.reefing.increase();
 		} else if keycode == KeyCode::Down {
 			self.input.reefing = self.input.reefing.decrease();
-		}
-
-		// Rudder input
-		if keycode == KeyCode::Left {
-			self.input.rudder = BiPolarFraction::from_f32(-1.).unwrap();
-		} else if keycode == KeyCode::Right {
-			self.input.rudder = BiPolarFraction::from_f32(1.).unwrap();
 		}
 
 		if keycode == KeyCode::F11 {
