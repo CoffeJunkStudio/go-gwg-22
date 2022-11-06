@@ -88,16 +88,23 @@ impl AssetBatch {
 		angle_x: f64,
 		into_param: impl Into<DrawParam>,
 	) -> SpriteIdx {
-		fn compute_offset(frames: u32, angle: f64) -> f32 {
+		// Compute a closed cycle offset (such as orientation)
+		fn compute_offset_closed(frames: u32, angle: f64) -> f32 {
 			let anim_progress = norm_angle(angle);
-			let frame = ((f64::from(frames - 1) * anim_progress.clamp(0.0, 1.0)).round() as u32)
-				.min(frames - 1);
+			let frame = ((f64::from(frames) * anim_progress.clamp(0.0, 1.0)).round() as u32)
+				.rem_euclid(frames);
+			frame as f32 / frames as f32
+		}
+		// Open an open sequence offset (such as angle of list)
+		fn compute_offset_open(frames: u32, angle: f64) -> f32 {
+			let anim_progress = norm_angle(angle);
+			let frame = (f64::from(frames) * anim_progress.clamp(0.0, 1.0)) as u32;
 			frame as f32 / frames as f32
 		}
 
-		let offs_z_local = compute_offset(self.params.z_local_frames, angle_z_local);
-		let offs_z = compute_offset(self.params.z_frames, angle_z);
-		let offs_x = compute_offset(
+		let offs_z_local = compute_offset_closed(self.params.z_local_frames, angle_z_local);
+		let offs_z = compute_offset_closed(self.params.z_frames, angle_z);
+		let offs_x = compute_offset_open(
 			self.params.x_frames,
 			(angle_x + std::f64::consts::FRAC_PI_2) * 2.0,
 		);
