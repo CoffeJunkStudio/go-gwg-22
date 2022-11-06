@@ -49,7 +49,7 @@ struct TerrainBatches {
 
 struct ShipSprites {
 	body: AssetBatch,
-	sail: AssetBatch,
+	sail: Vec<AssetBatch>,
 }
 
 struct ShipBatches {
@@ -119,7 +119,13 @@ impl Game {
 		let ship_batches = ShipBatches {
 			basic: ShipSprites {
 				body: AssetBatch::from_config(ctx, quad_ctx, &render_config, "ship-00")?,
-				sail: AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-4")?,
+				sail: vec![
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-0")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-1")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-2")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-3")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-4")?,
+				],
 			},
 		};
 
@@ -332,17 +338,23 @@ impl gwg::event::EventHandler for Game {
 			param,
 		);
 
+		let max_sail = self.ship_batches.basic.sail.len() - 1;
+		let sail_reefing = match self.world.state.player.vehicle.sail.reefing {
+			logic::state::Reefing::Reefed(n) => n,
+		};
+
+		let sail_ass = &mut self.ship_batches.basic.sail[usize::from(sail_reefing).min(max_sail)];
 		let sail_scale = logic::glm::vec1(
-			2.5 * logic::VEHICLE_SIZE
-				/ self.meters_per_pixel
-				/ self.ship_batches.basic.sail.params().width as f32,
+			2.5 * logic::VEHICLE_SIZE / self.meters_per_pixel / sail_ass.params().width as f32,
 		)
 		.xx();
 		let sail_param = DrawParam::new()
 			.dest(self.location_to_screen_coords(ctx, Location(ship_pos)))
 			.scale(sail_scale);
 		let sail_orient = f64::from(self.world.state.player.vehicle.sail.orientation);
-		self.ship_batches.basic.sail.add_frame(
+
+		let sail_ass = &mut self.ship_batches.basic.sail[usize::from(sail_reefing).min(max_sail)];
+		sail_ass.add_frame(
 			heading + sail_orient,
 			-heading + std::f64::consts::PI,
 			f64::from(self.world.state.player.vehicle.angle_of_list),
@@ -408,8 +420,14 @@ impl gwg::event::EventHandler for Game {
 			.chain([
 				self.building_batches.harbor.deref_mut(),
 				self.ship_batches.basic.body.deref_mut(),
-				self.ship_batches.basic.sail.deref_mut(),
-			]),
+			])
+			.chain(
+				self.ship_batches
+					.basic
+					.sail
+					.iter_mut()
+					.map(DerefMut::deref_mut),
+			),
 		)?;
 
 		// From the text example
