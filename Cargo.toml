@@ -3,7 +3,7 @@ members = ["logic", "libs/asset-config", "tools/render-assets"]
 
 [package]
 name = "plenty-of-fish-in-the-sea"
-version = "0.0.1-alpha"
+version = "0.0.1"
 edition = "2021"
 description = "Our Game-Off 2022 game jam participation"
 
