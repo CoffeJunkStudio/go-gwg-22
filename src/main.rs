@@ -2,6 +2,7 @@ use std::env;
 use std::path::Path;
 use std::path::PathBuf;
 
+use asset_batch::AssetBatch;
 use asset_config::AssetConfig;
 use asset_config::SingleAssetConfig;
 use good_web_game as gwg;
@@ -31,97 +32,10 @@ use logic::units::Location;
 use logic::Input;
 use logic::World;
 
+pub mod asset_batch;
+
 const ASSET_CONFIG_STR: &str =
 	include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/render_assets.toml"));
-
-fn norm_angle(angle: f64) -> f64 {
-	angle.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU
-}
-
-struct RotationBatch {
-	batch: SpriteBatch,
-	z_local_frames: u32,
-	z_frames: u32,
-	x_frames: u32,
-}
-
-impl RotationBatch {
-	fn new(batch: SpriteBatch, z_local_frames: u32, z_frames: u32, x_frames: u32) -> Self {
-		Self {
-			batch,
-			z_local_frames,
-			z_frames,
-			x_frames,
-		}
-	}
-
-	fn from_image_file(
-		ctx: &mut gwg::Context,
-		quad_ctx: &mut gwg::miniquad::Context,
-		path: impl AsRef<Path>,
-		z_local_frames: u32,
-		z_frames: u32,
-		x_frames: u32,
-	) -> GameResult<Self> {
-		let batch = image_batch(ctx, quad_ctx, path)?;
-		Ok(Self {
-			batch,
-			z_local_frames,
-			z_frames,
-			x_frames,
-		})
-	}
-
-	fn from_config(
-		ctx: &mut gwg::Context,
-		quad_ctx: &mut gwg::miniquad::Context,
-		config: &AssetConfig,
-		asset_name: &str,
-	) -> GameResult<Self> {
-		let asset = config.find_asset(asset_name).unwrap();
-		let asset_filename = config.get_asset_output(asset_name).unwrap();
-		let asset_filepath = PathBuf::from("assets")
-			.join("rendered")
-			.join(asset_filename);
-
-		Self::from_image_file(
-			ctx,
-			quad_ctx,
-			asset_filepath,
-			asset.z_local_frames,
-			asset.z_frames,
-			asset.x_frames,
-		)
-	}
-
-	fn add_frame(
-		&mut self,
-		angle_z_local: f64,
-		angle_z: f64,
-		angle_x: f64,
-		into_param: impl Into<DrawParam>,
-	) -> SpriteIdx {
-		fn compute_offset(frames: u32, angle: f64) -> f32 {
-			let anim_progress = norm_angle(angle);
-			let frame = ((f64::from(frames - 1) * anim_progress.clamp(0.0, 1.0)).round() as u32)
-				.min(frames - 1);
-			frame as f32 / frames as f32
-		}
-
-		let offs_z_local = compute_offset(self.z_local_frames, angle_z_local);
-		let offs_z = compute_offset(self.z_frames, angle_z);
-		let offs_x = compute_offset(self.x_frames, (angle_x + std::f64::consts::FRAC_PI_2) * 2.0);
-
-		let src = Rect {
-			x: offs_z,
-			y: offs_z_local + offs_x / self.z_local_frames as f32,
-			w: 1.0 / self.z_frames as f32,
-			h: 1.0 / self.x_frames as f32 / self.z_local_frames as f32,
-		};
-		let param = into_param.into().src(src);
-		self.batch.add(param)
-	}
-}
 
 struct TerrainBatches {
 	deep: SpriteBatch,
@@ -130,8 +44,8 @@ struct TerrainBatches {
 }
 
 struct ShipSprites {
-	body: RotationBatch,
-	sail: RotationBatch,
+	body: AssetBatch,
+	sail: AssetBatch,
 }
 
 struct ShipBatches {
@@ -199,8 +113,8 @@ impl Game {
 
 		let mut ship_batches = ShipBatches {
 			basic: ShipSprites {
-				body: RotationBatch::from_config(ctx, quad_ctx, &render_config, "ship-00")?,
-				sail: RotationBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-4")?,
+				body: AssetBatch::from_config(ctx, quad_ctx, &render_config, "ship-00")?,
+				sail: AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-4")?,
 			},
 		};
 
@@ -361,8 +275,12 @@ impl gwg::event::EventHandler for Game {
 			}
 		}
 
-		let ship_scale =
-			logic::glm::vec1(2.5 * logic::VEHICLE_SIZE / self.meters_per_pixel / 32.0).xx();
+		let ship_scale = logic::glm::vec1(
+			2.5 * logic::VEHICLE_SIZE
+				/ self.meters_per_pixel
+				/ self.ship_batches.basic.body.params().width as f32,
+		)
+		.xx();
 		let ship_pos = self.world.state.player.vehicle.pos.0
 			- logic::glm::vec1(2.5 * logic::VEHICLE_SIZE as f32).xx() * 0.5;
 		let param = DrawParam::new()
@@ -376,8 +294,12 @@ impl gwg::event::EventHandler for Game {
 			param,
 		);
 
-		let sail_scale =
-			logic::glm::vec1(2.5 * logic::VEHICLE_SIZE / self.meters_per_pixel / 32.0).xx();
+		let sail_scale = logic::glm::vec1(
+			2.5 * logic::VEHICLE_SIZE
+				/ self.meters_per_pixel
+				/ self.ship_batches.basic.sail.params().width as f32,
+		)
+		.xx();
 		let sail_param = DrawParam::new()
 			.dest(self.location_to_screen_coords(ctx, Location(ship_pos)))
 			.scale(sail_scale);
@@ -396,8 +318,8 @@ impl gwg::event::EventHandler for Game {
 				&mut self.terrain_batches.deep,
 				&mut self.terrain_batches.shallow,
 				&mut self.terrain_batches.land,
-				&mut self.ship_batches.basic.body.batch,
-				&mut self.ship_batches.basic.sail.batch,
+				&mut self.ship_batches.basic.body,
+				&mut self.ship_batches.basic.sail,
 			],
 		)?;
 
