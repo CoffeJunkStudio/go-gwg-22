@@ -68,9 +68,7 @@ impl AssetBatch {
 	) -> gwg::GameResult<Self> {
 		let asset = config.find_asset(asset_name).unwrap();
 		let asset_filename = config.get_asset_output(asset_name).unwrap();
-		let asset_filepath = PathBuf::from("assets")
-			.join("rendered")
-			.join(asset_filename);
+		let asset_filepath = PathBuf::from("rendered").join(asset_filename);
 
 		let params = AssetParams {
 			z_local_frames: asset.z_local_frames,
