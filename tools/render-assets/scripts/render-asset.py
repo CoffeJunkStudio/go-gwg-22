@@ -112,6 +112,14 @@ def main():
 
     new_im = Image.new('RGBA', (total_width, total_height))
 
+    child_eulers = list()
+    for c in obj.children:
+        child_eulers.append([
+            c.rotation_euler[0],
+            c.rotation_euler[1],
+            c.rotation_euler[2]
+        ])
+
     print("Rendering...")
     block_offset = 0
     for z_local_step in range(args.z_local_frames):
@@ -126,15 +134,14 @@ def main():
                 with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
                     z_angle = math.radians(z_step * 360 / args.z_frames)
 
-                    obj.rotation_euler[0] = ex
-                    obj.rotation_euler[1] = ey
-                    obj.rotation_euler[2] = ez
-
-                    for c in obj.children:
-                        rot_mat = Matrix.Identity(3)
+                    for i, c in enumerate(obj.children):
+                        rot_mat = Matrix.Identity(3)    
+                        ex = child_eulers[i][0]
+                        ey = child_eulers[i][1]
+                        ez = child_eulers[i][2]
+                        rot_mat.rotate(Euler((ex, ey, ez)))
                         rot_mat.rotate(Euler((0.0, 0.0, z_local_angle)))
                         c.rotation_euler = rot_mat.to_euler()
-
 
                     rot_mat = Matrix.Identity(3)
                     rot_mat.rotate(Euler((ex, ey, ez)))
