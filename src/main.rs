@@ -1,7 +1,9 @@
 use std::env;
+use std::ops::DerefMut;
 use std::path::Path;
 use std::path::PathBuf;
 
+use asset_batch::image_batch;
 use asset_batch::AssetBatch;
 use asset_config::AssetConfig;
 use asset_config::SingleAssetConfig;
@@ -31,6 +33,8 @@ use logic::units::Distance;
 use logic::units::Location;
 use logic::Input;
 use logic::World;
+use rand::seq::SliceRandom;
+use rand::Rng;
 
 pub mod asset_batch;
 
@@ -52,13 +56,8 @@ struct ShipBatches {
 	basic: ShipSprites,
 }
 
-fn image_batch(
-	ctx: &mut gwg::Context,
-	quad_ctx: &mut gwg::miniquad::Context,
-	path: impl AsRef<Path>,
-) -> GameResult<SpriteBatch> {
-	let image = graphics::Image::new(ctx, quad_ctx, path)?;
-	Ok(graphics::spritebatch::SpriteBatch::new(image))
+struct ResourceBatches {
+	fishes: Vec<AssetBatch>,
 }
 
 fn draw_and_clear<'a>(
@@ -83,6 +82,7 @@ struct Game {
 	sprite_batch: SpriteBatch,
 	terrain_batches: TerrainBatches,
 	ship_batches: ShipBatches,
+	resource_batches: ResourceBatches,
 	sound: audio::Source,
 	sound_fishy: audio::Source,
 	input_text: String,
@@ -111,11 +111,21 @@ impl Game {
 			land: image_batch(ctx, quad_ctx, "img/gwg.png")?,
 		};
 
-		let mut ship_batches = ShipBatches {
+		let ship_batches = ShipBatches {
 			basic: ShipSprites {
 				body: AssetBatch::from_config(ctx, quad_ctx, &render_config, "ship-00")?,
 				sail: AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-4")?,
 			},
+		};
+
+		let resource_batches = ResourceBatches {
+			fishes: [
+				"fish-00", "fish-01", "fish-02", "fish-03", "fish-04", "fish-05", "fish-06",
+				"fish-07",
+			]
+			.into_iter()
+			.map(|name| AssetBatch::from_config(ctx, quad_ctx, &render_config, name).unwrap())
+			.collect(),
 		};
 
 		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
@@ -128,16 +138,19 @@ impl Game {
 			resource_density: 1.0,
 		};
 
-		let rng = logic::StdRng::new(0xcafef00dd15ea5e5, seed.into());
-		let mut world = noise.generate(&settings, rng);
+		let mut rng = logic::StdRng::new(0xcafef00dd15ea5e5, seed.into());
+		let mut world = noise.generate(&settings, &mut rng);
 		world.state.player.vehicle.heading = 1.0;
+		world.state.player.vehicle.pos = world.init.terrain.random_passable_location(&mut rng);
 
-		let meters_per_pixel = 70.0 / 1920.0;
+
+		let meters_per_pixel = 30.0 / 1920.0;
 
 		let s = Game {
 			sprite_batch: batch,
 			terrain_batches,
 			ship_batches,
+			resource_batches,
 			sound,
 			sound_fishy,
 			input_text: String::new(),
@@ -326,6 +339,28 @@ impl gwg::event::EventHandler for Game {
 			sail_param,
 		);
 
+		for resource in &self.world.state.resources {
+			let mut rng = logic::StdRng::new(
+				(resource.loc.0.x * 100.0) as u128,
+				(resource.loc.0.y * 100.0) as u128,
+			);
+
+			let resource_scale = logic::glm::vec1(
+				logic::RESOURCE_PACK_FISH_SIZE
+					/ self.meters_per_pixel
+					/ self.ship_batches.basic.body.params().width as f32,
+			)
+			.xx();
+			let resource_pos =
+				resource.loc.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE as f32).xx() * 0.5;
+			let param = DrawParam::new()
+				.dest(self.location_to_screen_coords(ctx, Location(resource_pos)))
+				.scale(resource_scale);
+
+			let batch = self.resource_batches.fishes.choose_mut(&mut rng).unwrap();
+			batch.add_frame(0.0, rng.gen::<f64>() * std::f64::consts::TAU, 0.0, param);
+		}
+
 		draw_and_clear(
 			ctx,
 			quad_ctx,
@@ -333,9 +368,18 @@ impl gwg::event::EventHandler for Game {
 				&mut self.terrain_batches.deep,
 				&mut self.terrain_batches.shallow,
 				&mut self.terrain_batches.land,
-				&mut self.ship_batches.basic.body,
-				&mut self.ship_batches.basic.sail,
-			],
+			]
+			.into_iter()
+			.chain(
+				self.resource_batches
+					.fishes
+					.iter_mut()
+					.map(DerefMut::deref_mut),
+			)
+			.chain([
+				self.ship_batches.basic.body.deref_mut(),
+				self.ship_batches.basic.sail.deref_mut(),
+			]),
 		)?;
 
 		// From the text example

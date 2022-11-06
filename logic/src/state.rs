@@ -501,7 +501,7 @@ impl Reefing {
 	/// Shift up a gear, may switch to forward
 	pub fn increase(self) -> Self {
 		match self {
-			Self::Reefed(n) => Self::Reefed(n + 1),
+			Self::Reefed(n) => Self::Reefed(n.saturating_add(1)),
 		}
 	}
 
