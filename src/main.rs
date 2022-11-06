@@ -104,7 +104,7 @@ impl Game {
 	) -> gwg::GameResult<Self> {
 		// TODO: make it configurable or randomize (e.g. use an timestamp),
 		//       or implement both.
-		let seed: u64 = 42;
+		let seed: u64 = 44;
 
 		let render_config: AssetConfig = toml::from_str(ASSET_CONFIG_STR).unwrap();
 
