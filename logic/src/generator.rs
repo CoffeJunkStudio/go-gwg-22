@@ -1,9 +1,12 @@
 //! World generator sub module
 //!
 
+use std::f32::consts::TAU;
+
 use noise::Seedable;
 use rand::Rng;
 
+use crate::state::Harbor;
 use crate::state::WorldState;
 use crate::units::Elevation;
 use crate::ResourcePack;
@@ -102,6 +105,19 @@ impl Generator for PerlinNoise {
 			})
 			.collect();
 
+		// One harbour per 128 tiles (on average)
+		let harbor_amount =
+			(setting.edge_length as f32 * setting.edge_length as f32 / 128.).max(1.0);
+
+		let harbors = (0..(harbor_amount as u32))
+			.map(|_| {
+				Harbor {
+					loc: terrain.random_passable_location(&mut rng),
+					orientation: rng.gen::<f32>() * TAU,
+				}
+			})
+			.collect();
+
 		let seed: u64 = rng.gen();
 
 		World {
@@ -111,6 +127,7 @@ impl Generator for PerlinNoise {
 			},
 			state: WorldState {
 				resources,
+				harbors,
 				..Default::default()
 			},
 		}

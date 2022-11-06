@@ -53,10 +53,12 @@ pub enum Event {
 pub struct WorldState {
 	/// The point in time of this state
 	pub timestamp: Tick,
-	/// The full list of active players
+	/// The active player
 	pub player: Player,
 	/// The full list of collectables on the map
 	pub resources: Vec<ResourcePack>,
+	/// The full list of harbors
+	pub harbors: Vec<Harbor>,
 	/// The currently prevailing wind condition
 	pub wind: Wind,
 }
@@ -106,6 +108,7 @@ impl WorldState {
 			Wind(lerpy)
 
 			/*
+			// Turning wind
 			Wind::from_polar(
 				(self.timestamp.0 % (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL)))
 					as f32 / (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL)) as f32
@@ -141,7 +144,6 @@ impl WorldState {
 
 				let useful_drag = (local_wind_angle.abs() - PI / 2.).max(0.0);
 
-
 				p.vehicle.sail.orientation = -(local_sail_angle + ship_angle - PI) + PI;
 
 				let max_sail_area = 30.;
@@ -151,7 +153,6 @@ impl WorldState {
 				let sail_area = max_sail_area * rel_area;
 
 				let prop = useful_drag * sail_area * self.wind.magnitude();
-
 
 				// as fraction
 				// TODO: introduce wind (strength and direction)
@@ -306,6 +307,16 @@ impl WorldState {
 	}
 }
 
+
+/// Represents the car of a player
+#[derive(Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize)]
+pub struct Harbor {
+	/// Absolute position in meters
+	pub loc: Location,
+	/// Orientation in radians, zero is world x
+	pub orientation: f32,
+}
 
 
 /// Represents the car of a player
