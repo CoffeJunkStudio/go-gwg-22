@@ -588,7 +588,7 @@ impl gwg::event::EventHandler for Game {
 fn main() -> gwg::GameResult {
 	gwg::start(
 		gwg::conf::Conf::default()
-			.window_title("GWG Prep".into())
+			.window_title("Plenty of fish in the sea".into())
 			.window_resizable(true)
 			//.fullscreen(true)
 			.cache(Some(include_bytes!(concat!(
