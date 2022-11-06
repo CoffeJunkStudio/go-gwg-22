@@ -72,7 +72,7 @@ def main():
             fail(f"Camera '{args.camera_name}' not found in scene")
         bpy.context.scene.camera = cam
 
-    obj = find(bpy.data.objects, lambda x: x.type == 'MESH' and x.name == args.object_name)
+    obj = find(bpy.data.objects, lambda x: (x.type == 'MESH' or x.type == 'EMPTY') and x.name == args.object_name)
 
     if obj == None:
         fail(f"There is no object with name '{args.object_name}'")
@@ -84,9 +84,6 @@ def main():
     query_children(obj, to_hide)
     for x in to_hide:
         x.hide_render = False
-
-    obj.location[0] = 0
-    obj.location[1] = 0
 
     init_angle_x = obj.rotation_euler[0]
     init_angle_z = obj.rotation_euler[2]
@@ -110,13 +107,21 @@ def main():
     images = list()
     bpy.ops.object.select_all(action='DESELECT')
 
+    total_width = args.z_frames * target_width
+    total_height = args.x_frames * target_height * args.z_local_frames
+
+    new_im = Image.new('RGBA', (total_width, total_height))
+
     print("Rendering...")
+    block_offset = 0
     for z_local_step in range(args.z_local_frames):
         x_images = list()
         z_local_angle = math.radians(z_local_step * 360 / args.z_local_frames)
+        y_offset = 0
         for x_step in range(args.x_frames):
             z_images = list()
             x_angle = math.radians(x_step * x_angle_per_step + x_rot_offset)
+            x_offset = 0
             for z_step in range(args.z_frames):
                 with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
                     z_angle = math.radians(z_step * 360 / args.z_frames)
@@ -125,42 +130,30 @@ def main():
                     obj.rotation_euler[1] = ey
                     obj.rotation_euler[2] = ez
 
-                    obj.select_set(state=True)
+                    for c in obj.children:
+                        rot_mat = Matrix.Identity(3)
+                        rot_mat.rotate(Euler((0.0, 0.0, z_local_angle)))
+                        c.rotation_euler = rot_mat.to_euler()
+
 
                     rot_mat = Matrix.Identity(3)
                     rot_mat.rotate(Euler((ex, ey, ez)))
-                    rot_mat.rotate(Euler((0.0, 0.0, z_local_angle)))
                     rot_mat.rotate(Euler((x_angle, 0.0, 0.0)))
                     rot_mat.rotate(Euler((0.0, 0.0, z_angle)))
-                    # bpy.ops.transform.rotate(value=z_local_angle, orient_axis='Z')
-                    # bpy.ops.transform.rotate(value=x_angle, orient_axis='X')
-                    # bpy.ops.transform.rotate(value=z_angle, orient_axis='Z')
                     obj.rotation_euler = rot_mat.to_euler()
 
                     bpy.context.scene.render.filepath = tmp.name
                     tmp.close()
                     bpy.ops.render.render(write_still = True)
-                    z_images.append(Image.open(tmp.name))
-            x_images.append(z_images)
-        images.append(x_images)
-    print("Rendering complete.")
-    print("Merging...")
 
-    total_width = args.z_frames * target_width
-    total_height = args.x_frames * target_height * args.z_local_frames
+                    im = Image.open(tmp.name)
+                    new_im.paste(im, (x_offset, block_offset + y_offset))
 
-    new_im = Image.new('RGBA', (total_width, total_height))
 
-    block_offset = 0
-    for x_images in images:
-        y_offset = 0
-        for z_images in x_images:
-            x_offset = 0
-            for im in z_images:
-                new_im.paste(im, (x_offset, block_offset + y_offset))
                 x_offset += target_width
             y_offset += target_height
         block_offset += target_height * args.x_frames
+    print("Rendering complete.")
 
     os.makedirs(Path(args.output).parent, exist_ok=True)
     new_im.save(args.output)
