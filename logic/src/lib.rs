@@ -24,7 +24,7 @@ pub type StdRng = rand_pcg::Pcg64;
 pub const TILE_SIZE: u32 = 4;
 
 /// The bounding-box "diameter" of a harbor, in meter
-pub const HARBOR_SIZE: u32 = 10;
+pub const HARBOR_SIZE: f32 = 10.0;
 
 /// The effect "diameter" within which a player an interact with a harbor, in meter
 pub const HARBOR_EFFECT_SIZE: u32 = 20;

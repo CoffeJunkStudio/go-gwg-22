@@ -60,6 +60,10 @@ struct ResourceBatches {
 	fishes: Vec<AssetBatch>,
 }
 
+struct BuildingBatches {
+	harbor: AssetBatch,
+}
+
 fn draw_and_clear<'a>(
 	ctx: &mut gwg::Context,
 	quad_ctx: &mut gwg::miniquad::Context,
@@ -83,6 +87,7 @@ struct Game {
 	terrain_batches: TerrainBatches,
 	ship_batches: ShipBatches,
 	resource_batches: ResourceBatches,
+	building_batches: BuildingBatches,
 	sound: audio::Source,
 	sound_fishy: audio::Source,
 	input_text: String,
@@ -128,6 +133,10 @@ impl Game {
 			.collect(),
 		};
 
+		let building_batches = BuildingBatches {
+			harbor: AssetBatch::from_config(ctx, quad_ctx, &render_config, "harbour-00").unwrap(),
+		};
+
 		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
 		let sound_fishy = audio::Source::new(ctx, "/sound/fischie.ogg")?;
 
@@ -151,6 +160,7 @@ impl Game {
 			terrain_batches,
 			ship_batches,
 			resource_batches,
+			building_batches,
 			sound,
 			sound_fishy,
 			input_text: String::new(),
@@ -345,20 +355,39 @@ impl gwg::event::EventHandler for Game {
 				(resource.loc.0.y * 100.0) as u128,
 			);
 
+			let resource_pos =
+				resource.loc.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE as f32).xx() * 0.5;
+			let dest = self.location_to_screen_coords(ctx, Location(resource_pos));
+
+			let batch = self.resource_batches.fishes.choose_mut(&mut rng).unwrap();
+
 			let resource_scale = logic::glm::vec1(
 				logic::RESOURCE_PACK_FISH_SIZE
 					/ self.meters_per_pixel
-					/ self.ship_batches.basic.body.params().width as f32,
+					/ batch.params().width as f32,
 			)
 			.xx();
-			let resource_pos =
-				resource.loc.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE as f32).xx() * 0.5;
-			let param = DrawParam::new()
-				.dest(self.location_to_screen_coords(ctx, Location(resource_pos)))
-				.scale(resource_scale);
+			let param = DrawParam::new().dest(dest).scale(resource_scale);
 
-			let batch = self.resource_batches.fishes.choose_mut(&mut rng).unwrap();
 			batch.add_frame(0.0, rng.gen::<f64>() * std::f64::consts::TAU, 0.0, param);
+		}
+
+		for harbor in &self.world.state.harbors {
+			let harbor_scale = logic::glm::vec1(
+				logic::HARBOR_SIZE
+					/ self.meters_per_pixel
+					/ self.building_batches.harbor.params().width as f32,
+			)
+			.xx();
+			let harbor_pos =
+				harbor.loc.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE as f32).xx() * 0.5;
+			let param = DrawParam::new()
+				.dest(self.location_to_screen_coords(ctx, Location(harbor_pos)))
+				.scale(harbor_scale);
+
+			self.building_batches
+				.harbor
+				.add_frame(0.0, f64::from(harbor.orientation), 0.0, param);
 		}
 
 		draw_and_clear(
@@ -377,6 +406,7 @@ impl gwg::event::EventHandler for Game {
 					.map(DerefMut::deref_mut),
 			)
 			.chain([
+				self.building_batches.harbor.deref_mut(),
 				self.ship_batches.basic.body.deref_mut(),
 				self.ship_batches.basic.sail.deref_mut(),
 			]),
