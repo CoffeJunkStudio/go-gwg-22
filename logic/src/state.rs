@@ -196,14 +196,15 @@ impl WorldState {
 			p.vehicle.velocity += acc * duration;
 			let distance = duration * (vel_0 + duration * acc);
 
-			let old_tile: TileCoord = p.vehicle.pos.into();
+			let old_tile: TileCoord = p.vehicle.pos.try_into().expect("Player is out of bounds");
 			p.vehicle.pos.0 += distance;
 
 
 			// Terrain interaction
 			if init.terrain.contains(p.vehicle.pos) {
-				if init.terrain.get(old_tile).is_passable() {
-					let new_tile: TileCoord = p.vehicle.pos.into();
+				if Some(true) == init.terrain.try_get(old_tile).map(|t| t.is_passable()) {
+					let new_tile: TileCoord =
+						p.vehicle.pos.try_into().expect("Player goes out of bounds");
 
 					match init.terrain.get(new_tile).is_passable() {
 						true => {

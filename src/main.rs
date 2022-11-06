@@ -278,8 +278,8 @@ impl gwg::event::EventHandler for Game {
 			let scm_y = screen_coords.h * self.meters_per_pixel;
 			let dst = Distance::new(scm_x * 0.5, scm_y * 0.5);
 
-			let lt = TileCoord::from((player_pos - dst).max(Location::ORIGIN));
-			let rb = TileCoord::from(player_pos + dst);
+			let lt = TileCoord::try_from((player_pos - dst).max(Location::ORIGIN)).expect("bar");
+			let rb = TileCoord::try_from(player_pos + dst).expect("foo");
 
 			(lt, rb)
 		};

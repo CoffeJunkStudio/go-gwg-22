@@ -81,23 +81,35 @@ impl From<TileCoord> for (u16, u16) {
 		(tc.x, tc.y)
 	}
 }
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum TileCoordOutOfBoundsError {
+	UnderRun,
+	OverRun,
+}
 /// Gives the coordinates of the tile below the given location
 ///
 /// Notice, if the location is out-of-bounds of the map, so will the tile coord.
-impl From<Location> for TileCoord {
-	fn from(loc: Location) -> Self {
+impl TryFrom<Location> for TileCoord {
+	type Error = TileCoordOutOfBoundsError;
+
+	fn try_from(loc: Location) -> Result<Self, Self::Error> {
 		// TODO: consider handling these errors, as well as
 		// `n / TILE_SIZE > u16::MAX`, more graceful
 		assert!(loc.0.x >= 0.0, "x is negative (or nan)");
 		assert!(loc.0.y >= 0.0, "y is negative (or nan)");
-		Self {
+		if loc.0.x < 0.0 || loc.0.y < 0.0 {
+			return Err(TileCoordOutOfBoundsError::UnderRun);
+		}
+
+		Ok(Self {
 			x: (loc.0.x as u32 / TILE_SIZE)
 				.try_into()
-				.unwrap_or_else(|_| panic!("Location way too huge: {:?}", loc)),
+				.map_err(|_| TileCoordOutOfBoundsError::OverRun)?,
 			y: (loc.0.y as u32 / TILE_SIZE)
 				.try_into()
-				.unwrap_or_else(|_| panic!("Location way too huge: {:?}", loc)),
-		}
+				.map_err(|_| TileCoordOutOfBoundsError::OverRun)?,
+		})
 	}
 }
 /// Gives the center point of the tile
@@ -254,7 +266,7 @@ impl Terrain {
 			let candidate = self.random_location(&mut rng);
 
 			// Check if the location is on a passable tile
-			if self.get(candidate.into()).is_passable() {
+			if self.get(candidate.try_into().unwrap()).is_passable() {
 				return candidate;
 			}
 		}
