@@ -253,7 +253,11 @@ impl WorldState {
 			// Turning angle
 			let angle = distance_norm / turning_circle_radius;
 
-			p.vehicle.heading += angle * p.vehicle.ruder.to_f32().signum();
+			let angle = angle.max(0.02);
+
+			if p.vehicle.ruder.to_f32().abs() > 0.01 {
+				p.vehicle.heading += angle * p.vehicle.ruder.to_f32().signum();
+			}
 
 			// Turning by traction
 
