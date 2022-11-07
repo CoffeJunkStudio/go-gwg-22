@@ -38,6 +38,22 @@ use crate::WIND_CHANGE_INTERVAL;
 
 
 
+/// Normalize an angle in positive range [0,2π)
+fn normalize_angle_pos(angle: f32) -> f32 {
+	angle.rem_euclid(TAU)
+}
+
+/// Normalize an angle in range [-π,π)
+fn normalize_angle_rel(angle: f32) -> f32 {
+	let pos = normalize_angle_pos(angle);
+	if pos > PI {
+		pos - TAU
+	} else {
+		pos
+	}
+}
+
+
 /// Events that can happen between ticks
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -132,33 +148,41 @@ impl WorldState {
 				let apparent_wind = true_wind - p.vehicle.velocity;
 				let ship_angle = p.vehicle.heading;
 
-				let local_wind_angle = (f32::atan2(apparent_wind.y, apparent_wind.x) - ship_angle
-					+ PI)
-					.rem_euclid(TAU);
-				let local_wind_angle = if local_wind_angle > PI {
-					local_wind_angle - TAU
-				} else {
-					local_wind_angle
+				let local_wind_angle = {
+					let diff = f32::atan2(apparent_wind.y, apparent_wind.x) - ship_angle;
+
+					// Normalized to [-π, π)
+					normalize_angle_rel(diff)
 				};
-				let local_sail_angle = local_wind_angle.clamp(-PI / 2., PI / 2.);
 
-				let useful_drag = (local_wind_angle.abs() - PI / 2.).max(0.0);
+				let local_sail_angle =
+					(normalize_angle_rel(local_wind_angle + PI)).clamp(-PI / 2., PI / 2.) - PI;
+				p.vehicle.sail.orientation = local_sail_angle + ship_angle;
 
-				p.vehicle.sail.orientation = -(local_sail_angle + ship_angle - PI) + PI;
 
-				let max_sail_area = 30.;
+				let sail_drag_ness = 1.
+					- p.vehicle
+						.sail
+						.orientation_vec()
+						.dot(&apparent_wind.normalize())
+						.abs();
+
+				let sail_drag = apparent_wind * sail_drag_ness;
+
+
+				let static_ship_area = 1.;
+				let max_sail_area = 200.;
 				let rel_area = match p.vehicle.sail.reefing {
 					Reefing::Reefed(n) => (f32::from(n) / 4.).min(1.0),
 				};
 				let sail_area = max_sail_area * rel_area;
 
-				let prop = useful_drag * sail_area * self.wind.magnitude();
+				let prop = sail_drag * sail_area + apparent_wind * static_ship_area;
 
-				// as fraction
-				// TODO: introduce wind (strength and direction)
-				// TODO: use sail trim
+				let direction = apparent_wind.normalize();
+
 				// in W
-				let power = prop;
+				let power = prop.magnitude();
 				// in J
 				let work = power * duration;
 
@@ -172,7 +196,7 @@ impl WorldState {
 				// in m/s²
 				let acceleration = (-speed + (speed * speed + 2.0 * work / mass).sqrt()) / duration;
 
-				acceleration
+				direction * acceleration
 			};
 
 			/* debugging
@@ -185,7 +209,6 @@ impl WorldState {
 			);
 			*/
 
-			let acceleration = p.vehicle.heading_vec() * acceleration;
 			let friction = p.vehicle.friction_deacceleration();
 
 			let vel_0 = p.vehicle.velocity;
@@ -483,6 +506,12 @@ pub struct Sail {
 	pub reefing: Reefing,
 	/// Absolute sail orientation in radians, zero is word-X.
 	pub orientation: f32,
+}
+impl Sail {
+	/// Orientation as unit vector.
+	pub fn orientation_vec(&self) -> Vec2 {
+		Vec2::new(self.orientation.cos(), self.orientation.sin())
+	}
 }
 
 /// Represents the dynamic state of a player

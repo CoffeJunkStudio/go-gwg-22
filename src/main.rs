@@ -331,9 +331,10 @@ impl gwg::event::EventHandler for Game {
 			.dest(self.location_to_screen_coords(ctx, Location(ship_pos)))
 			.scale(ship_scale);
 		let heading = f64::from(self.world.state.player.vehicle.heading);
+		let ship_heading = -heading + std::f64::consts::PI;
 		self.ship_batches.basic.body.add_frame(
 			0.0,
-			-heading + std::f64::consts::PI,
+			ship_heading,
 			f64::from(self.world.state.player.vehicle.angle_of_list),
 			param,
 		);
@@ -351,12 +352,14 @@ impl gwg::event::EventHandler for Game {
 		let sail_param = DrawParam::new()
 			.dest(self.location_to_screen_coords(ctx, Location(ship_pos)))
 			.scale(sail_scale);
-		let sail_orient = f64::from(self.world.state.player.vehicle.sail.orientation);
+		let orientation = f64::from(self.world.state.player.vehicle.sail.orientation);
+		let sail_orient = -orientation + std::f64::consts::PI;
 
 		let sail_ass = &mut self.ship_batches.basic.sail[usize::from(sail_reefing).min(max_sail)];
 		sail_ass.add_frame(
-			heading + sail_orient,
-			-heading + std::f64::consts::PI,
+			// We need the sail orientation, minus the heading (because the model is in a rotating frame), plus a half turn (because the model is half way turned around).
+			sail_orient - ship_heading + std::f64::consts::PI,
+			ship_heading,
 			f64::from(self.world.state.player.vehicle.angle_of_list),
 			sail_param,
 		);
@@ -477,6 +480,7 @@ impl gwg::event::EventHandler for Game {
 			),
 			Color::BLACK,
 		)?;
+
 		// Current Ship states
 		let input_text = Text::new(format!(
 			"Ship: {:.2} m/s, fish {:.0} kg",
@@ -490,6 +494,7 @@ impl gwg::event::EventHandler for Game {
 			(Point2::new(100.0, 60.0), Color::WHITE),
 			Color::BLACK,
 		)?;
+
 		// Current Ship states
 		let input_text = Text::new(format!(
 			"Ori: {:.2}, {:.2}",
