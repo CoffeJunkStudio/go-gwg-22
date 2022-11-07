@@ -20,11 +20,11 @@ jobs:
 
     steps:
     - name: Install prerequisites
-      run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev git-lfs
+      run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
     - name: Check out git repo
       uses: actions/checkout@v3
-    - name: Resolve LFS references
-      run: git lfs pull
+    - name: Update submodules
+      run: git submodule update --init
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -38,11 +38,11 @@ jobs:
 
     steps:
     - name: Install prerequisites
-      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev git-lfs
+      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev
     - name: Check out git repo
       uses: actions/checkout@v3
-    - name: Resolve LFS references
-      run: git lfs pull
+    - name: Update submodules
+      run: git submodule update --init
     - name: Build binary
       run: cargo build --release --verbose
     - name: Archive binary
@@ -59,11 +59,11 @@ jobs:
 
     steps:
     - name: Install prerequisites
-      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev gcc-mingw-w64-x86-64 git-lfs
+      run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev gcc-mingw-w64-x86-64
     - name: Check out git repo
       uses: actions/checkout@v3
-    - name: Resolve LFS references
-      run: git lfs pull
+    - name: Update submodules
+      run: git submodule update --init
     - name: Install win target
       run: rustup target add x86_64-pc-windows-gnu
     - name: Build binary
@@ -82,11 +82,11 @@ jobs:
 
     steps:
     - name: Install prerequisites
-      run: apt-get update && apt-get install -y --no-install-recommends git-lfs
+      run: apt-get update && apt-get install -y --no-install-recommends
     - name: Check out git repo
       uses: actions/checkout@v3
-    - name: Resolve LFS references
-      run: git lfs pull
+    - name: Update submodules
+      run: git submodule update --init
     - name: Install web target
       run: rustup target add wasm32-unknown-unknown
     - name: Build binary
@@ -105,12 +105,12 @@ jobs:
 
     steps:
     - name: Install prerequisites
-      run: apt-get update && apt-get install -y --no-install-recommends libz-dev git-lfs
+      run: apt-get update && apt-get install -y --no-install-recommends libz-dev git
     # Intentionally checking out git repo AFTER installing the prerequisites as actions/checkout@v3 seems to do some weird checkout if git is not installed
     - name: Check out git repo
       uses: actions/checkout@v3
-    - name: Resolve LFS references
-      run: git lfs pull
+    - name: Update submodules
+      run: git submodule update --init
     - name: Build binary
       run: cargo quad-apk build --release
     - name: Archive web package

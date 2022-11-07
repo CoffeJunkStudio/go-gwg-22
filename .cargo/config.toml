@@ -1,3 +1,0 @@
-
-[alias]
-render-assets = "run --release -p render-assets"

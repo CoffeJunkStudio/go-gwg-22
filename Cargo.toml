@@ -1,5 +1,6 @@
 [workspace]
-members = ["logic", "libs/asset-config", "tools/render-assets"]
+members = ["logic"]
+exclude = ["asset-repo"]
 
 [package]
 name = "plenty-of-fish-in-the-sea"
@@ -13,8 +14,9 @@ logic = {path = "logic"}
 rand = { version = "0.8.5", default_features = false }
 num-rational = {version = "0.4"}
 mint = "0.5.9"
-asset-config = { path = "libs/asset-config" }
+asset-config = { path = "asset-repo/libs/asset-config" }
 toml = "0.5"
+miniquad = "=0.3.13"
 
 [dependencies.nalgebra]
 version = "0.31.0"

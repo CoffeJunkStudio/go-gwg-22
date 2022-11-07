@@ -21,7 +21,7 @@ fn built_info() {
 // Package up all the assets from the `assets` folder
 fn package_assets() {
 	// We want to rerun this script if anything within the "assets" folder changed
-	println!("cargo:rerun-if-changed=assets");
+	println!("cargo:rerun-if-changed=asset-repo/assets");
 
 	// We are going to package all that stuff into a tar archive, so we
 	// can inline that into our binary, and thus we write it to the OUT folder.
@@ -32,7 +32,7 @@ fn package_assets() {
 	let mut tar_builder = tar::Builder::new(tar_file);
 
 	// Move all the asset stuff into the archive
-	tar_builder.append_dir_all(".", "assets").unwrap();
+	tar_builder.append_dir_all(".", "asset-repo/assets").unwrap();
 	// And write it.
 	tar_builder.finish().unwrap();
 }

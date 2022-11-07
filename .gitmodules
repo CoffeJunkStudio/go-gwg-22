@@ -1,0 +1,3 @@
+[submodule "asset-repo"]
+	path = asset-repo
+	url = https://github.com/CoffeJunkStudio/go-gwg-22-assets.git

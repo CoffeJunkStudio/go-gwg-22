@@ -39,7 +39,7 @@ use rand::Rng;
 pub mod asset_batch;
 
 const ASSET_CONFIG_STR: &str =
-	include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/render_assets.toml"));
+	include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/asset-repo/render_assets.toml"));
 
 struct TerrainBatches {
 	deep: SpriteBatch,
