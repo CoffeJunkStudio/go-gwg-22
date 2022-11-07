@@ -220,8 +220,21 @@ impl WorldState {
 			let distance = duration * (vel_0 + duration * acc);
 
 			let old_tile: TileCoord = p.vehicle.pos.try_into().expect("Player is out of bounds");
+			let old_pos = p.vehicle.pos.0;
 			p.vehicle.pos.0 += distance;
 
+			// Keep the player on the Torus-world
+			p.vehicle.pos.0.x = p.vehicle.pos.0.x.rem_euclid(init.terrain.map_size());
+			p.vehicle.pos.0.y = p.vehicle.pos.0.y.rem_euclid(init.terrain.map_size());
+			// Apparently, floating-point rems, may return a value as big as `rhs`
+			// So we need to fix that
+			// Maybe we could use one day `next_down()` instead
+			if p.vehicle.pos.0.x == init.terrain.map_size() {
+				p.vehicle.pos.0.x = 0.0;
+			}
+			if p.vehicle.pos.0.y == init.terrain.map_size() {
+				p.vehicle.pos.0.y = 0.0;
+			}
 
 			// Terrain interaction
 			if init.terrain.contains(p.vehicle.pos) {
@@ -236,7 +249,7 @@ impl WorldState {
 						false => {
 							// TODO: maybe we want to handle this differently
 							// Vehicles bounce off mountains
-							p.vehicle.pos.0 -= distance;
+							p.vehicle.pos.0 = old_pos;
 
 							p.vehicle.velocity *= -0.5;
 
@@ -253,9 +266,13 @@ impl WorldState {
 				}
 			} else {
 				// Player off map
+				// Can not happen in Torus-world!
+				eprintln!("Player pos: {:?}", p.vehicle.pos);
+				panic!("Player went off the Torus!")
+
 				// Clamp
-				p.vehicle.pos.0 -= distance;
-				p.vehicle.velocity = Vec2::new(0., 0.);
+				//p.vehicle.pos.0 -= distance;
+				//p.vehicle.velocity = Vec2::new(0., 0.);
 			}
 
 
