@@ -135,11 +135,11 @@ def main():
                     z_angle = math.radians(z_step * 360 / args.z_frames)
 
                     for i, c in enumerate(obj.children):
-                        rot_mat = Matrix.Identity(3)    
-                        ex = child_eulers[i][0]
-                        ey = child_eulers[i][1]
-                        ez = child_eulers[i][2]
-                        rot_mat.rotate(Euler((ex, ey, ez)))
+                        rot_mat = Matrix.Identity(3)
+                        cex = child_eulers[i][0]
+                        cey = child_eulers[i][1]
+                        cez = child_eulers[i][2]
+                        rot_mat.rotate(Euler((cex, cey, cez)))
                         rot_mat.rotate(Euler((0.0, 0.0, z_local_angle)))
                         c.rotation_euler = rot_mat.to_euler()
 
