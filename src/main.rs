@@ -251,7 +251,6 @@ impl gwg::event::EventHandler for Game {
 
 			self.input.rudder = BiPolarFraction::from_f32(rudder).unwrap();
 			let events = self.world.state.update(&self.world.init, &self.input);
-			self.input.rudder = BiPolarFraction::default();
 
 			for ev in events {
 				match ev {
@@ -278,8 +277,8 @@ impl gwg::event::EventHandler for Game {
 			let scm_y = screen_coords.h * self.meters_per_pixel;
 			let dst = Distance::new(scm_x * 0.5, scm_y * 0.5);
 
-			let lt = TileCoord::try_from((player_pos - dst).max(Location::ORIGIN)).expect("bar");
-			let rb = TileCoord::try_from(player_pos + dst).expect("foo");
+			let lt = TileCoord::try_from((player_pos - dst).max(Location::ORIGIN)).expect("no lt");
+			let rb = TileCoord::try_from(player_pos + dst).expect("no rb");
 
 			(lt, rb)
 		};
@@ -497,12 +496,19 @@ impl gwg::event::EventHandler for Game {
 
 		// Current Ship states
 		let input_text = Text::new(format!(
-			"Ori: {:.2}, {:.2}",
-			self.world.state.player.vehicle.heading,
-			f32::atan2(
-				self.world.state.player.vehicle.heading_vec().y,
-				self.world.state.player.vehicle.heading_vec().x
-			)
+			"Ori: {:.2}, List: {:.0}°",
+			self.world
+				.state
+				.player
+				.vehicle
+				.heading
+				.rem_euclid(std::f32::consts::TAU),
+
+			self.world
+				.state
+				.player
+				.vehicle
+				.angle_of_list.to_degrees()
 		));
 		self.draw_text_with_halo(
 			ctx,

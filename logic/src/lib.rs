@@ -90,7 +90,7 @@ pub const BREAKING_DEACCL: f32 = 3.0;
 pub const WATER_CONSUMPTION: f32 = 0.01;
 
 /// Maximum amount of traction
-pub const MAX_TRACTION: f32 = 1.0;
+pub const MAX_TRACTION: f32 = 0.5;
 
 /// The interval between wind changes in seconds
 pub const WIND_CHANGE_INTERVAL: u16 = 10;

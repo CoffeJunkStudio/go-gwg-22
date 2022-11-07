@@ -288,7 +288,9 @@ impl WorldState {
 			// Turning by traction
 
 			let head_speed = p.vehicle.wheel_speed();
-			let cross_speed = p.vehicle.cross_speed();
+			let cross_speed = p.vehicle.cross_speed() * 0.5;
+
+			p.vehicle.angle_of_list = (-(cross_speed / MAX_TRACTION / 2.) * PI).clamp(-PI,PI);
 
 			let cross_traction_speed = cross_speed.clamp(-MAX_TRACTION, MAX_TRACTION);
 
