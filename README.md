@@ -25,6 +25,12 @@ Prerequisites
 In order to build this game from source, you need a decent Rust compiler and the
 Cargo package manager, you can get both from [here][rust-get-started].
 
+Also since we put the assets into a sub-module, you need to initialize it first:
+
+```sh
+git submodule update --init
+```
+
 ### Native
 
 On Linux you need at least the following additional libraries:
