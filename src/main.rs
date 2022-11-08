@@ -16,6 +16,8 @@ mod scenes;
 
 
 fn main() -> gwg::GameResult {
+	println!("--- [main] entered");
+
 	gwg::start(
 		gwg::conf::Conf::default()
 			.window_title("Plenty of fish in the sea".into())
@@ -25,7 +27,7 @@ fn main() -> gwg::GameResult {
 				env!("OUT_DIR"),
 				"/assets.tar"
 			)))),
-		|context, quad_ctx| Box::new(scenes::Game::new(context, quad_ctx).unwrap()),
+		|context, _quad_ctx| Box::new(scenes::create_stack(context)),
 	)
 }
 

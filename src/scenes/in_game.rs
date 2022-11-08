@@ -3,6 +3,8 @@ use std::ops::DerefMut;
 use good_web_game as gwg;
 use gwg::audio;
 use gwg::cgmath::Point2;
+use gwg::goodies::scene::Scene;
+use gwg::goodies::scene::SceneSwitch;
 use gwg::graphics;
 use gwg::graphics::Color;
 use gwg::graphics::DrawParam;
@@ -25,6 +27,7 @@ use logic::World;
 use rand::seq::SliceRandom;
 use rand::Rng;
 
+use super::GlobalState;
 use crate::assets::asset_batch::image_batch;
 use crate::assets::asset_batch::AssetBatch;
 use crate::assets::draw_and_clear;
@@ -62,14 +65,26 @@ impl Game {
 		//       or implement both.
 		let seed: u64 = 44;
 
+		println!(
+			"{:.3} [game] loading config...",
+			gwg::timer::time_since_start(ctx).as_secs_f64()
+		);
 		let render_config = load_asset_config();
 
+		println!(
+			"{:.3} [game] loading terrain...",
+			gwg::timer::time_since_start(ctx).as_secs_f64()
+		);
 		let terrain_batches = TerrainBatches {
 			deep: image_batch(ctx, quad_ctx, "img/deepwater0.png")?,
 			shallow: image_batch(ctx, quad_ctx, "img/shallowwater.png")?,
 			land: image_batch(ctx, quad_ctx, "img/gwg.png")?,
 		};
 
+		println!(
+			"{:.3} [game] loading ships...",
+			gwg::timer::time_since_start(ctx).as_secs_f64()
+		);
 		let ship_batches = ShipBatches {
 			basic: ShipSprites {
 				body: AssetBatch::from_config(ctx, quad_ctx, &render_config, "ship-00")?,
@@ -83,6 +98,10 @@ impl Game {
 			},
 		};
 
+		println!(
+			"{:.3} [game] loading resources...",
+			gwg::timer::time_since_start(ctx).as_secs_f64()
+		);
 		let resource_batches = ResourceBatches {
 			fishes: [
 				"fish-00", "fish-01", "fish-02", "fish-03", "fish-04", "fish-05", "fish-06",
@@ -93,13 +112,26 @@ impl Game {
 			.collect(),
 		};
 
+		println!(
+			"{:.3} [game] loading buildings...",
+			gwg::timer::time_since_start(ctx).as_secs_f64()
+		);
 		let building_batches = BuildingBatches {
 			harbor: AssetBatch::from_config(ctx, quad_ctx, &render_config, "harbour-00").unwrap(),
 		};
 
+		println!(
+			"{:.3} [game] loading sounds...",
+			gwg::timer::time_since_start(ctx).as_secs_f64()
+		);
 		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
 		let sound_fishy = audio::Source::new(ctx, "/sound/fischie.ogg")?;
 
+
+		println!(
+			"{:.3} [game] generating world...",
+			gwg::timer::time_since_start(ctx).as_secs_f64()
+		);
 		// Generate world
 		let noise = PerlinNoise;
 		let settings = Setting {
@@ -111,7 +143,6 @@ impl Game {
 		let mut world = noise.generate(&settings, &mut rng);
 		world.state.player.vehicle.heading = 1.0;
 		world.state.player.vehicle.pos = world.init.terrain.random_passable_location(&mut rng);
-
 
 		let meters_per_pixel = 30.0 / 1920.0;
 
@@ -128,6 +159,11 @@ impl Game {
 			input: Input::default(),
 			meters_per_pixel,
 		};
+
+		println!(
+			"{:.3} [game] ready to go",
+			gwg::timer::time_since_start(ctx).as_secs_f64()
+		);
 
 		Ok(s)
 	}
@@ -183,12 +219,17 @@ impl Game {
 	}
 }
 
-impl gwg::event::EventHandler for Game {
+impl Scene<GlobalState> for Game {
+	fn name(&self) -> &str {
+		"In-Game"
+	}
+
 	fn update(
 		&mut self,
+		glob: &mut GlobalState,
 		ctx: &mut gwg::Context,
 		_quad_ctx: &mut gwg::miniquad::Context,
-	) -> gwg::GameResult<()> {
+	) -> SceneSwitch<GlobalState> {
 		use gwg::input::keyboard::is_key_pressed;
 
 		while gwg::timer::check_update_time(ctx, TICKS_PER_SECOND.into()) {
@@ -212,11 +253,16 @@ impl gwg::event::EventHandler for Game {
 			}
 		}
 
-		Ok(())
+		if is_key_pressed(&ctx, KeyCode::Escape) {
+			SceneSwitch::Pop
+		} else {
+			SceneSwitch::None
+		}
 	}
 
 	fn draw(
 		&mut self,
+		glob: &mut GlobalState,
 		ctx: &mut gwg::Context,
 		quad_ctx: &mut gwg::miniquad::Context,
 	) -> gwg::GameResult<()> {
@@ -484,11 +530,10 @@ impl gwg::event::EventHandler for Game {
 
 	fn key_down_event(
 		&mut self,
+		glob: &mut GlobalState,
 		ctx: &mut gwg::Context,
 		quad_ctx: &mut gwg::miniquad::Context,
 		keycode: gwg::miniquad::KeyCode,
-		_keymods: gwg::event::KeyMods,
-		_repeat: bool,
 	) {
 		if keycode == KeyCode::Escape {
 			gwg::event::quit(ctx);
@@ -520,6 +565,8 @@ impl gwg::event::EventHandler for Game {
 		}
 	}
 
+	/*
+	TODO: what to do about that?
 	fn text_input_event(
 		&mut self,
 		_ctx: &mut gwg::Context,
@@ -528,16 +575,16 @@ impl gwg::event::EventHandler for Game {
 	) {
 		self.input_text.push(character);
 	}
+	*/
 
 	fn resize_event(
 		&mut self,
+		glob: &mut GlobalState,
 		context: &mut gwg::Context,
 		_quad_ctx: &mut gwg::miniquad::GraphicsContext,
 		w: f32,
 		h: f32,
 	) {
-		//self.screen_width = w;
-		//self.screen_height = h;
 		let coordinates = graphics::Rect::new(0., 0., w, h);
 
 		graphics::set_screen_coordinates(context, coordinates).expect("Can't resize the window");
