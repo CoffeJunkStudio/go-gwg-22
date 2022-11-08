@@ -1,10 +1,8 @@
 use std::f32::consts::PI;
 use std::f32::consts::TAU;
-use std::ops::Rem;
 
 use nalgebra_glm::Vec2;
 use rand::Rng;
-use rand::SeedableRng;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -20,18 +18,11 @@ use crate::ResourcePack;
 use crate::ResourcePackContent;
 use crate::StdRng;
 use crate::WorldInit;
-use crate::ENGINE_IDEAL_RPM;
-use crate::ENGINE_POWER;
-use crate::ENGINE_STALL_RPM;
 use crate::FRICTION_CROSS_SPEED_FACTOR;
 use crate::FRICTION_GROUND_SPEED_FACTOR;
-use crate::FRICTION_MOTOR_FACTOR;
-use crate::GEAR_BASE_RATION;
-use crate::GEAR_RATIO_PROGRESSION;
 use crate::MAX_TRACTION;
 use crate::MAX_WIND_SPEED;
 use crate::RESOURCE_PACK_FISH_SIZE;
-use crate::TIRE_SPEED_PER_RPM;
 use crate::VEHICLE_DEADWEIGHT;
 use crate::VEHICLE_SIZE;
 use crate::WIND_CHANGE_INTERVAL;
@@ -90,7 +81,7 @@ impl WorldState {
 		self.timestamp = self.timestamp.next();
 
 		// Apply user inputs
-		self.player.vehicle.apply_input(inputs.clone());
+		self.player.vehicle.apply_input(*inputs);
 
 		// Update wind
 		self.wind = {
@@ -290,7 +281,7 @@ impl WorldState {
 			let head_speed = p.vehicle.wheel_speed();
 			let cross_speed = p.vehicle.cross_speed() * 0.5;
 
-			p.vehicle.angle_of_list = (-(cross_speed / MAX_TRACTION / 2.) * PI).clamp(-PI,PI);
+			p.vehicle.angle_of_list = (-(cross_speed / MAX_TRACTION / 2.) * PI).clamp(-PI, PI);
 
 			let cross_traction_speed = cross_speed.clamp(-MAX_TRACTION, MAX_TRACTION);
 
@@ -413,45 +404,6 @@ impl Vehicle {
 		self.velocity.dot(&self.tangent_vec())
 	}
 
-	/// The raw engine RPM as if the engine never stalls.
-	///
-	/// Notice these RPMs can become negative.
-	#[deprecated]
-	fn engine_rpm_raw(&self) -> f32 {
-		let axle_rpm = self.wheel_speed() / TIRE_SPEED_PER_RPM;
-
-		let (gear, gear_dir): (u8, i8) = {
-			match self.sail.reefing {
-				Reefing::Reefed(n) => (n, 1),
-			}
-		};
-		let gear_translation =
-			GEAR_BASE_RATION * GEAR_RATIO_PROGRESSION.powi(gear.into()) * gear_dir as f32;
-
-		axle_rpm / gear_translation
-	}
-
-	/// The current RPM of the engine
-	///
-	/// Returns `None` if the engine is stalling
-	#[deprecated]
-	pub fn engine_rpm(&self) -> Option<f32> {
-		let rpm = self.engine_rpm_raw();
-
-		// The first gear(s) never disengage
-		if matches!(self.sail.reefing, Reefing::Reefed(0)) {
-			return Some(rpm);
-		}
-
-		// Notice, if forward/reverse is wrongly selected,
-		// the RPMs become even negative.
-		if rpm > ENGINE_STALL_RPM {
-			Some(rpm)
-		} else {
-			None
-		}
-	}
-
 	/// The acceleration caused by friction in m/s
 	///
 	/// This acceleration is vectorial thus it can be just added to the `velocity`.
@@ -462,12 +414,7 @@ impl Vehicle {
 		let sliding_friction =
 			-self.cross_speed() * FRICTION_CROSS_SPEED_FACTOR * self.tangent_vec();
 
-		let motor_friction = -self.engine_rpm().unwrap_or(0.0).abs()
-			* FRICTION_MOTOR_FACTOR
-			* self.wheel_speed().signum()
-			* self.heading_vec();
-
-		rolling_friction + sliding_friction + motor_friction
+		rolling_friction + sliding_friction
 	}
 
 	/// Apply the given `input` to this vehicle
@@ -480,7 +427,7 @@ impl Vehicle {
 
 	/// Returns the total mass of the vehicle (inclusive payloads) in kilogram
 	pub fn mass(&self) -> f32 {
-		VEHICLE_DEADWEIGHT + self.fish.0 as f32
+		VEHICLE_DEADWEIGHT + self.fish.0
 	}
 }
 

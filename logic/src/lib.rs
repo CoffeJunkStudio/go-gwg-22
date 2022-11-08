@@ -24,10 +24,10 @@ pub type StdRng = rand_pcg::Pcg64;
 pub const TILE_SIZE: u32 = 4;
 
 /// The bounding-box "diameter" of a harbor, in meter
-pub const HARBOR_SIZE: f32 = 10.0;
+pub const HARBOR_SIZE: f32 = 10.;
 
 /// The effect "diameter" within which a player an interact with a harbor, in meter
-pub const HARBOR_EFFECT_SIZE: u32 = 20;
+pub const HARBOR_EFFECT_SIZE: f32 = 20.;
 
 /// The "diameter" of the player's car.
 pub const VEHICLE_SIZE: f32 = 1.3;
@@ -41,29 +41,6 @@ pub const RESOURCE_PACK_FISH_SIZE: f32 = 0.8;
 /// The amount of fuel in each fuel resource pack
 pub const RESOURCE_PACK_FISH_AMOUNT: Fish = Fish(1.);
 
-/// The diameter of the tier, in meter
-const TIRE_DIAMETER: f32 = 0.4;
-/// Gives the speed in m/s per axle rpm
-const TIRE_SPEED_PER_RPM: f32 = core::f32::consts::PI * TIRE_DIAMETER / 60.0;
-
-/// Gives the engine rpm per axle rpm
-const GEAR_BASE_RATION: f32 = 0.1;
-/// Gives ration of the engine rpm per axle rpm for each gear
-const GEAR_RATIO_PROGRESSION: f32 = core::f32::consts::SQRT_2;
-
-/// Gives the lower allowed bound for the engine rpm, if the calculated
-/// engine rpm falls below this threshold, the engine stalls.
-pub const ENGINE_STALL_RPM: f32 = 950.0;
-
-/// The engine power at full throttle and ideal RPM, in watt
-pub const ENGINE_POWER: f32 = 5_000.0;
-
-/// The optimal engine rpm, i.e. yielding ful power, in rpm
-pub const ENGINE_IDEAL_RPM: f32 = 3_000.0;
-
-/// The work produced by one kilogram of fuel, in J/kg
-pub const ENGINE_WORK_PER_FUEL: f32 = 25_000.0;
-
 /// Scalar factor influencing the strength of ground based friction.
 ///
 /// This kind of friction gets stronger if the vehicle moves faster over ground.
@@ -72,22 +49,11 @@ pub const FRICTION_GROUND_SPEED_FACTOR: f32 = 0.1;
 /// Scalar factor influencing the strength of gronud based friction when sliding
 pub const FRICTION_CROSS_SPEED_FACTOR: f32 = 0.8;
 
-/// Scalar factor influencing the strength of motor friction.
-///
-/// This kind of friction gets stronger if the motor runs at higher RPM.
-pub const FRICTION_MOTOR_FACTOR: f32 = 0.0001;
-
 /// The maximum steering angle in radians per steering.
 pub const VEHICLE_MAX_STEERING_ANGLE: f32 = core::f32::consts::FRAC_PI_3; // = 60 deg
 
 /// The inner length of the vehicle, it this the distance between the front and back wheels in meter
 pub const VEHICLE_WHEEL_BASE: f32 = 0.9 * VEHICLE_SIZE;
-
-/// The maximum breaking power in m/s²
-pub const BREAKING_DEACCL: f32 = 3.0;
-
-/// The players continues water consumption in kg/s
-pub const WATER_CONSUMPTION: f32 = 0.01;
 
 /// Maximum amount of traction
 pub const MAX_TRACTION: f32 = 0.5;

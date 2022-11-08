@@ -1,4 +1,3 @@
-use enum_map::Enum;
 use nalgebra_glm::Vec2;
 use rand::Rng;
 use serde::Deserialize;

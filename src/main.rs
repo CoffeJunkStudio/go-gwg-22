@@ -1,18 +1,14 @@
 use std::env;
 use std::ops::DerefMut;
-use std::path::Path;
-use std::path::PathBuf;
 
 use asset_batch::image_batch;
 use asset_batch::AssetBatch;
 use asset_config::AssetConfig;
-use asset_config::SingleAssetConfig;
 use good_web_game as gwg;
 use gwg::audio;
 use gwg::cgmath::Point2;
 use gwg::graphics;
 use gwg::graphics::spritebatch::SpriteBatch;
-use gwg::graphics::spritebatch::SpriteIdx;
 use gwg::graphics::Color;
 use gwg::graphics::DrawParam;
 use gwg::graphics::PxScale;
@@ -38,8 +34,10 @@ use rand::Rng;
 
 pub mod asset_batch;
 
-const ASSET_CONFIG_STR: &str =
-	include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/asset-repo/render_assets.toml"));
+const ASSET_CONFIG_STR: &str = include_str!(concat!(
+	env!("CARGO_MANIFEST_DIR"),
+	"/asset-repo/render_assets.toml"
+));
 
 struct TerrainBatches {
 	deep: SpriteBatch,
@@ -83,7 +81,6 @@ fn draw_and_clear<'a>(
 
 // #[derive(Debug)] `audio::Source` dose not implement Debug!
 struct Game {
-	sprite_batch: SpriteBatch,
 	terrain_batches: TerrainBatches,
 	ship_batches: ShipBatches,
 	resource_batches: ResourceBatches,
@@ -107,8 +104,6 @@ impl Game {
 		let seed: u64 = 44;
 
 		let render_config: AssetConfig = toml::from_str(ASSET_CONFIG_STR).unwrap();
-
-		let batch = image_batch(ctx, quad_ctx, "img/gwg.png")?;
 
 		let terrain_batches = TerrainBatches {
 			deep: image_batch(ctx, quad_ctx, "img/deepwater0.png")?,
@@ -162,7 +157,6 @@ impl Game {
 		let meters_per_pixel = 30.0 / 1920.0;
 
 		let s = Game {
-			sprite_batch: batch,
 			terrain_batches,
 			ship_batches,
 			resource_batches,
@@ -325,7 +319,7 @@ impl gwg::event::EventHandler for Game {
 		)
 		.xx();
 		let ship_pos = self.world.state.player.vehicle.pos.0
-			- logic::glm::vec1(2.5 * logic::VEHICLE_SIZE as f32).xx() * 0.5;
+			- logic::glm::vec1(2.5 * logic::VEHICLE_SIZE).xx() * 0.5;
 		let param = DrawParam::new()
 			.dest(self.location_to_screen_coords(ctx, Location(ship_pos)))
 			.scale(ship_scale);
@@ -370,7 +364,7 @@ impl gwg::event::EventHandler for Game {
 			);
 
 			let resource_pos =
-				resource.loc.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE as f32).xx() * 0.5;
+				resource.loc.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE).xx() * 0.5;
 			let dest = self.location_to_screen_coords(ctx, Location(resource_pos));
 
 			let batch = self.resource_batches.fishes.choose_mut(&mut rng).unwrap();
@@ -394,7 +388,7 @@ impl gwg::event::EventHandler for Game {
 			)
 			.xx();
 			let harbor_pos =
-				harbor.loc.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE as f32).xx() * 0.5;
+				harbor.loc.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE).xx() * 0.5;
 			let param = DrawParam::new()
 				.dest(self.location_to_screen_coords(ctx, Location(harbor_pos)))
 				.scale(harbor_scale);
@@ -503,12 +497,7 @@ impl gwg::event::EventHandler for Game {
 				.vehicle
 				.heading
 				.rem_euclid(std::f32::consts::TAU),
-
-			self.world
-				.state
-				.player
-				.vehicle
-				.angle_of_list.to_degrees()
+			self.world.state.player.vehicle.angle_of_list.to_degrees()
 		));
 		self.draw_text_with_halo(
 			ctx,
