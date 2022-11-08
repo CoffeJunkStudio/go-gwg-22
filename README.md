@@ -5,8 +5,6 @@ Plenty of Fish in the Sea
 >
 > Theme: _Cliché_
 
-We are currently in the progress of finding a good [idea](ideas.md).
-
 Our game is written in Rust with the [good-web-game] crate.
 It can be compiled as an HTML 5 game, natively to Linux and Windows, and for
 Android.
@@ -16,7 +14,23 @@ Or get the "stable" version from our [itch.io page][itchio].
 
 [good-web-game]: https://crates.io/crates/good-web-game
 [preview]: https://coffejunkstudio.github.io/go-gwg-22/
-[itchio]: https://coffejunkstudio.itch.io/plenty-of-fish-in-the-sea
+[itchio]: https://coffejunkstudio.itch.io/plenty-of-fish-in-the-sea?secret=5ZPYs4Hk9oiPTYzBzm4Nenx2fg
+
+
+Game Play
+---------
+
+_We are currently still implementing the core game._
+
+The core game play is about manoeuvering a sailing ship to catch fish from the sea.
+
+
+### Controls
+
+Use the left and right arrow key to turn the ship.
+
+Use the up and down arrow key to set sail and take in the sail, respectively.
+
 
 
 Prerequisites
