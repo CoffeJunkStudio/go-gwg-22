@@ -20,6 +20,7 @@ use crate::StdRng;
 use crate::WorldInit;
 use crate::FRICTION_CROSS_SPEED_FACTOR;
 use crate::FRICTION_GROUND_SPEED_FACTOR;
+use crate::HARBOR_SIZE;
 use crate::MAX_TRACTION;
 use crate::MAX_WIND_SPEED;
 use crate::RESOURCE_PACK_FISH_SIZE;
@@ -206,11 +207,13 @@ impl WorldState {
 
 			let acc = acceleration + friction;
 
+			// Save the old tile and position
+			let old_tile: TileCoord = p.vehicle.pos.try_into().expect("Player is out of bounds");
+			let old_pos = p.vehicle.pos.0;
+
 			// Move according to acceleration & velocity
 			p.vehicle.velocity += acc * duration;
 			let distance = duration * (vel_0 + duration * acc);
-
-			let old_tile: TileCoord = p.vehicle.pos.try_into().expect("Player is out of bounds");
 			p.vehicle.pos.0 += distance;
 
 
@@ -246,8 +249,28 @@ impl WorldState {
 				p.vehicle.velocity = Vec2::new(0., 0.);
 			}
 
+			// Harbor collision
+			for harbor in &self.harbors {
+				// Only check if the player isn't inside yet
+				if old_pos.metric_distance(&harbor.loc.0) > HARBOR_SIZE {
+					// Check if the player went inside
+					if p.vehicle.pos.0.metric_distance(&harbor.loc.0) < HARBOR_SIZE {
+						// Reset player pos
+						p.vehicle.pos.0 = old_pos;
+
+						// Bounce off away from the harbor
+						let head = (old_pos - harbor.loc.0).normalize();
+						//let turn = Rotation2::new(PI / 2.);
+						//let tang = turn * head;
+
+						let head_speed = p.vehicle.velocity.dot(&head);
+						p.vehicle.velocity -= head * head_speed * 2.;
+					}
+				}
+			}
 
 			/* TODO: how about a shore-based breaking
+			 * Tho we would need a (too) shallow water visualization
 			// Apply breaking
 			let wheel_speed = p.vehicle.wheel_speed();
 			let breaking_impulse = p.vehicle.engine.breaking.to_f32() * BREAKING_DEACCL * DELTA;
