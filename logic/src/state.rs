@@ -215,31 +215,28 @@ impl WorldState {
 
 
 			// Terrain interaction
-			if init.terrain.contains(p.vehicle.pos) {
+			// First check whether the player is still on the map, and if so
+			// retrieve its new tile.
+			if let Ok(new_tile) = TileCoord::try_from(p.vehicle.pos) {
+				// Only check collisions if the player is in passable water.
+				// So the player is free to move around if he glitched into terrain, to get out
 				if Some(true) == init.terrain.try_get(old_tile).map(|t| t.is_passable()) {
-					let new_tile: TileCoord =
-						p.vehicle.pos.try_into().expect("Player goes out of bounds");
+					// Check if the player tries to go into impassable terrain
+					if !init.terrain.get(new_tile).is_passable() {
+						// TODO: maybe we want to handle this differently
+						// Ship bounce off land
+						p.vehicle.pos.0 -= distance;
 
-					match init.terrain.get(new_tile).is_passable() {
-						true => {
-							// Alright
-						},
-						false => {
-							// TODO: maybe we want to handle this differently
-							// Vehicles bounce off mountains
-							p.vehicle.pos.0 -= distance;
+						p.vehicle.velocity *= -0.5;
 
-							p.vehicle.velocity *= -0.5;
-
-							if old_tile.x == new_tile.x {
-								// restore x component sign
-								p.vehicle.velocity.x *= -1.;
-							}
-							if old_tile.y == new_tile.y {
-								// restore y component sign
-								p.vehicle.velocity.y *= -1.;
-							}
-						},
+						if old_tile.x == new_tile.x {
+							// restore x component sign
+							p.vehicle.velocity.x *= -1.;
+						}
+						if old_tile.y == new_tile.y {
+							// restore y component sign
+							p.vehicle.velocity.y *= -1.;
+						}
 					}
 				}
 			} else {

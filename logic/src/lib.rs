@@ -8,6 +8,7 @@ pub mod state;
 pub mod terrain;
 pub mod units;
 
+
 pub use nalgebra_glm as glm;
 use state::Reefing;
 use state::WorldState;
@@ -92,6 +93,9 @@ pub struct ResourcePack {
 pub struct World {
 	pub init: WorldInit,
 	pub state: WorldState,
+}
+impl World {
+	// nothing, yet
 }
 
 /// The static initial part of the world

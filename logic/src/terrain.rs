@@ -93,13 +93,13 @@ impl TryFrom<Location> for TileCoord {
 	type Error = TileCoordOutOfBoundsError;
 
 	fn try_from(loc: Location) -> Result<Self, Self::Error> {
-		// TODO: consider handling these errors, as well as
-		// `n / TILE_SIZE > u16::MAX`, more graceful
-		assert!(loc.0.x >= 0.0, "x is negative (or nan)");
-		assert!(loc.0.y >= 0.0, "y is negative (or nan)");
+		// TODO: `n > u32::MAX` and `n / TILE_SIZE > u16::MAX` more gracefully
+
 		if loc.0.x < 0.0 || loc.0.y < 0.0 {
 			return Err(TileCoordOutOfBoundsError::UnderRun);
 		}
+		assert!(loc.0.x >= 0.0, "x is negative (or nan)");
+		assert!(loc.0.y >= 0.0, "y is negative (or nan)");
 
 		Ok(Self {
 			x: (loc.0.x as u32 / TILE_SIZE)

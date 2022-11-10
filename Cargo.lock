@@ -883,6 +883,7 @@ version = "0.0.2-alpha"
 dependencies = [
  "enum-map",
  "lazy_static",
+ "nalgebra",
  "nalgebra-glm",
  "noise",
  "rand 0.8.5",
