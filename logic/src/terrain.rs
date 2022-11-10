@@ -181,10 +181,15 @@ impl Terrain {
 	}
 
 	pub fn try_get(&self, tc: TileCoord) -> Option<&Elevation> {
-		self.playground.get(self.index(tc))
+		if tc.x >= self.edge_length {
+			None
+		} else {
+			self.playground.get(self.index(tc))
+		}
 	}
 
 	/// Gets tile type at given coordinate
+	#[track_caller]
 	pub fn get(&self, tc: TileCoord) -> &Elevation {
 		let idx = self.index(tc);
 		&self.playground[idx]

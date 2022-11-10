@@ -203,6 +203,7 @@ impl WorldState {
 
 			let friction = p.vehicle.friction_deacceleration();
 
+
 			let vel_0 = p.vehicle.velocity;
 
 			let acc = acceleration + friction;
@@ -225,7 +226,7 @@ impl WorldState {
 				// So the player is free to move around if he glitched into terrain, to get out
 				if Some(true) == init.terrain.try_get(old_tile).map(|t| t.is_passable()) {
 					// Check if the player tries to go into impassable terrain
-					if !init.terrain.get(new_tile).is_passable() {
+					if Some(true) != init.terrain.try_get(new_tile).map(|t| t.is_passable()) {
 						// TODO: maybe we want to handle this differently
 						// Ship bounce off land
 						p.vehicle.pos.0 -= distance;
