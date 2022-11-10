@@ -115,8 +115,8 @@ impl TryFrom<Location> for TileCoord {
 impl From<TileCoord> for Location {
 	fn from(tc: TileCoord) -> Self {
 		Self(Vec2::new(
-			(tc.x as u32 * TILE_SIZE) as f32 + 0.5,
-			(tc.y as u32 * TILE_SIZE) as f32 + 0.5,
+			(tc.x as u32 * TILE_SIZE) as f32 + 0.5 * TILE_SIZE as f32,
+			(tc.y as u32 * TILE_SIZE) as f32 + 0.5 * TILE_SIZE as f32,
 		))
 	}
 }

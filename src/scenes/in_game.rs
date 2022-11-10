@@ -144,7 +144,7 @@ impl Game {
 		world.state.player.vehicle.heading = 1.0;
 		world.state.player.vehicle.pos = world.init.terrain.random_passable_location(&mut rng);
 
-		let meters_per_pixel = 30.0 / 1920.0;
+		let meters_per_pixel = 30. / 800.;
 
 		let s = Game {
 			terrain_batches,
@@ -295,9 +295,11 @@ impl Scene<GlobalState> for Game {
 					// 	continue;
 					// }
 
+					let image_size = 256.;
 
-					let scale = logic::TILE_SIZE as f32 / self.meters_per_pixel / 256.0;
-					let loc = tc.to_location().0; // - logic::glm::vec1(logic::TILE_SIZE as f32).xx() * 0.5;
+					let scale = logic::TILE_SIZE as f32 / self.meters_per_pixel / image_size;
+					let loc =
+						tc.to_location().0 - logic::glm::vec1(logic::TILE_SIZE as f32 * 0.5).xx();
 					let param = DrawParam::new()
 						.dest(self.location_to_screen_coords(ctx, Location(loc)))
 						.scale(logic::glm::vec2(scale, scale));
@@ -387,13 +389,12 @@ impl Scene<GlobalState> for Game {
 
 		for harbor in &self.world.state.harbors {
 			let harbor_scale = logic::glm::vec1(
-				logic::HARBOR_SIZE
+				2. * logic::HARBOR_SIZE
 					/ self.meters_per_pixel
 					/ self.building_batches.harbor.params().width as f32,
 			)
 			.xx();
-			let harbor_pos =
-				harbor.loc.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE).xx() * 0.5;
+			let harbor_pos = harbor.loc.0 - logic::glm::vec1(2. * logic::HARBOR_SIZE).xx() * 0.5;
 			let param = DrawParam::new()
 				.dest(self.location_to_screen_coords(ctx, Location(harbor_pos)))
 				.scale(harbor_scale);

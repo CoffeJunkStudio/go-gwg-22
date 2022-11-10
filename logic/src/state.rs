@@ -252,10 +252,11 @@ impl WorldState {
 
 			// Harbor collision
 			for harbor in &self.harbors {
+				let coll_dist = (HARBOR_SIZE + VEHICLE_SIZE) * 0.5;
 				// Only check if the player isn't inside yet
-				if old_pos.metric_distance(&harbor.loc.0) > HARBOR_SIZE {
+				if old_pos.metric_distance(&harbor.loc.0) >= coll_dist {
 					// Check if the player went inside
-					if p.vehicle.pos.0.metric_distance(&harbor.loc.0) < HARBOR_SIZE {
+					if p.vehicle.pos.0.metric_distance(&harbor.loc.0) < coll_dist {
 						// Reset player pos
 						p.vehicle.pos.0 = old_pos;
 
