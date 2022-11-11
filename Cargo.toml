@@ -28,6 +28,12 @@ tar = "0.4"
 built = { version = "0.5", features = ["git2", "chrono"] }
 
 
+[profile.dev]
+#opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 1
+
 [profile.release]
 strip = true
 lto = true
