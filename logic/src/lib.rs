@@ -88,6 +88,21 @@ pub struct ResourcePack {
 }
 
 
+#[derive(Debug, Clone, Copy, Default)]
+#[derive(Serialize, Deserialize)]
+pub struct DebuggingConf {
+	/// Give the ship an engine which will propel the ship at a constant speed
+	/// regardless of the wind.
+	pub ship_engine: bool,
+
+	/// Make the wind constantly turn
+	pub wind_turning: bool,
+
+	/// Fix the wind direction in a specific direction, in radians
+	pub fixed_wind_direction: Option<f32>,
+}
+
+
 /// The entire game world
 #[derive(Debug, Clone)]
 pub struct World {
@@ -104,6 +119,8 @@ impl World {
 pub struct WorldInit {
 	pub terrain: Terrain,
 	pub seed: u64,
+	/// Debugging configuration
+	pub dbg: DebuggingConf,
 }
 
 

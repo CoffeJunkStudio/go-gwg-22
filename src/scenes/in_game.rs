@@ -6,10 +6,14 @@ use gwg::cgmath::Point2;
 use gwg::goodies::scene::Scene;
 use gwg::goodies::scene::SceneSwitch;
 use gwg::graphics;
+use gwg::graphics::draw;
 use gwg::graphics::Color;
+use gwg::graphics::DrawMode;
 use gwg::graphics::DrawParam;
+use gwg::graphics::MeshBuilder;
 use gwg::graphics::PxScale;
 use gwg::graphics::Rect;
+use gwg::graphics::StrokeOptions;
 use gwg::graphics::Text;
 use gwg::graphics::Transform;
 use gwg::miniquad::KeyCode;
@@ -17,6 +21,7 @@ use gwg::timer;
 use logic::generator::Generator;
 use logic::generator::PerlinNoise;
 use logic::generator::Setting;
+use logic::glm::vec1;
 use logic::state::Event;
 use logic::state::TICKS_PER_SECOND;
 use logic::terrain::TileCoord;
@@ -25,6 +30,7 @@ use logic::units::Distance;
 use logic::units::Location;
 use logic::Input;
 use logic::World;
+use logic::TILE_SIZE;
 use rand::seq::SliceRandom;
 use rand::Rng;
 
@@ -166,6 +172,7 @@ impl Game {
 		let mut world = noise.generate(&settings, &mut rng);
 		world.state.player.vehicle.heading = 1.0;
 		world.state.player.vehicle.pos = world.init.terrain.random_passable_location(&mut rng);
+		world.init.dbg = crate::OPTIONS.to_debugging_conf();
 
 		let s = Game {
 			terrain_batches,
@@ -260,6 +267,76 @@ impl Game {
 			+ logic::glm::vec2(screen_coords.w, screen_coords.h) * 0.5;
 
 		nalgebra::Point2::new(sprite_pos.x, sprite_pos.y)
+	}
+
+	fn draw_debugging(
+		&self,
+		ctx: &mut gwg::Context,
+		quad_ctx: &mut gwg::miniquad::Context,
+	) -> gwg::GameResult<()> {
+		let pixel_per_meter = self.pixel_per_meter(ctx);
+
+		if crate::OPTIONS.bounding_boxes {
+			// Harbor bounding box
+			let mesh = {
+				let mut mb = MeshBuilder::new();
+
+				for h in &self.world.state.harbors {
+					mb.circle(
+						DrawMode::Stroke(StrokeOptions::DEFAULT),
+						self.location_to_screen_coords(ctx, h.loc),
+						0.5 * logic::HARBOR_SIZE * pixel_per_meter,
+						1.0,
+						Color::MAGENTA,
+					)?;
+				}
+
+				mb.build(ctx, quad_ctx)?
+			};
+			draw(ctx, quad_ctx, &mesh, (Point2::new(0., 0.),))?;
+
+			// Ship bounding box
+			let mesh = MeshBuilder::new()
+				.circle(
+					DrawMode::Stroke(StrokeOptions::DEFAULT),
+					self.location_to_screen_coords(ctx, self.world.state.player.vehicle.pos),
+					0.5 * logic::VEHICLE_SIZE * pixel_per_meter,
+					1.0,
+					Color::MAGENTA,
+				)?
+				.build(ctx, quad_ctx)?;
+			draw(ctx, quad_ctx, &mesh, (Point2::new(0., 0.),))?;
+
+			// Ship's tile bounding box
+			let player_tile = TileCoord::try_from(self.world.state.player.vehicle.pos).unwrap();
+			let player_tile_loc = Location::from(player_tile);
+			let player_tile_top_left = self.location_to_screen_coords(
+				ctx,
+				Location(player_tile_loc.0 - vec1(TILE_SIZE as f32 * 0.5).xx()),
+			);
+			let player_tile_bottom_right = self.location_to_screen_coords(
+				ctx,
+				Location(player_tile_loc.0 + vec1(TILE_SIZE as f32 * 0.5).xx()),
+			);
+			let rect = Rect::new(
+				player_tile_top_left.x,
+				player_tile_top_left.y,
+				player_tile_bottom_right.x - player_tile_top_left.x,
+				player_tile_bottom_right.y - player_tile_top_left.y,
+			);
+			let mesh = MeshBuilder::new()
+				.rectangle(
+					DrawMode::Stroke(StrokeOptions::DEFAULT),
+					rect,
+					Color::MAGENTA,
+				)?
+				.build(ctx, quad_ctx)?;
+			draw(ctx, quad_ctx, &mesh, (Point2::new(0., 0.),))?;
+
+			// TODO: fishies collision boxes
+		}
+
+		Ok(())
 	}
 }
 
@@ -477,6 +554,9 @@ impl Scene<GlobalState> for Game {
 			),
 		)?;
 
+		// Draw some debugging stuff
+		self.draw_debugging(ctx, quad_ctx)?;
+
 		// From the text example
 		// Source: https://github.com/ggez/good-web-game/blob/master/examples/text.rs
 		let fps = timer::fps(ctx);
@@ -557,7 +637,6 @@ impl Scene<GlobalState> for Game {
 			(Point2::new(100.0, 80.0), Color::WHITE),
 			Color::BLACK,
 		)?;
-
 
 		let mut text = Text::new("Press 'A' for a sound, and Enter to clear");
 		text.set_font(Default::default(), PxScale::from(32.));

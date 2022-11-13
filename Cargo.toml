@@ -8,6 +8,12 @@ version = "0.0.2-alpha"
 edition = "2021"
 description = "Our Game-Off 2022 game jam participation"
 
+
+[features]
+# Enable development stuff
+dev = ["logic/dev"]
+
+
 [dependencies]
 good-web-game = "0.6.0"
 logic = {path = "logic"}
@@ -16,11 +22,24 @@ num-rational = {version = "0.4"}
 mint = "0.5.9"
 asset-config = { path = "asset-repo/libs/asset-config" }
 toml = "0.5"
+cfg-if = "1.0"
+structopt = "0.3.26"
+lazy_static = "1.4"
+
+# Pin Miniquad, because the newer 0.3.14 is broken!
 miniquad = "=0.3.13"
 
 [dependencies.nalgebra]
 version = "0.31.0"
 features = [ "mint" ]
+
+
+[target.'cfg(any(target_family="unix", target_family="windows"))'.dependencies]
+# None yet
+
+
+[target.'cfg(target_family="wasm")'.dependencies]
+# None yet, notice we can't have anything with wasm-bindgen, because of miniquad
 
 
 [build-dependencies]

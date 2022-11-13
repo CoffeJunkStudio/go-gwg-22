@@ -1256,13 +1256,16 @@ version = "0.0.2-alpha"
 dependencies = [
  "asset-config",
  "built",
+ "cfg-if",
  "good-web-game",
+ "lazy_static",
  "logic",
  "miniquad",
  "mint",
  "nalgebra",
  "num-rational 0.4.1",
  "rand 0.8.5",
+ "structopt",
  "tar",
  "toml",
 ]

@@ -3,6 +3,12 @@ name = "logic"
 version = "0.0.2-alpha"
 edition = "2021"
 
+
+[features]
+# Enables development stuff
+dev = []
+
+
 [dependencies]
 rand = { version = "0.8.5", default_features = false }
 rand_pcg = "0.3.1"

@@ -86,44 +86,52 @@ impl WorldState {
 
 		// Update wind
 		self.wind = {
-			let interval = u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL);
-			let earlier = self.timestamp.0 / interval;
-			let later = earlier + 1;
-			let offset = self.timestamp.0 - earlier * interval;
+			if init.dbg.wind_turning {
+				// Turning wind
+				Wind::from_polar(
+					(self.timestamp.0
+						% (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL))) as f32
+						/ (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL)) as f32
+						* std::f32::consts::TAU,
+					MAX_WIND_SPEED,
+				)
+			} else if let Some(dir) = init.dbg.fixed_wind_direction {
+				// Fixed wind
+				Wind::from_polar(dir, MAX_WIND_SPEED)
+			} else {
+				// Normal randomized wind
 
-			let early = {
-				let mut rng = StdRng::new(
-					0xcafef00dd15ea5e5,
-					0xa02bdbf7bb3c0a7ac28fa16a64abf96 ^ u128::from(init.seed) ^ u128::from(earlier),
-				);
+				let interval = u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL);
+				let earlier = self.timestamp.0 / interval;
+				let later = earlier + 1;
+				let offset = self.timestamp.0 - earlier * interval;
 
-				let angle = rng.gen::<f32>() * std::f32::consts::TAU;
-				let magnitude = rng.gen::<f32>() * MAX_WIND_SPEED;
-				Wind::from_polar(angle, magnitude)
-			};
-			let late = {
-				let mut rng = StdRng::new(
-					0xcafef00dd15ea5e5,
-					0xa02bdbf7bb3c0a7ac28fa16a64abf96 ^ u128::from(init.seed) ^ u128::from(later),
-				);
+				let early = {
+					let mut rng = StdRng::new(
+						0xcafef00dd15ea5e5,
+						0xa02bdbf7bb3c0a7ac28fa16a64abf96
+							^ u128::from(init.seed) ^ u128::from(earlier),
+					);
 
-				let angle = rng.gen::<f32>() * std::f32::consts::TAU;
-				let magnitude = rng.gen::<f32>() * MAX_WIND_SPEED;
-				Wind::from_polar(angle, magnitude)
-			};
+					let angle = rng.gen::<f32>() * std::f32::consts::TAU;
+					let magnitude = rng.gen::<f32>() * MAX_WIND_SPEED;
+					Wind::from_polar(angle, magnitude)
+				};
+				let late = {
+					let mut rng = StdRng::new(
+						0xcafef00dd15ea5e5,
+						0xa02bdbf7bb3c0a7ac28fa16a64abf96
+							^ u128::from(init.seed) ^ u128::from(later),
+					);
 
-			let lerpy = nalgebra_glm::lerp(&early.0, &late.0, offset as f32 / interval as f32);
-			Wind(lerpy)
+					let angle = rng.gen::<f32>() * std::f32::consts::TAU;
+					let magnitude = rng.gen::<f32>() * MAX_WIND_SPEED;
+					Wind::from_polar(angle, magnitude)
+				};
 
-			/*
-			// Turning wind
-			Wind::from_polar(
-				(self.timestamp.0 % (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL)))
-					as f32 / (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL)) as f32
-					* std::f32::consts::TAU,
-				1.0,
-			)
-			*/
+				let lerpy = nalgebra_glm::lerp(&early.0, &late.0, offset as f32 / interval as f32);
+				Wind(lerpy)
+			}
 		};
 
 		//let water_consumption = crate::WATER_CONSUMPTION * DELTA;
@@ -133,6 +141,25 @@ impl WorldState {
 
 			// in s
 			let duration = DELTA;
+
+			// Speed cheat
+			if init.dbg.ship_engine {
+				let max_speed = 15.;
+				let rel_speed = match p.vehicle.sail.reefing {
+					Reefing::Reefed(n) => (f32::from(n) / 4.).powi(2).min(1.0),
+				};
+				let speed = max_speed * rel_speed;
+
+				if p.vehicle.velocity.norm() < speed {
+					let tang_speed = p.vehicle.velocity.dot(&p.vehicle.tangent_vec());
+					let head_speed = p.vehicle.velocity.dot(&p.vehicle.heading_vec());
+
+					let diff_speed = (speed.powi(2) - tang_speed.powi(2)).sqrt() - head_speed;
+
+					p.vehicle.velocity += p.vehicle.heading_vec() * diff_speed;
+				}
+			}
+
 
 			// in m/s²
 			let acceleration = {

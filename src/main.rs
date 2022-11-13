@@ -1,5 +1,6 @@
 use std::env;
 
+use cfg_if::cfg_if;
 use good_web_game as gwg;
 use gwg::cgmath::Point2;
 use gwg::graphics;
@@ -8,6 +9,9 @@ use gwg::graphics::PxScale;
 use gwg::graphics::Rect;
 use gwg::graphics::Text;
 use gwg::GameResult;
+use lazy_static::lazy_static;
+use logic::DebuggingConf;
+use structopt::StructOpt;
 
 
 mod assets;
@@ -15,8 +19,58 @@ mod scenes;
 
 
 
+#[derive(Debug, Clone)]
+#[derive(structopt::StructOpt)]
+struct Opts {
+	/// Draw bounding boxes
+	#[structopt(long)]
+	bounding_boxes: bool,
+
+	/// Give the ship an engine, cheat
+	#[cfg(feature = "dev")]
+	#[structopt(long)]
+	engine_cheat: bool,
+
+	/// Let the wind turn predictably, cheat
+	#[cfg(feature = "dev")]
+	#[structopt(long)]
+	wind_turn_cheat: bool,
+
+	/// Let the wind blow from one direction only
+	///
+	/// You can give the wind direction in radians.
+	#[cfg(feature = "dev")]
+	#[structopt(long)]
+	fixed_wind: Option<f32>,
+}
+impl Opts {
+	fn to_debugging_conf(&self) -> logic::DebuggingConf {
+		cfg_if! {
+			if #[cfg(feature = "dev")] {
+				DebuggingConf {
+					ship_engine: self.engine_cheat,
+					wind_turning: self.wind_turn_cheat,
+					fixed_wind_direction: self.fixed_wind,
+				}
+			} else {
+				DebuggingConf {
+					.. Default::default()
+				}
+			}
+		}
+	}
+}
+
+lazy_static! {
+	static ref OPTIONS: Opts = Opts::from_args();
+}
+
+
+
 fn main() -> gwg::GameResult {
 	println!("--- [main] entered");
+
+	let _opts = &*OPTIONS;
 
 	gwg::start(
 		gwg::conf::Conf::default()

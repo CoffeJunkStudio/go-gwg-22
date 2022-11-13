@@ -62,6 +62,7 @@ impl Generator for WhiteNoise {
 			init: WorldInit {
 				terrain,
 				seed,
+				dbg: Default::default(),
 			},
 			state: WorldState {
 				resources,
@@ -124,6 +125,7 @@ impl Generator for PerlinNoise {
 			init: WorldInit {
 				terrain,
 				seed,
+				dbg: Default::default(),
 			},
 			state: WorldState {
 				resources,
