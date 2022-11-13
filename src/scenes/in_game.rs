@@ -9,6 +9,7 @@ use gwg::graphics;
 use gwg::graphics::Color;
 use gwg::graphics::DrawParam;
 use gwg::graphics::PxScale;
+use gwg::graphics::Rect;
 use gwg::graphics::Text;
 use gwg::graphics::Transform;
 use gwg::miniquad::KeyCode;
@@ -41,6 +42,23 @@ use crate::draw_version;
 
 
 
+/// Zoom factor exponentiation base.
+///
+/// Also see: [Game::zoom_factor_exp]
+const ZOOM_FACTOR_BASE: f32 = std::f32::consts::SQRT_2;
+
+/// The amount of the world visible across the screen diagonal (i.e. the windows diagonal).
+///
+/// See: [Game::pixel_per_meter]
+const METERS_PER_SCREEN_DIAGONAL: f32 = 20.;
+
+/// The default (i.e. initial) zoom factor exponent
+///
+/// Also see: [Game::zoom_factor_exp]
+const DEFAULT_ZOOM_LEVEL: i32 = 0;
+
+
+
 // #[derive(Debug)] `audio::Source` dose not implement Debug!
 pub struct Game {
 	terrain_batches: TerrainBatches,
@@ -53,7 +71,12 @@ pub struct Game {
 	full_screen: bool,
 	world: World,
 	input: Input,
-	meters_per_pixel: f32,
+	/// The exponent to calculate the zoom factor
+	///
+	/// The bigger this value, the more pixel a meter is on the screen (i.e. more zoomed in).
+	///
+	/// See: [Game::pixel_per_meter]
+	zoom_factor_exp: i32,
 }
 
 impl Game {
@@ -144,8 +167,6 @@ impl Game {
 		world.state.player.vehicle.heading = 1.0;
 		world.state.player.vehicle.pos = world.init.terrain.random_passable_location(&mut rng);
 
-		let meters_per_pixel = 30. / 800.;
-
 		let s = Game {
 			terrain_batches,
 			ship_batches,
@@ -157,7 +178,7 @@ impl Game {
 			full_screen: false,
 			world,
 			input: Input::default(),
-			meters_per_pixel,
+			zoom_factor_exp: DEFAULT_ZOOM_LEVEL,
 		};
 
 		println!(
@@ -166,6 +187,29 @@ impl Game {
 		);
 
 		Ok(s)
+	}
+
+	/// A unitless factor for zooming the game view
+	///
+	/// The bigger this factor, the more pixels a meter is on the screen (i.e. zoomed in).
+	fn zoom_factor(&self) -> f32 {
+		ZOOM_FACTOR_BASE.powi(self.zoom_factor_exp)
+	}
+
+	/// Conversion factor between world meter and screen pixel.
+	fn pixel_per_meter(&self, ctx: &gwg::Context) -> f32 {
+		// Get the current screen size
+		let Rect{w,h,..} = gwg::graphics::screen_coordinates(ctx);
+		// px/diag
+		let diag_size = (w*w + h*h).sqrt();
+
+		// in m/diag
+		let m_p_sd = METERS_PER_SCREEN_DIAGONAL;
+
+		// in px/m
+		let meter_res = diag_size / m_p_sd;
+
+		meter_res * self.zoom_factor()
 	}
 
 	fn draw_text_with_halo(
@@ -212,7 +256,7 @@ impl Game {
 	) -> nalgebra::Point2<f32> {
 		let screen_coords = gwg::graphics::screen_coordinates(ctx);
 		let loc = pos - self.world.state.player.vehicle.pos;
-		let sprite_pos = loc.0 / self.meters_per_pixel
+		let sprite_pos = loc.0 * self.pixel_per_meter(ctx)
 			+ logic::glm::vec2(screen_coords.w, screen_coords.h) * 0.5;
 
 		nalgebra::Point2::new(sprite_pos.x, sprite_pos.y)
@@ -270,10 +314,11 @@ impl Scene<GlobalState> for Game {
 
 		let player_pos = self.world.state.player.vehicle.pos;
 		let screen_coords = gwg::graphics::screen_coordinates(ctx);
+		let pixel_per_meter = self.pixel_per_meter(ctx);
 
 		let (left_top, right_bottom) = {
-			let scm_x = screen_coords.w * self.meters_per_pixel;
-			let scm_y = screen_coords.h * self.meters_per_pixel;
+			let scm_x = screen_coords.w / pixel_per_meter;
+			let scm_y = screen_coords.h / pixel_per_meter;
 			let dst = Distance::new(scm_x * 0.5, scm_y * 0.5);
 
 			let lt = TileCoord::try_from((player_pos - dst).max(Location::ORIGIN)).expect("no lt");
@@ -297,7 +342,7 @@ impl Scene<GlobalState> for Game {
 
 					let image_size = 256.;
 
-					let scale = logic::TILE_SIZE as f32 / self.meters_per_pixel / image_size;
+					let scale = logic::TILE_SIZE as f32 * pixel_per_meter / image_size;
 					let loc =
 						tc.to_location().0 - logic::glm::vec1(logic::TILE_SIZE as f32 * 0.5).xx();
 					let param = DrawParam::new()
@@ -321,7 +366,7 @@ impl Scene<GlobalState> for Game {
 
 		let ship_scale = logic::glm::vec1(
 			2.5 * logic::VEHICLE_SIZE
-				/ self.meters_per_pixel
+				* pixel_per_meter
 				/ self.ship_batches.basic.body.params().width as f32,
 		)
 		.xx();
@@ -346,7 +391,7 @@ impl Scene<GlobalState> for Game {
 
 		let sail_ass = &mut self.ship_batches.basic.sail[usize::from(sail_reefing).min(max_sail)];
 		let sail_scale = logic::glm::vec1(
-			2.5 * logic::VEHICLE_SIZE / self.meters_per_pixel / sail_ass.params().width as f32,
+			2.5 * logic::VEHICLE_SIZE * pixel_per_meter / sail_ass.params().width as f32,
 		)
 		.xx();
 		let sail_param = DrawParam::new()
@@ -378,7 +423,7 @@ impl Scene<GlobalState> for Game {
 
 			let resource_scale = logic::glm::vec1(
 				logic::RESOURCE_PACK_FISH_SIZE
-					/ self.meters_per_pixel
+					* pixel_per_meter
 					/ batch.params().width as f32,
 			)
 			.xx();
@@ -390,7 +435,7 @@ impl Scene<GlobalState> for Game {
 		for harbor in &self.world.state.harbors {
 			let harbor_scale = logic::glm::vec1(
 				2. * logic::HARBOR_SIZE
-					/ self.meters_per_pixel
+					* pixel_per_meter
 					/ self.building_batches.harbor.params().width as f32,
 			)
 			.xx();
@@ -548,6 +593,16 @@ impl Scene<GlobalState> for Game {
 
 		if keycode == KeyCode::A {
 			self.sound.play(ctx).unwrap()
+		}
+
+		if keycode == KeyCode::KpAdd {
+			self.zoom_factor_exp = self.zoom_factor_exp.saturating_add(1);
+		}
+		if keycode == KeyCode::KpSubtract {
+			self.zoom_factor_exp = self.zoom_factor_exp.saturating_sub(1);
+		}
+		if keycode == KeyCode::Kp0 {
+			self.zoom_factor_exp = 0;
 		}
 
 		// Reefing input
