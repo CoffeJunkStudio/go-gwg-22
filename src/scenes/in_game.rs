@@ -405,6 +405,17 @@ impl Scene<GlobalState> for Game {
 		let screen_coords = gwg::graphics::screen_coordinates(ctx);
 		let pixel_per_meter = self.pixel_per_meter(ctx);
 
+		// Clear screen
+		let red = elapsed.sin() * 0.5 + 0.5;
+		let green = (1.3 + elapsed + 0.3).sin() * 0.5 + 0.5;
+		let blue = (1.13 * elapsed + 0.7).sin() * 0.5 + 0.5;
+		gwg::graphics::clear(ctx, quad_ctx, [red, green, blue, 1.0].into());
+
+		// Tile sizes
+		let tile_image_size = 256.;
+		let tile_anim_image_size = 512.;
+
+		// Calculate the top left and bottom right corner where to start and stop drawing the tiles.
 		let (left_top, right_bottom) = {
 			let scm_x = screen_coords.w / pixel_per_meter;
 			let scm_y = screen_coords.h / pixel_per_meter;
@@ -416,24 +427,19 @@ impl Scene<GlobalState> for Game {
 			(lt, rb)
 		};
 
-		let red = elapsed.sin() * 0.5 + 0.5;
-		let green = (1.3 + elapsed + 0.3).sin() * 0.5 + 0.5;
-		let blue = (1.13 * elapsed + 0.7).sin() * 0.5 + 0.5;
-		gwg::graphics::clear(ctx, quad_ctx, [red, green, blue, 1.0].into());
-
-		let tile_image_size = 256.;
-		let tile_anim_image_size = 512.;
-		let anim_scale = tile_anim_image_size / tile_image_size;
-
+		// Water wave animation, adding half the wind to the offset
 		self.water_wave_offset += self.world.state.wind.0 * timer::delta(ctx).as_secs_f32()/ 2.;
+		// Modulo the waves by tile size
 		self.water_wave_offset.x %= TILE_SIZE as f32;
 		self.water_wave_offset.y %= TILE_SIZE as f32;
 
+		// Draw the waves (notice the draw order is given way below via the `draw_and_clear`
+		// TODO: draw the wave in wave size i.e. twice the size of a tile.
 		for x in left_top.x.saturating_sub(1)..(right_bottom.x + 2) {
 			for y in left_top.y.saturating_sub(1)..(right_bottom.y + 2) {
 				let tc = TileCoord::new(x, y);
 				if let Some(_) = self.world.init.terrain.try_get(tc) {
-					let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_image_size / anim_scale;
+					let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_anim_image_size;
 					let loc =
 						tc.to_location().0 - logic::glm::vec1(logic::TILE_SIZE as f32 * 0.5).xx();
 
@@ -449,6 +455,7 @@ impl Scene<GlobalState> for Game {
 			}
 		}
 
+		// Draw the tile background
 		for x in left_top.x.saturating_sub(1)..(right_bottom.x + 1) {
 			for y in left_top.y.saturating_sub(1)..(right_bottom.y + 1) {
 				let tc = TileCoord::new(x, y);
@@ -477,6 +484,7 @@ impl Scene<GlobalState> for Game {
 			}
 		}
 
+		// Draw the player ship
 		let ship_scale = logic::glm::vec1(
 			2.5 * logic::VEHICLE_SIZE * pixel_per_meter
 				/ self.ship_batches.basic.body.params().width as f32,
@@ -496,6 +504,7 @@ impl Scene<GlobalState> for Game {
 			param,
 		);
 
+		// Draw the player sail
 		let max_sail = self.ship_batches.basic.sail.len() - 1;
 		let sail_reefing = match self.world.state.player.vehicle.sail.reefing {
 			logic::state::Reefing::Reefed(n) => n,
@@ -521,6 +530,7 @@ impl Scene<GlobalState> for Game {
 			sail_param,
 		);
 
+		// Draw the resources (i.e. fishys)
 		for resource in &self.world.state.resources {
 			let mut rng = logic::StdRng::new(
 				(resource.loc.0.x * 100.0) as u128,
@@ -542,6 +552,7 @@ impl Scene<GlobalState> for Game {
 			batch.add_frame(0.0, rng.gen::<f64>() * std::f64::consts::TAU, 0.0, param);
 		}
 
+		// Draw harbors
 		for harbor in &self.world.state.harbors {
 			let harbor_scale = logic::glm::vec1(
 				2. * logic::HARBOR_SIZE * pixel_per_meter
@@ -558,6 +569,8 @@ impl Scene<GlobalState> for Game {
 				.add_frame(0.0, f64::from(harbor.orientation), 0.0, param);
 		}
 
+		// Draw and clear sprite batches
+		// This defines the draw order.
 		draw_and_clear(
 			ctx,
 			quad_ctx,
