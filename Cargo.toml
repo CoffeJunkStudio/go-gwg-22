@@ -59,3 +59,8 @@ lto = true
 panic = 'abort'
 codegen-units = 1
 opt-level = 'z'
+
+
+
+[patch.crates-io]
+miniquad = { git = "https://github.com/CoffeJunkStudio/miniquad", branch = "hack-fixed-filter-setting-and-mipmap" }

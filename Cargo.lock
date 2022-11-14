@@ -990,8 +990,7 @@ dependencies = [
 [[package]]
 name = "miniquad"
 version = "0.3.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a07975b18f290b99365f042dd80db3e03908539ca6bc47e749c5eef4ee262fd4"
+source = "git+https://github.com/CoffeJunkStudio/miniquad?branch=hack-fixed-filter-setting-and-mipmap#beb9d2533a45580ecaa625af75162763d0643e74"
 dependencies = [
  "libc",
  "ndk-sys",
