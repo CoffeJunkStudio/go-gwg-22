@@ -107,7 +107,8 @@ impl Game {
 		let terrain_batches = TerrainBatches {
 			deep: image_batch(ctx, quad_ctx, "img/deepwater0.png")?,
 			shallow: image_batch(ctx, quad_ctx, "img/shallowwater.png")?,
-			land: image_batch(ctx, quad_ctx, "img/gwg.png")?,
+			beach: image_batch(ctx, quad_ctx, "img/sand.png")?,
+			land: image_batch(ctx, quad_ctx, "img/grass.png")?,
 		};
 
 		println!(
@@ -431,6 +432,8 @@ impl Scene<GlobalState> for Game {
 							&mut self.terrain_batches.deep
 						} else if tile.0 < 0 {
 							&mut self.terrain_batches.shallow
+						} else if tile.0 < 1 {
+							&mut self.terrain_batches.beach
 						} else {
 							&mut self.terrain_batches.land
 						}
@@ -532,6 +535,7 @@ impl Scene<GlobalState> for Game {
 			[
 				&mut self.terrain_batches.deep,
 				&mut self.terrain_batches.shallow,
+				&mut self.terrain_batches.beach,
 				&mut self.terrain_batches.land,
 			]
 			.into_iter()

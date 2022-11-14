@@ -20,6 +20,7 @@ const ASSET_CONFIG_STR: &str = include_str!(concat!(
 pub struct TerrainBatches {
 	pub deep: SpriteBatch,
 	pub shallow: SpriteBatch,
+	pub beach: SpriteBatch,
 	pub land: SpriteBatch,
 }
 
