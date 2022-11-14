@@ -11,7 +11,6 @@ use gwg::graphics::Color;
 use gwg::graphics::DrawMode;
 use gwg::graphics::DrawParam;
 use gwg::graphics::MeshBuilder;
-use gwg::graphics::PxScale;
 use gwg::graphics::Rect;
 use gwg::graphics::StrokeOptions;
 use gwg::graphics::Text;
@@ -23,7 +22,6 @@ use logic::generator::PerlinNoise;
 use logic::generator::Setting;
 use logic::glm::vec1;
 use logic::glm::Vec2;
-use logic::glm::vec2;
 use logic::state::Event;
 use logic::state::TICKS_PER_SECOND;
 use logic::terrain::TileCoord;
@@ -33,7 +31,6 @@ use logic::units::Location;
 use logic::Input;
 use logic::World;
 use logic::TILE_SIZE;
-use nalgebra::wrap;
 use rand::seq::SliceRandom;
 use rand::Rng;
 
@@ -76,7 +73,6 @@ pub struct Game {
 	building_batches: BuildingBatches,
 	sound: audio::Source,
 	sound_fishy: audio::Source,
-	input_text: String,
 	full_screen: bool,
 	world: World,
 	input: Input,
@@ -188,7 +184,6 @@ impl Game {
 			building_batches,
 			sound,
 			sound_fishy,
-			input_text: String::new(),
 			full_screen: false,
 			world,
 			input: Input::default(),
@@ -359,7 +354,7 @@ impl Scene<GlobalState> for Game {
 
 	fn update(
 		&mut self,
-		glob: &mut GlobalState,
+		_glob: &mut GlobalState,
 		ctx: &mut gwg::Context,
 		_quad_ctx: &mut gwg::miniquad::Context,
 	) -> SceneSwitch<GlobalState> {
@@ -395,7 +390,7 @@ impl Scene<GlobalState> for Game {
 
 	fn draw(
 		&mut self,
-		glob: &mut GlobalState,
+		_glob: &mut GlobalState,
 		ctx: &mut gwg::Context,
 		quad_ctx: &mut gwg::miniquad::Context,
 	) -> gwg::GameResult<()> {
@@ -685,13 +680,6 @@ impl Scene<GlobalState> for Game {
 			Color::BLACK,
 		)?;
 
-		let mut text = Text::new("Press 'A' for a sound, and Enter to clear");
-		text.set_font(Default::default(), PxScale::from(32.));
-		graphics::draw(ctx, quad_ctx, &text, (Point2::new(0.0, 300.), Color::BLACK))?;
-		let mut text = Text::new(format!("»{}«", self.input_text.as_str()));
-		text.set_font(Default::default(), PxScale::from(64.));
-		graphics::draw(ctx, quad_ctx, &text, (Point2::new(0.0, 350.), Color::BLACK))?;
-
 		// Print version info
 		draw_version(ctx, quad_ctx)?;
 
@@ -702,7 +690,7 @@ impl Scene<GlobalState> for Game {
 
 	fn key_down_event(
 		&mut self,
-		glob: &mut GlobalState,
+		_glob: &mut GlobalState,
 		ctx: &mut gwg::Context,
 		quad_ctx: &mut gwg::miniquad::Context,
 		keycode: gwg::miniquad::KeyCode,
@@ -712,8 +700,6 @@ impl Scene<GlobalState> for Game {
 		}
 
 		if keycode == KeyCode::Enter || keycode == KeyCode::KpEnter {
-			self.input_text.clear();
-
 			self.sound.play(ctx).unwrap()
 		}
 
@@ -761,7 +747,7 @@ impl Scene<GlobalState> for Game {
 
 	fn resize_event(
 		&mut self,
-		glob: &mut GlobalState,
+		_glob: &mut GlobalState,
 		context: &mut gwg::Context,
 		_quad_ctx: &mut gwg::miniquad::GraphicsContext,
 		w: f32,
