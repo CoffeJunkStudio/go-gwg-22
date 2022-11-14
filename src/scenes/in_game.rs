@@ -22,6 +22,8 @@ use logic::generator::Generator;
 use logic::generator::PerlinNoise;
 use logic::generator::Setting;
 use logic::glm::vec1;
+use logic::glm::Vec2;
+use logic::glm::vec2;
 use logic::state::Event;
 use logic::state::TICKS_PER_SECOND;
 use logic::terrain::TileCoord;
@@ -31,6 +33,7 @@ use logic::units::Location;
 use logic::Input;
 use logic::World;
 use logic::TILE_SIZE;
+use nalgebra::wrap;
 use rand::seq::SliceRandom;
 use rand::Rng;
 
@@ -83,6 +86,8 @@ pub struct Game {
 	///
 	/// See: [Game::pixel_per_meter]
 	zoom_factor_exp: i32,
+	/// Offset of the water waves within a tile
+	water_wave_offset: Vec2,
 }
 
 impl Game {
@@ -109,6 +114,7 @@ impl Game {
 			shallow: image_batch(ctx, quad_ctx, "img/shallowwater.png")?,
 			beach: image_batch(ctx, quad_ctx, "img/sand.png")?,
 			land: image_batch(ctx, quad_ctx, "img/grass.png")?,
+			water_anim: image_batch(ctx, quad_ctx, "img/wateranim.png")?,
 		};
 
 		println!(
@@ -187,6 +193,7 @@ impl Game {
 			world,
 			input: Input::default(),
 			zoom_factor_exp: DEFAULT_ZOOM_LEVEL,
+			water_wave_offset: Default::default(),
 		};
 
 		println!(
@@ -207,9 +214,13 @@ impl Game {
 	/// Conversion factor between world meter and screen pixel.
 	fn pixel_per_meter(&self, ctx: &gwg::Context) -> f32 {
 		// Get the current screen size
-		let Rect{w,h,..} = gwg::graphics::screen_coordinates(ctx);
+		let Rect {
+			w,
+			h,
+			..
+		} = gwg::graphics::screen_coordinates(ctx);
 		// px/diag
-		let diag_size = (w*w + h*h).sqrt();
+		let diag_size = (w * w + h * h).sqrt();
 
 		// in m/diag
 		let m_p_sd = METERS_PER_SCREEN_DIAGONAL;
@@ -410,17 +421,39 @@ impl Scene<GlobalState> for Game {
 		let blue = (1.13 * elapsed + 0.7).sin() * 0.5 + 0.5;
 		gwg::graphics::clear(ctx, quad_ctx, [red, green, blue, 1.0].into());
 
+		let tile_image_size = 256.;
+		let tile_anim_image_size = 512.;
+		let anim_scale = tile_anim_image_size / tile_image_size;
+
+		self.water_wave_offset += self.world.state.wind.0 * timer::delta(ctx).as_secs_f32()/ 2.;
+		self.water_wave_offset.x %= TILE_SIZE as f32;
+		self.water_wave_offset.y %= TILE_SIZE as f32;
+
+		for x in left_top.x.saturating_sub(1)..(right_bottom.x + 2) {
+			for y in left_top.y.saturating_sub(1)..(right_bottom.y + 2) {
+				let tc = TileCoord::new(x, y);
+				if let Some(_) = self.world.init.terrain.try_get(tc) {
+					let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_image_size / anim_scale;
+					let loc =
+						tc.to_location().0 - logic::glm::vec1(logic::TILE_SIZE as f32 * 0.5).xx();
+
+					// Add the offset
+					let loc = loc + self.water_wave_offset;
+
+					let param = DrawParam::new()
+						.dest(self.location_to_screen_coords(ctx, Location(loc)))
+						.scale(logic::glm::vec2(scale, scale));
+
+					self.terrain_batches.water_anim.add(param);
+				}
+			}
+		}
+
 		for x in left_top.x.saturating_sub(1)..(right_bottom.x + 1) {
 			for y in left_top.y.saturating_sub(1)..(right_bottom.y + 1) {
 				let tc = TileCoord::new(x, y);
 				if let Some(tile) = self.world.init.terrain.try_get(tc) {
-					// if TileCoord::from(self.world.state.player.vehicle.pos) == tc {
-					// 	continue;
-					// }
-
-					let image_size = 256.;
-
-					let scale = logic::TILE_SIZE as f32 * pixel_per_meter / image_size;
+					let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_image_size;
 					let loc =
 						tc.to_location().0 - logic::glm::vec1(logic::TILE_SIZE as f32 * 0.5).xx();
 					let param = DrawParam::new()
@@ -445,8 +478,7 @@ impl Scene<GlobalState> for Game {
 		}
 
 		let ship_scale = logic::glm::vec1(
-			2.5 * logic::VEHICLE_SIZE
-				* pixel_per_meter
+			2.5 * logic::VEHICLE_SIZE * pixel_per_meter
 				/ self.ship_batches.basic.body.params().width as f32,
 		)
 		.xx();
@@ -502,9 +534,7 @@ impl Scene<GlobalState> for Game {
 			let batch = self.resource_batches.fishes.choose_mut(&mut rng).unwrap();
 
 			let resource_scale = logic::glm::vec1(
-				logic::RESOURCE_PACK_FISH_SIZE
-					* pixel_per_meter
-					/ batch.params().width as f32,
+				logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter / batch.params().width as f32,
 			)
 			.xx();
 			let param = DrawParam::new().dest(dest).scale(resource_scale);
@@ -514,8 +544,7 @@ impl Scene<GlobalState> for Game {
 
 		for harbor in &self.world.state.harbors {
 			let harbor_scale = logic::glm::vec1(
-				2. * logic::HARBOR_SIZE
-					* pixel_per_meter
+				2. * logic::HARBOR_SIZE * pixel_per_meter
 					/ self.building_batches.harbor.params().width as f32,
 			)
 			.xx();
@@ -535,6 +564,7 @@ impl Scene<GlobalState> for Game {
 			[
 				&mut self.terrain_batches.deep,
 				&mut self.terrain_batches.shallow,
+				&mut self.terrain_batches.water_anim,
 				&mut self.terrain_batches.beach,
 				&mut self.terrain_batches.land,
 			]

@@ -18,10 +18,17 @@ const ASSET_CONFIG_STR: &str = include_str!(concat!(
 
 /// Terrain assets bundle
 pub struct TerrainBatches {
+	/// Represents the deep ocean
 	pub deep: SpriteBatch,
+	/// Represents water near shore
 	pub shallow: SpriteBatch,
+	/// Represents land near water
 	pub beach: SpriteBatch,
+	/// Represents inward land
 	pub land: SpriteBatch,
+
+	/// An animation layer for water waves
+	pub water_anim: SpriteBatch,
 }
 
 /// Asset of one ship
