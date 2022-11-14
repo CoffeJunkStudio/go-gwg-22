@@ -31,6 +31,8 @@ Use the left and right arrow key to turn the ship.
 
 Use the up and down arrow key to set sail and take in the sail, respectively.
 
+You can use the plus and minus sign on the key pad to zoom in and out.
+
 
 
 Prerequisites
