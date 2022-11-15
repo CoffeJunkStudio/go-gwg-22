@@ -32,7 +32,9 @@ fn package_assets() {
 	let mut tar_builder = tar::Builder::new(tar_file);
 
 	// Move all the asset stuff into the archive
-	tar_builder.append_dir_all(".", "asset-repo/assets").unwrap();
+	tar_builder
+		.append_dir_all(".", "asset-repo/assets")
+		.unwrap();
 	// And write it.
 	tar_builder.finish().unwrap();
 }

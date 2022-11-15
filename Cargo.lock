@@ -883,6 +883,7 @@ version = "0.0.2-alpha"
 dependencies = [
  "enum-map",
  "lazy_static",
+ "nalgebra",
  "nalgebra-glm",
  "noise",
  "rand 0.8.5",
@@ -989,8 +990,7 @@ dependencies = [
 [[package]]
 name = "miniquad"
 version = "0.3.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a07975b18f290b99365f042dd80db3e03908539ca6bc47e749c5eef4ee262fd4"
+source = "git+https://github.com/CoffeJunkStudio/miniquad?branch=hack-fixed-filter-setting-and-mipmap#beb9d2533a45580ecaa625af75162763d0643e74"
 dependencies = [
  "libc",
  "ndk-sys",
@@ -1255,13 +1255,16 @@ version = "0.0.2-alpha"
 dependencies = [
  "asset-config",
  "built",
+ "cfg-if",
  "good-web-game",
+ "lazy_static",
  "logic",
  "miniquad",
  "mint",
  "nalgebra",
  "num-rational 0.4.1",
  "rand 0.8.5",
+ "structopt",
  "tar",
  "toml",
 ]

@@ -22,6 +22,12 @@
 </head>
 
 <body>
+	<h1 id="title" style="color: white">Plenty of Fish in the Sea</h1>
+	<h2 id="sub-title" style="color: white">...</h2>
+
+	<noscript>You need a JavaScript capable browser or you need to enable JavaScript.</noscript>
+	<script>document.getElementById("sub-title").innerText = "Downloading...";</script>
+
     <canvas id="glcanvas" tabindex='1'></canvas>
 	<!-- A copy of the Macroquad GL file:
 		https://github.com/not-fl3/macroquad/blob/master/js/mq_js_bundle.js
@@ -30,8 +36,23 @@
 		sound causes a crash in WASM.
 	-->
 	<script src="mq_js_bundle.js"></script>
-	<!-- Our compiled wasm file -->
-    <script>load("plenty-of-fish-in-the-sea.wasm");</script>
+    <script>
+		document.getElementById("sub-title").innerText = "Fetching WASM file...";
+		load(
+			// Our compiled wasm file
+			"plenty-of-fish-in-the-sea.wasm",
+			function () {
+				// On success, hide HTML stuff
+				document.getElementById("title").style = "display: none";
+				document.getElementById("sub-title").style = "display: none";
+			},
+			function () {
+				// On Error, say so
+				document.getElementById("sub-title").innerText = "Failed to load the WASM file, sorry";
+				document.getElementById("sub-title").style = "color: red";
+			},
+		);
+	</script>
 </body>
 
 </html>

@@ -1,10 +1,8 @@
 use std::f32::consts::PI;
 use std::f32::consts::TAU;
-use std::ops::Rem;
 
 use nalgebra_glm::Vec2;
 use rand::Rng;
-use rand::SeedableRng;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -20,18 +18,12 @@ use crate::ResourcePack;
 use crate::ResourcePackContent;
 use crate::StdRng;
 use crate::WorldInit;
-use crate::ENGINE_IDEAL_RPM;
-use crate::ENGINE_POWER;
-use crate::ENGINE_STALL_RPM;
 use crate::FRICTION_CROSS_SPEED_FACTOR;
 use crate::FRICTION_GROUND_SPEED_FACTOR;
-use crate::FRICTION_MOTOR_FACTOR;
-use crate::GEAR_BASE_RATION;
-use crate::GEAR_RATIO_PROGRESSION;
+use crate::HARBOR_SIZE;
 use crate::MAX_TRACTION;
 use crate::MAX_WIND_SPEED;
 use crate::RESOURCE_PACK_FISH_SIZE;
-use crate::TIRE_SPEED_PER_RPM;
 use crate::VEHICLE_DEADWEIGHT;
 use crate::VEHICLE_SIZE;
 use crate::WIND_CHANGE_INTERVAL;
@@ -90,48 +82,56 @@ impl WorldState {
 		self.timestamp = self.timestamp.next();
 
 		// Apply user inputs
-		self.player.vehicle.apply_input(inputs.clone());
+		self.player.vehicle.apply_input(*inputs);
 
 		// Update wind
 		self.wind = {
-			let interval = u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL);
-			let earlier = self.timestamp.0 / interval;
-			let later = earlier + 1;
-			let offset = self.timestamp.0 - earlier * interval;
+			if init.dbg.wind_turning {
+				// Turning wind
+				Wind::from_polar(
+					(self.timestamp.0
+						% (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL))) as f32
+						/ (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL)) as f32
+						* std::f32::consts::TAU,
+					MAX_WIND_SPEED,
+				)
+			} else if let Some(dir) = init.dbg.fixed_wind_direction {
+				// Fixed wind
+				Wind::from_polar(dir, MAX_WIND_SPEED)
+			} else {
+				// Normal randomized wind
 
-			let early = {
-				let mut rng = StdRng::new(
-					0xcafef00dd15ea5e5,
-					0xa02bdbf7bb3c0a7ac28fa16a64abf96 ^ u128::from(init.seed) ^ u128::from(earlier),
-				);
+				let interval = u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL);
+				let earlier = self.timestamp.0 / interval;
+				let later = earlier + 1;
+				let offset = self.timestamp.0 - earlier * interval;
 
-				let angle = rng.gen::<f32>() * std::f32::consts::TAU;
-				let magnitude = rng.gen::<f32>() * MAX_WIND_SPEED;
-				Wind::from_polar(angle, magnitude)
-			};
-			let late = {
-				let mut rng = StdRng::new(
-					0xcafef00dd15ea5e5,
-					0xa02bdbf7bb3c0a7ac28fa16a64abf96 ^ u128::from(init.seed) ^ u128::from(later),
-				);
+				let early = {
+					let mut rng = StdRng::new(
+						0xcafef00dd15ea5e5,
+						0xa02bdbf7bb3c0a7ac28fa16a64abf96
+							^ u128::from(init.seed) ^ u128::from(earlier),
+					);
 
-				let angle = rng.gen::<f32>() * std::f32::consts::TAU;
-				let magnitude = rng.gen::<f32>() * MAX_WIND_SPEED;
-				Wind::from_polar(angle, magnitude)
-			};
+					let angle = rng.gen::<f32>() * std::f32::consts::TAU;
+					let magnitude = rng.gen::<f32>() * MAX_WIND_SPEED;
+					Wind::from_polar(angle, magnitude)
+				};
+				let late = {
+					let mut rng = StdRng::new(
+						0xcafef00dd15ea5e5,
+						0xa02bdbf7bb3c0a7ac28fa16a64abf96
+							^ u128::from(init.seed) ^ u128::from(later),
+					);
 
-			let lerpy = nalgebra_glm::lerp(&early.0, &late.0, offset as f32 / interval as f32);
-			Wind(lerpy)
+					let angle = rng.gen::<f32>() * std::f32::consts::TAU;
+					let magnitude = rng.gen::<f32>() * MAX_WIND_SPEED;
+					Wind::from_polar(angle, magnitude)
+				};
 
-			/*
-			// Turning wind
-			Wind::from_polar(
-				(self.timestamp.0 % (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL)))
-					as f32 / (u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL)) as f32
-					* std::f32::consts::TAU,
-				1.0,
-			)
-			*/
+				let lerpy = nalgebra_glm::lerp(&early.0, &late.0, offset as f32 / interval as f32);
+				Wind(lerpy)
+			}
 		};
 
 		//let water_consumption = crate::WATER_CONSUMPTION * DELTA;
@@ -141,6 +141,25 @@ impl WorldState {
 
 			// in s
 			let duration = DELTA;
+
+			// Speed cheat
+			if init.dbg.ship_engine {
+				let max_speed = 15.;
+				let rel_speed = match p.vehicle.sail.reefing {
+					Reefing::Reefed(n) => (f32::from(n) / 4.).powi(2).min(1.0),
+				};
+				let speed = max_speed * rel_speed;
+
+				if p.vehicle.velocity.norm() < speed {
+					let tang_speed = p.vehicle.velocity.dot(&p.vehicle.tangent_vec());
+					let head_speed = p.vehicle.velocity.dot(&p.vehicle.heading_vec());
+
+					let diff_speed = (speed.powi(2) - tang_speed.powi(2)).sqrt() - head_speed;
+
+					p.vehicle.velocity += p.vehicle.heading_vec() * diff_speed;
+				}
+			}
+
 
 			// in m/s²
 			let acceleration = {
@@ -211,16 +230,18 @@ impl WorldState {
 
 			let friction = p.vehicle.friction_deacceleration();
 
+
 			let vel_0 = p.vehicle.velocity;
 
 			let acc = acceleration + friction;
 
+			// Save the old tile and position
+			let old_tile: TileCoord = p.vehicle.pos.try_into().expect("Player is out of bounds");
+			let old_pos = p.vehicle.pos.0;
+
 			// Move according to acceleration & velocity
 			p.vehicle.velocity += acc * duration;
 			let distance = duration * (vel_0 + duration * acc);
-
-			let old_tile: TileCoord = p.vehicle.pos.try_into().expect("Player is out of bounds");
-			let old_pos = p.vehicle.pos.0;
 			p.vehicle.pos.0 += distance;
 
 			// Keep the player on the Torus-world
@@ -237,31 +258,28 @@ impl WorldState {
 			}
 
 			// Terrain interaction
-			if init.terrain.contains(p.vehicle.pos) {
+			// First check whether the player is still on the map, and if so
+			// retrieve its new tile.
+			if let Ok(new_tile) = TileCoord::try_from(p.vehicle.pos) {
+				// Only check collisions if the player is in passable water.
+				// So the player is free to move around if he glitched into terrain, to get out
 				if Some(true) == init.terrain.try_get(old_tile).map(|t| t.is_passable()) {
-					let new_tile: TileCoord =
-						p.vehicle.pos.try_into().expect("Player goes out of bounds");
+					// Check if the player tries to go into impassable terrain
+					if Some(true) != init.terrain.try_get(new_tile).map(|t| t.is_passable()) {
+						// TODO: maybe we want to handle this differently
+						// Ship bounce off land
+						p.vehicle.pos.0 = old_pos;
 
-					match init.terrain.get(new_tile).is_passable() {
-						true => {
-							// Alright
-						},
-						false => {
-							// TODO: maybe we want to handle this differently
-							// Vehicles bounce off mountains
-							p.vehicle.pos.0 = old_pos;
+						p.vehicle.velocity *= -0.5;
 
-							p.vehicle.velocity *= -0.5;
-
-							if old_tile.x == new_tile.x {
-								// restore x component sign
-								p.vehicle.velocity.x *= -1.;
-							}
-							if old_tile.y == new_tile.y {
-								// restore y component sign
-								p.vehicle.velocity.y *= -1.;
-							}
-						},
+						if old_tile.x == new_tile.x {
+							// restore x component sign
+							p.vehicle.velocity.x *= -1.;
+						}
+						if old_tile.y == new_tile.y {
+							// restore y component sign
+							p.vehicle.velocity.y *= -1.;
+						}
 					}
 				}
 			} else {
@@ -275,8 +293,29 @@ impl WorldState {
 				//p.vehicle.velocity = Vec2::new(0., 0.);
 			}
 
+			// Harbor collision
+			for harbor in &self.harbors {
+				let coll_dist = (HARBOR_SIZE + VEHICLE_SIZE) * 0.5;
+				// Only check if the player isn't inside yet
+				if old_pos.metric_distance(&harbor.loc.0) >= coll_dist {
+					// Check if the player went inside
+					if p.vehicle.pos.0.metric_distance(&harbor.loc.0) < coll_dist {
+						// Reset player pos
+						p.vehicle.pos.0 = old_pos;
+
+						// Bounce off away from the harbor
+						let head = (old_pos - harbor.loc.0).normalize();
+						//let turn = Rotation2::new(PI / 2.);
+						//let tang = turn * head;
+
+						let head_speed = p.vehicle.velocity.dot(&head);
+						p.vehicle.velocity -= head * head_speed * 2.;
+					}
+				}
+			}
 
 			/* TODO: how about a shore-based breaking
+			 * Tho we would need a (too) shallow water visualization
 			// Apply breaking
 			let wheel_speed = p.vehicle.wheel_speed();
 			let breaking_impulse = p.vehicle.engine.breaking.to_f32() * BREAKING_DEACCL * DELTA;
@@ -307,7 +346,7 @@ impl WorldState {
 			let head_speed = p.vehicle.wheel_speed();
 			let cross_speed = p.vehicle.cross_speed() * 0.5;
 
-			p.vehicle.angle_of_list = (-(cross_speed / MAX_TRACTION / 2.) * PI).clamp(-PI,PI);
+			p.vehicle.angle_of_list = (-(cross_speed / MAX_TRACTION / 2.) * PI).clamp(-PI, PI);
 
 			let cross_traction_speed = cross_speed.clamp(-MAX_TRACTION, MAX_TRACTION);
 
@@ -430,45 +469,6 @@ impl Vehicle {
 		self.velocity.dot(&self.tangent_vec())
 	}
 
-	/// The raw engine RPM as if the engine never stalls.
-	///
-	/// Notice these RPMs can become negative.
-	#[deprecated]
-	fn engine_rpm_raw(&self) -> f32 {
-		let axle_rpm = self.wheel_speed() / TIRE_SPEED_PER_RPM;
-
-		let (gear, gear_dir): (u8, i8) = {
-			match self.sail.reefing {
-				Reefing::Reefed(n) => (n, 1),
-			}
-		};
-		let gear_translation =
-			GEAR_BASE_RATION * GEAR_RATIO_PROGRESSION.powi(gear.into()) * gear_dir as f32;
-
-		axle_rpm / gear_translation
-	}
-
-	/// The current RPM of the engine
-	///
-	/// Returns `None` if the engine is stalling
-	#[deprecated]
-	pub fn engine_rpm(&self) -> Option<f32> {
-		let rpm = self.engine_rpm_raw();
-
-		// The first gear(s) never disengage
-		if matches!(self.sail.reefing, Reefing::Reefed(0)) {
-			return Some(rpm);
-		}
-
-		// Notice, if forward/reverse is wrongly selected,
-		// the RPMs become even negative.
-		if rpm > ENGINE_STALL_RPM {
-			Some(rpm)
-		} else {
-			None
-		}
-	}
-
 	/// The acceleration caused by friction in m/s
 	///
 	/// This acceleration is vectorial thus it can be just added to the `velocity`.
@@ -479,12 +479,7 @@ impl Vehicle {
 		let sliding_friction =
 			-self.cross_speed() * FRICTION_CROSS_SPEED_FACTOR * self.tangent_vec();
 
-		let motor_friction = -self.engine_rpm().unwrap_or(0.0).abs()
-			* FRICTION_MOTOR_FACTOR
-			* self.wheel_speed().signum()
-			* self.heading_vec();
-
-		rolling_friction + sliding_friction + motor_friction
+		rolling_friction + sliding_friction
 	}
 
 	/// Apply the given `input` to this vehicle
@@ -497,7 +492,7 @@ impl Vehicle {
 
 	/// Returns the total mass of the vehicle (inclusive payloads) in kilogram
 	pub fn mass(&self) -> f32 {
-		VEHICLE_DEADWEIGHT + self.fish.0 as f32
+		VEHICLE_DEADWEIGHT + self.fish.0
 	}
 }
 

@@ -3,6 +3,12 @@ name = "logic"
 version = "0.0.2-alpha"
 edition = "2021"
 
+
+[features]
+# Enables development stuff
+dev = []
+
+
 [dependencies]
 rand = { version = "0.8.5", default_features = false }
 rand_pcg = "0.3.1"
@@ -10,6 +16,7 @@ structopt = "0.3.26"
 lazy_static = "1.4"
 noise = "0.7.0"
 standard-dist = "1.0"
+nalgebra = "0.31.3"
 
 uuid = "1.1"
 enum-map = "2.3"

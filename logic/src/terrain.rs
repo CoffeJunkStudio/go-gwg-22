@@ -1,4 +1,3 @@
-use enum_map::Enum;
 use nalgebra_glm::Vec2;
 use rand::Rng;
 use serde::Deserialize;
@@ -94,13 +93,13 @@ impl TryFrom<Location> for TileCoord {
 	type Error = TileCoordOutOfBoundsError;
 
 	fn try_from(loc: Location) -> Result<Self, Self::Error> {
-		// TODO: consider handling these errors, as well as
-		// `n / TILE_SIZE > u16::MAX`, more graceful
-		assert!(loc.0.x >= 0.0, "x is negative (or nan)");
-		assert!(loc.0.y >= 0.0, "y is negative (or nan)");
+		// TODO: `n > u32::MAX` and `n / TILE_SIZE > u16::MAX` more gracefully
+
 		if loc.0.x < 0.0 || loc.0.y < 0.0 {
 			return Err(TileCoordOutOfBoundsError::UnderRun);
 		}
+		assert!(loc.0.x >= 0.0, "x is negative (or nan)");
+		assert!(loc.0.y >= 0.0, "y is negative (or nan)");
 
 		Ok(Self {
 			x: (loc.0.x as u32 / TILE_SIZE)
@@ -116,8 +115,8 @@ impl TryFrom<Location> for TileCoord {
 impl From<TileCoord> for Location {
 	fn from(tc: TileCoord) -> Self {
 		Self(Vec2::new(
-			(tc.x as u32 * TILE_SIZE) as f32 + 0.5,
-			(tc.y as u32 * TILE_SIZE) as f32 + 0.5,
+			(tc.x as u32 * TILE_SIZE) as f32 + 0.5 * TILE_SIZE as f32,
+			(tc.y as u32 * TILE_SIZE) as f32 + 0.5 * TILE_SIZE as f32,
 		))
 	}
 }
@@ -182,10 +181,15 @@ impl Terrain {
 	}
 
 	pub fn try_get(&self, tc: TileCoord) -> Option<&Elevation> {
-		self.playground.get(self.index(tc))
+		if tc.x >= self.edge_length {
+			None
+		} else {
+			self.playground.get(self.index(tc))
+		}
 	}
 
 	/// Gets tile type at given coordinate
+	#[track_caller]
 	pub fn get(&self, tc: TileCoord) -> &Elevation {
 		let idx = self.index(tc);
 		&self.playground[idx]
