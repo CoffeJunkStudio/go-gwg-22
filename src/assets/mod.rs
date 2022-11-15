@@ -29,6 +29,8 @@ pub struct TerrainBatches {
 
 	/// An animation layer for water waves
 	pub water_anim: SpriteBatch,
+	/// Second animation layer for water waves
+	pub water_anim_2: SpriteBatch,
 }
 
 /// Asset of one ship

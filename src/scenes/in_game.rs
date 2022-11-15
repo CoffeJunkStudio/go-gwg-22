@@ -84,6 +84,8 @@ pub struct Game {
 	zoom_factor_exp: i32,
 	/// Offset of the water waves within a tile
 	water_wave_offset: Vec2,
+	/// Offset of the secondary water waves within a tile
+	water_wave_2_offset: Vec2,
 }
 
 impl Game {
@@ -111,6 +113,7 @@ impl Game {
 			beach: image_batch(ctx, quad_ctx, "img/sand.png")?,
 			land: image_batch(ctx, quad_ctx, "img/grass.png")?,
 			water_anim: image_batch(ctx, quad_ctx, "img/wateranim.png")?,
+			water_anim_2: image_batch(ctx, quad_ctx, "img/wateranim2.png")?,
 		};
 
 		println!(
@@ -189,6 +192,7 @@ impl Game {
 			input: Input::default(),
 			zoom_factor_exp: DEFAULT_ZOOM_LEVEL,
 			water_wave_offset: Default::default(),
+			water_wave_2_offset: Default::default(),
 		};
 
 		println!(
@@ -423,10 +427,17 @@ impl Scene<GlobalState> for Game {
 		};
 
 		// Water wave animation, adding half the wind to the offset
-		self.water_wave_offset += self.world.state.wind.0 * timer::delta(ctx).as_secs_f32()/ 2.;
+		self.water_wave_offset += self.world.state.wind.0 * timer::delta(ctx).as_secs_f32() / 4.;
 		// Modulo the waves by tile size
 		self.water_wave_offset.x %= TILE_SIZE as f32;
 		self.water_wave_offset.y %= TILE_SIZE as f32;
+
+		// Secondary water wave animation, adding half the wind to the offset
+		self.water_wave_2_offset +=
+			self.world.state.wind.0 * timer::delta(ctx).as_secs_f32() * 2. / 3.;
+		// Modulo the waves by tile size
+		self.water_wave_2_offset.x %= TILE_SIZE as f32;
+		self.water_wave_2_offset.y %= TILE_SIZE as f32;
 
 		// Draw the waves (notice the draw order is given way below via the `draw_and_clear`
 		// TODO: draw the wave in wave size i.e. twice the size of a tile.
@@ -435,17 +446,35 @@ impl Scene<GlobalState> for Game {
 				let tc = TileCoord::new(x, y);
 				if let Some(_) = self.world.init.terrain.try_get(tc) {
 					let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_anim_image_size;
-					let loc =
-						tc.to_location().0 - logic::glm::vec1(logic::TILE_SIZE as f32 * 0.5).xx();
+					let quarter_tile = logic::glm::vec1(logic::TILE_SIZE as f32 * 0.25).xx();
+					let half_tile = logic::glm::vec1(logic::TILE_SIZE as f32 * 0.5).xx();
+					let loc = tc.to_location().0 - half_tile;
 
 					// Add the offset
-					let loc = loc + self.water_wave_offset;
+					let wave_1 = loc + self.water_wave_offset;
+
+					let f1 = (timer::time() * 0.5).sin().powi(4) as f32;
+					let f2 = (timer::time() * 0.5).cos().powi(4) as f32;
 
 					let param = DrawParam::new()
-						.dest(self.location_to_screen_coords(ctx, Location(loc)))
-						.scale(logic::glm::vec2(scale, scale));
-
+						.dest(self.location_to_screen_coords(ctx, Location(wave_1)))
+						.scale(logic::glm::vec2(scale, scale))
+						.color(Color::new(f1, f1, f1, 1.));
 					self.terrain_batches.water_anim.add(param);
+
+					let param = DrawParam::new()
+						.dest(self.location_to_screen_coords(ctx, Location(wave_1 - quarter_tile)))
+						.scale(logic::glm::vec2(scale, scale))
+						.color(Color::new(f2, f2, f2, 1.));
+					self.terrain_batches.water_anim.add(param);
+
+					// Add the offset
+					let wave_2 = loc + self.water_wave_2_offset;
+
+					let param = DrawParam::new()
+						.dest(self.location_to_screen_coords(ctx, Location(wave_2)))
+						.scale(logic::glm::vec2(scale, scale));
+					self.terrain_batches.water_anim_2.add(param);
 				}
 			}
 		}
@@ -569,31 +598,34 @@ impl Scene<GlobalState> for Game {
 		draw_and_clear(
 			ctx,
 			quad_ctx,
-			[
-				&mut self.terrain_batches.deep,
-				&mut self.terrain_batches.shallow,
-				&mut self.terrain_batches.water_anim,
-				&mut self.terrain_batches.beach,
-				&mut self.terrain_batches.land,
-			]
-			.into_iter()
-			.chain(
-				self.resource_batches
-					.fishes
-					.iter_mut()
-					.map(DerefMut::deref_mut),
-			)
-			.chain([
-				self.building_batches.harbor.deref_mut(),
-				self.ship_batches.basic.body.deref_mut(),
-			])
-			.chain(
-				self.ship_batches
-					.basic
-					.sail
-					.iter_mut()
-					.map(DerefMut::deref_mut),
-			),
+			[].into_iter()
+				.chain([
+					&mut self.terrain_batches.deep,
+					&mut self.terrain_batches.shallow,
+				])
+				.chain(
+					self.resource_batches
+						.fishes
+						.iter_mut()
+						.map(DerefMut::deref_mut),
+				)
+				.chain([
+					&mut self.terrain_batches.water_anim,
+					&mut self.terrain_batches.water_anim_2,
+					&mut self.terrain_batches.beach,
+					&mut self.terrain_batches.land,
+				])
+				.chain([
+					self.building_batches.harbor.deref_mut(),
+					self.ship_batches.basic.body.deref_mut(),
+				])
+				.chain(
+					self.ship_batches
+						.basic
+						.sail
+						.iter_mut()
+						.map(DerefMut::deref_mut),
+				),
 		)?;
 
 		// Draw some debugging stuff
