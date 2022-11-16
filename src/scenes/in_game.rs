@@ -446,15 +446,20 @@ impl Scene<GlobalState> for Game {
 				let tc = TileCoord::new(x, y);
 				if let Some(_) = self.world.init.terrain.try_get(tc) {
 					let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_anim_image_size;
-					let quarter_tile = logic::glm::vec1(logic::TILE_SIZE as f32 * 0.25).xx();
+
+					// Quarter tile size, but going right and up for better visuals
+					let quarter_tile = logic::glm::vec2(
+						logic::TILE_SIZE as f32 * 0.25,
+						logic::TILE_SIZE as f32 * -0.25,
+					);
 					let half_tile = logic::glm::vec1(logic::TILE_SIZE as f32 * 0.5).xx();
 					let loc = tc.to_location().0 - half_tile;
 
 					// Add the offset
 					let wave_1 = loc + self.water_wave_offset;
 
-					let f1 = (timer::time() * 0.5).sin().powi(4) as f32;
-					let f2 = (timer::time() * 0.5).cos().powi(4) as f32;
+					let f1 = (timer::time() * 0.5).sin().powi(6) as f32 * 0.8 + 0.2;
+					let f2 = (timer::time() * 0.5).cos().powi(6) as f32 * 0.8 + 0.2;
 
 					let param = DrawParam::new()
 						.dest(self.location_to_screen_coords(ctx, Location(wave_1)))
