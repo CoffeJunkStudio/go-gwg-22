@@ -20,6 +20,8 @@ use crate::StdRng;
 use crate::WorldInit;
 use crate::FRICTION_CROSS_SPEED_FACTOR;
 use crate::FRICTION_GROUND_SPEED_FACTOR;
+use crate::HARBOR_EFFECT_SIZE;
+use crate::HARBOR_MAX_SPEED;
 use crate::HARBOR_SIZE;
 use crate::MAX_TRACTION;
 use crate::MAX_WIND_SPEED;
@@ -377,6 +379,116 @@ impl WorldState {
 
 		events
 	}
+
+	/// Get options for trading
+	pub fn get_trading(&mut self) -> Option<TradeOption> {
+		let mut min_dist_n_idx: Option<(f32, usize)> = None;
+		for (idx, h) in self.harbors.iter().enumerate() {
+			let dist = self.player.vehicle.pos.0.metric_distance(&h.loc.0);
+			if dist < HARBOR_EFFECT_SIZE {
+				match min_dist_n_idx {
+					None => {
+						min_dist_n_idx = Some((dist, idx));
+					},
+					Some((d, _)) if dist < d => {
+						min_dist_n_idx = Some((dist, idx));
+					},
+					_ => {},
+				}
+			}
+		}
+
+		min_dist_n_idx
+			.map(|(_d, idx)| idx)
+			.map(|idx| TradeOption::new(self, idx))
+	}
+}
+
+/// Represents a trading option
+///
+///
+pub struct TradeOption<'a> {
+	/// The world state
+	state: &'a mut WorldState,
+	/// The harbor in question
+	///
+	/// This is an index into the `harbors` field on the above `state`.
+	harbor_idx: usize,
+	/// Base price for fish, in money
+	base_price: u64,
+	/// Amount of fish traded so far, in kg
+	traded_fish_amount: u32,
+}
+impl<'a> TradeOption<'a> {
+	fn new(state: &'a mut WorldState, harbor_idx: usize) -> Self {
+		Self {
+			state,
+			harbor_idx,
+			base_price: 1,
+			traded_fish_amount: 0,
+		}
+	}
+}
+
+impl TradeOption<'_> {
+	/// The harbor with which trade is possible
+	pub fn get_harbor(&mut self) -> &mut Harbor {
+		&mut self.state.harbors[self.harbor_idx]
+	}
+
+	/// The the current offered price for fish, in money
+	pub fn get_price_for_fish(&self) -> u64 {
+		self.base_price
+	}
+
+	/// The monetary volume traded so far, in money
+	pub fn get_traded_volume(&self) -> u64 {
+		u64::from(self.traded_fish_amount) * self.base_price
+	}
+
+	/// Check whether the player has a proper speed for trading
+	pub fn has_player_valid_speed(&self) -> bool {
+		self.state.player.vehicle.ground_speed() <= HARBOR_MAX_SPEED
+	}
+
+	/// Returns the amount of fish the player has left
+	pub fn players_fish_amount(&self) -> u32 {
+		self.state.player.vehicle.fish.0
+	}
+
+	/// Sell `amount` (in kg) of fish, returns the proceeds
+	pub fn sell_fish(&mut self, amount: u32) -> u64 {
+		// Do not trade if the player is too fast
+		if !self.has_player_valid_speed() {
+			return 0;
+		}
+
+		// Find the actual amount sellable
+		let amount = { amount.min(self.state.player.vehicle.fish.0) };
+
+		// Calculate the generated proceeds
+		let proceeds = u64::from(amount) * self.base_price;
+
+		// Remove the fish from the player
+		// This must not underflow, because we checked above
+		self.state.player.vehicle.fish.0 = self
+			.state
+			.player
+			.vehicle
+			.fish
+			.0
+			.checked_sub(amount)
+			.expect("Trying to sell too much");
+
+		// Deposit proceeds into the player's account
+		// If the player manages to get 2^64 money, we just keep it that way
+		self.state.player.money = self.state.player.money.saturating_add(proceeds);
+
+		// Remember the session trade volume
+		self.traded_fish_amount += amount;
+
+		proceeds
+	}
 }
 
 
@@ -476,7 +588,7 @@ impl Vehicle {
 
 	/// Returns the total mass of the vehicle (inclusive payloads) in kilogram
 	pub fn mass(&self) -> f32 {
-		VEHICLE_DEADWEIGHT + self.fish.0
+		VEHICLE_DEADWEIGHT + self.fish.0 as f32
 	}
 }
 
@@ -488,7 +600,7 @@ impl Default for Vehicle {
 			heading: Default::default(),
 			ruder: Default::default(),
 			velocity: Default::default(),
-			fish: Fish(0.0),
+			fish: Fish(0),
 			angle_of_list: 0.0,
 		}
 	}
@@ -517,6 +629,7 @@ impl Sail {
 #[derive(Serialize, Deserialize)]
 pub struct Player {
 	pub vehicle: Vehicle,
+	pub money: u64,
 }
 
 

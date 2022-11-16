@@ -11,6 +11,7 @@ use gwg::graphics::Color;
 use gwg::graphics::DrawMode;
 use gwg::graphics::DrawParam;
 use gwg::graphics::MeshBuilder;
+use gwg::graphics::PxScale;
 use gwg::graphics::Rect;
 use gwg::graphics::StrokeOptions;
 use gwg::graphics::Text;
@@ -56,7 +57,7 @@ const ZOOM_FACTOR_BASE: f32 = std::f32::consts::SQRT_2;
 /// The amount of the world visible across the screen diagonal (i.e. the windows diagonal).
 ///
 /// See: [Game::pixel_per_meter]
-const METERS_PER_SCREEN_DIAGONAL: f32 = 20.;
+const METERS_PER_SCREEN_DIAGONAL: f32 = 30.;
 
 /// The default (i.e. initial) zoom factor exponent
 ///
@@ -385,7 +386,13 @@ impl Scene<GlobalState> for Game {
 			}
 		}
 
-		if is_key_pressed(&ctx, KeyCode::Escape) {
+		if let Some(mut trade) = self.world.state.get_trading() {
+			if is_key_pressed(ctx, KeyCode::S) {
+				trade.sell_fish(1);
+			}
+		}
+
+		if is_key_pressed(ctx, KeyCode::Escape) {
 			SceneSwitch::Pop
 		} else {
 			SceneSwitch::None
@@ -716,6 +723,68 @@ impl Scene<GlobalState> for Game {
 			(Point2::new(100.0, 80.0), Color::WHITE),
 			Color::BLACK,
 		)?;
+
+		// Show players money
+		let money = Text::new(format!("Money: {:} ℓ", self.world.state.player.money));
+		self.draw_text_with_halo(
+			ctx,
+			quad_ctx,
+			&money,
+			(Point2::new(0.0, 0.0), Color::WHITE),
+			Color::BLACK,
+		)?;
+
+		// Show the current amount of fish in the ship
+		let fish = Text::new(format!(
+			"Fish: {:} kg",
+			self.world.state.player.vehicle.fish.0
+		));
+		self.draw_text_with_halo(
+			ctx,
+			quad_ctx,
+			&fish,
+			(Point2::new(0.0, 20.0), Color::WHITE),
+			Color::BLACK,
+		)?;
+
+		if let Some(t) = self.world.state.get_trading() {
+			if t.players_fish_amount() > 0 {
+				if t.has_player_valid_speed() {
+					// Trading is possible
+
+					let mut text = Text::new("Press 'S' to sell fish");
+					text.set_font(Default::default(), PxScale::from(32.));
+					graphics::draw(
+						ctx,
+						quad_ctx,
+						&text,
+						(Point2::new(0.0, screen_coords.h / 2.), Color::BLACK),
+					)?;
+				} else {
+					// Player is too fast for trading
+
+					let mut text = Text::new("Slow down for trading");
+					text.set_font(Default::default(), PxScale::from(32.));
+					graphics::draw(
+						ctx,
+						quad_ctx,
+						&text,
+						(Point2::new(0.0, screen_coords.h / 2.), Color::BLACK),
+					)?;
+				}
+			} else {
+				// No fish to sell
+
+				let mut text = Text::new("You need more fish");
+				text.set_font(Default::default(), PxScale::from(32.));
+				graphics::draw(
+					ctx,
+					quad_ctx,
+					&text,
+					(Point2::new(0.0, screen_coords.h / 2.), Color::BLACK),
+				)?;
+			}
+		}
 
 		// Print version info
 		draw_version(ctx, quad_ctx)?;

@@ -28,7 +28,10 @@ pub const TILE_SIZE: u32 = 4;
 pub const HARBOR_SIZE: f32 = 10.;
 
 /// The effect "diameter" within which a player an interact with a harbor, in meter
-pub const HARBOR_EFFECT_SIZE: f32 = 20.;
+pub const HARBOR_EFFECT_SIZE: f32 = 15.;
+
+/// The maximum speed of the player while trading.
+pub const HARBOR_MAX_SPEED: f32 = 1.;
 
 /// The "diameter" of the player's car.
 pub const VEHICLE_SIZE: f32 = 1.3;
@@ -40,7 +43,7 @@ const VEHICLE_DEADWEIGHT: f32 = 100.0;
 pub const RESOURCE_PACK_FISH_SIZE: f32 = 0.8;
 
 /// The amount of fuel in each fuel resource pack
-pub const RESOURCE_PACK_FISH_AMOUNT: Fish = Fish(1.);
+pub const RESOURCE_PACK_FISH_AMOUNT: Fish = Fish(1);
 
 /// Scalar factor influencing the strength of ground based friction.
 ///
