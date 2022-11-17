@@ -26,10 +26,14 @@ use crate::HARBOR_SIZE;
 use crate::MAX_TRACTION;
 use crate::MAX_WIND_SPEED;
 use crate::RESOURCE_PACK_FISH_SIZE;
+use crate::TICKS_PER_SECOND;
 use crate::VEHICLE_DEADWEIGHT;
 use crate::VEHICLE_SIZE;
 use crate::WIND_CHANGE_INTERVAL;
 
+
+
+const DELTA: f32 = 1_f32 / TICKS_PER_SECOND as f32;
 
 
 /// Normalize an angle in positive range [0,2π)
@@ -73,9 +77,6 @@ pub struct WorldState {
 	pub wind: Wind,
 }
 
-pub const TICKS_PER_SECOND: u16 = 60;
-const DELTA: f32 = 1_f32 / TICKS_PER_SECOND as f32;
-
 impl WorldState {
 	pub fn update(&mut self, init: &WorldInit, inputs: &Input) -> Vec<Event> {
 		let mut events = Vec::new();
@@ -85,6 +86,11 @@ impl WorldState {
 
 		// Apply user inputs
 		self.player.vehicle.apply_input(*inputs);
+
+		// Update fishies
+		for r in &mut self.resources {
+			r.update(self.timestamp);
+		}
 
 		// Update wind
 		self.wind = {

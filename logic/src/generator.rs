@@ -48,12 +48,7 @@ impl Generator for WhiteNoise {
 			setting.edge_length as f32 * setting.edge_length as f32 * setting.resource_density;
 
 		let resources = (0..(resource_amount as u32))
-			.map(|_| {
-				ResourcePack {
-					content: rng.gen(),
-					loc: terrain.random_location(&mut rng),
-				}
-			})
+			.map(|_| ResourcePack::new(terrain.random_location(&mut rng), &mut rng))
 			.collect();
 
 		let seed: u64 = rng.gen();
@@ -98,12 +93,7 @@ impl Generator for PerlinNoise {
 			setting.edge_length as f32 * setting.edge_length as f32 * setting.resource_density;
 
 		let resources = (0..(resource_amount as u32))
-			.map(|_| {
-				ResourcePack {
-					content: rng.gen(),
-					loc: terrain.random_passable_location(&mut rng),
-				}
-			})
+			.map(|_| ResourcePack::new(terrain.random_location(&mut rng), &mut rng))
 			.collect();
 
 		// One harbour per 128 tiles (on average)

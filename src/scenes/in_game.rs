@@ -24,16 +24,14 @@ use logic::generator::Setting;
 use logic::glm::vec1;
 use logic::glm::Vec2;
 use logic::state::Event;
-use logic::state::TICKS_PER_SECOND;
 use logic::terrain::TileCoord;
 use logic::units::BiPolarFraction;
 use logic::units::Distance;
 use logic::units::Location;
 use logic::Input;
 use logic::World;
+use logic::TICKS_PER_SECOND;
 use logic::TILE_SIZE;
-use rand::seq::SliceRandom;
-use rand::Rng;
 
 use super::GlobalState;
 use crate::assets::asset_batch::image_batch;
@@ -568,16 +566,11 @@ impl Scene<GlobalState> for Game {
 
 		// Draw the resources (i.e. fishys)
 		for resource in &self.world.state.resources {
-			let mut rng = logic::StdRng::new(
-				(resource.loc.0.x * 100.0) as u128,
-				(resource.loc.0.y * 100.0) as u128,
-			);
-
 			let resource_pos =
 				resource.loc.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE).xx() * 0.5;
 			let dest = self.location_to_screen_coords(ctx, Location(resource_pos));
 
-			let batch = self.resource_batches.fishes.choose_mut(&mut rng).unwrap();
+			let batch = &mut self.resource_batches.fishes[usize::from(resource.variant)];
 
 			let resource_scale = logic::glm::vec1(
 				logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter / batch.params().width as f32,
@@ -585,7 +578,7 @@ impl Scene<GlobalState> for Game {
 			.xx();
 			let param = DrawParam::new().dest(dest).scale(resource_scale);
 
-			batch.add_frame(0.0, rng.gen::<f64>() * std::f64::consts::TAU, 0.0, param);
+			batch.add_frame(0.0, -f64::from(resource.ori), 0.0, param);
 		}
 
 		// Draw harbors
