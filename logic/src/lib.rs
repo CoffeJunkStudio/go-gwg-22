@@ -1,4 +1,8 @@
+use std::f32::consts::TAU;
+
 use enum_map::Enum;
+use glm::vec2;
+use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -16,6 +20,7 @@ use terrain::Terrain;
 use units::BiPolarFraction;
 use units::Fish;
 use units::Location;
+use units::Tick;
 
 pub type StdRng = rand_pcg::Pcg64;
 
@@ -28,7 +33,10 @@ pub const TILE_SIZE: u32 = 4;
 pub const HARBOR_SIZE: f32 = 10.;
 
 /// The effect "diameter" within which a player an interact with a harbor, in meter
-pub const HARBOR_EFFECT_SIZE: f32 = 20.;
+pub const HARBOR_EFFECT_SIZE: f32 = 15.;
+
+/// The maximum speed of the player while trading.
+pub const HARBOR_MAX_SPEED: f32 = 1.;
 
 /// The "diameter" of the player's car.
 pub const VEHICLE_SIZE: f32 = 1.3;
@@ -40,7 +48,7 @@ const VEHICLE_DEADWEIGHT: f32 = 100.0;
 pub const RESOURCE_PACK_FISH_SIZE: f32 = 0.8;
 
 /// The amount of fuel in each fuel resource pack
-pub const RESOURCE_PACK_FISH_AMOUNT: Fish = Fish(1.);
+pub const RESOURCE_PACK_FISH_AMOUNT: Fish = Fish(1);
 
 /// Scalar factor influencing the strength of ground based friction.
 ///
@@ -65,6 +73,14 @@ pub const WIND_CHANGE_INTERVAL: u16 = 10;
 /// The maximum wind speed in m/s
 pub const MAX_WIND_SPEED: f32 = 15.0;
 
+/// Number of fish variants
+pub const FISH_TYPES: u8 = 8;
+
+/// The base duration of the fish animation in seconds
+pub const FISH_ANIM_BASE_DURATION: u32 = 3;
+
+/// Target logical ticks per second
+pub const TICKS_PER_SECOND: u16 = 60;
 
 
 /// Gives the resource type that can be in a resource pack
@@ -83,8 +99,66 @@ pub enum ResourcePackContent {
 pub struct ResourcePack {
 	/// The type of the resource
 	pub content: ResourcePackContent,
+	/// Fish variant
+	pub variant: u8,
 	/// The location of the resource in meter
 	pub loc: Location,
+	/// The orientation of the resource, zero is world x axis
+	pub ori: f32,
+
+	/// The origin location of the resource in meter
+	pub origin: Location,
+	/// Animation parameters
+	pub params: (i8, i8),
+	/// Animation phase offset
+	pub phase: f32,
+}
+impl ResourcePack {
+	pub fn new<R: Rng>(loc: Location, mut rng: R) -> Self {
+		Self {
+			content: rng.gen(),
+			variant: rng.gen_range(0..FISH_TYPES),
+			loc: Default::default(),
+			ori: 0.,
+			origin: loc,
+			params: (rng.gen_range(-9..=-1), rng.gen_range(2..=10)),
+			phase: rng.gen_range(0.0..TAU),
+		}
+	}
+
+	pub fn update(&mut self, current_tick: Tick) {
+		let duration = 1 + self.params.0.unsigned_abs() + self.params.1.unsigned_abs();
+		let duration =
+			u32::from(duration) * (FISH_ANIM_BASE_DURATION * u32::from(TICKS_PER_SECOND));
+		let progress =
+			self.phase + TAU * (current_tick.0 % u64::from(duration)) as f32 / duration as f32;
+
+		// Normal function
+		let base = vec2(progress.sin(), progress.cos());
+		let first = vec2(
+			(progress * self.params.0 as f32).sin(),
+			(progress * self.params.0 as f32).cos(),
+		);
+		let second = vec2(
+			(progress * self.params.1 as f32).sin(),
+			(progress * self.params.1 as f32).cos(),
+		);
+		self.loc = Location(self.origin.0 + base + first + second);
+
+		// Derivation
+		let d_base = vec2(progress.cos(), -progress.sin());
+		let d_first = vec2(
+			(progress * self.params.0 as f32).cos() * self.params.0 as f32,
+			-(progress * self.params.0 as f32).sin() * self.params.0 as f32,
+		);
+		let d_second = vec2(
+			(progress * self.params.1 as f32).cos() * self.params.1 as f32,
+			-(progress * self.params.1 as f32).sin() * self.params.1 as f32,
+		);
+		let d_vec = d_base + d_first + d_second;
+
+		self.ori = f32::atan2(d_vec.y, d_vec.x);
+	}
 }
 
 

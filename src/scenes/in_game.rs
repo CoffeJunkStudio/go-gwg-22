@@ -11,6 +11,7 @@ use gwg::graphics::Color;
 use gwg::graphics::DrawMode;
 use gwg::graphics::DrawParam;
 use gwg::graphics::MeshBuilder;
+use gwg::graphics::PxScale;
 use gwg::graphics::Rect;
 use gwg::graphics::StrokeOptions;
 use gwg::graphics::Text;
@@ -23,16 +24,14 @@ use logic::generator::Setting;
 use logic::glm::vec1;
 use logic::glm::Vec2;
 use logic::state::Event;
-use logic::state::TICKS_PER_SECOND;
 use logic::terrain::TileCoord;
 use logic::units::BiPolarFraction;
 use logic::units::Distance;
 use logic::units::Location;
 use logic::Input;
 use logic::World;
+use logic::TICKS_PER_SECOND;
 use logic::TILE_SIZE;
-use rand::seq::SliceRandom;
-use rand::Rng;
 
 use super::GlobalState;
 use crate::assets::asset_batch::image_batch;
@@ -56,7 +55,7 @@ const ZOOM_FACTOR_BASE: f32 = std::f32::consts::SQRT_2;
 /// The amount of the world visible across the screen diagonal (i.e. the windows diagonal).
 ///
 /// See: [Game::pixel_per_meter]
-const METERS_PER_SCREEN_DIAGONAL: f32 = 20.;
+const METERS_PER_SCREEN_DIAGONAL: f32 = 30.;
 
 /// The default (i.e. initial) zoom factor exponent
 ///
@@ -385,7 +384,13 @@ impl Scene<GlobalState> for Game {
 			}
 		}
 
-		if is_key_pressed(&ctx, KeyCode::Escape) {
+		if let Some(mut trade) = self.world.state.get_trading() {
+			if is_key_pressed(ctx, KeyCode::S) {
+				trade.sell_fish(1);
+			}
+		}
+
+		if is_key_pressed(ctx, KeyCode::Escape) {
 			SceneSwitch::Pop
 		} else {
 			SceneSwitch::None
@@ -446,15 +451,20 @@ impl Scene<GlobalState> for Game {
 				let tc = TileCoord::new(x, y);
 				if let Some(_) = self.world.init.terrain.try_get(tc) {
 					let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_anim_image_size;
-					let quarter_tile = logic::glm::vec1(logic::TILE_SIZE as f32 * 0.25).xx();
+
+					// Quarter tile size, but going right and up for better visuals
+					let quarter_tile = logic::glm::vec2(
+						logic::TILE_SIZE as f32 * 0.25,
+						logic::TILE_SIZE as f32 * -0.25,
+					);
 					let half_tile = logic::glm::vec1(logic::TILE_SIZE as f32 * 0.5).xx();
 					let loc = tc.to_location().0 - half_tile;
 
 					// Add the offset
 					let wave_1 = loc + self.water_wave_offset;
 
-					let f1 = (timer::time() * 0.5).sin().powi(4) as f32;
-					let f2 = (timer::time() * 0.5).cos().powi(4) as f32;
+					let f1 = (timer::time() * 0.5).sin().powi(6) as f32 * 0.8 + 0.2;
+					let f2 = (timer::time() * 0.5).cos().powi(6) as f32 * 0.8 + 0.2;
 
 					let param = DrawParam::new()
 						.dest(self.location_to_screen_coords(ctx, Location(wave_1)))
@@ -556,16 +566,11 @@ impl Scene<GlobalState> for Game {
 
 		// Draw the resources (i.e. fishys)
 		for resource in &self.world.state.resources {
-			let mut rng = logic::StdRng::new(
-				(resource.loc.0.x * 100.0) as u128,
-				(resource.loc.0.y * 100.0) as u128,
-			);
-
 			let resource_pos =
 				resource.loc.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE).xx() * 0.5;
 			let dest = self.location_to_screen_coords(ctx, Location(resource_pos));
 
-			let batch = self.resource_batches.fishes.choose_mut(&mut rng).unwrap();
+			let batch = &mut self.resource_batches.fishes[usize::from(resource.variant)];
 
 			let resource_scale = logic::glm::vec1(
 				logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter / batch.params().width as f32,
@@ -573,7 +578,7 @@ impl Scene<GlobalState> for Game {
 			.xx();
 			let param = DrawParam::new().dest(dest).scale(resource_scale);
 
-			batch.add_frame(0.0, rng.gen::<f64>() * std::f64::consts::TAU, 0.0, param);
+			batch.add_frame(0.0, -f64::from(resource.ori), 0.0, param);
 		}
 
 		// Draw harbors
@@ -711,6 +716,68 @@ impl Scene<GlobalState> for Game {
 			(Point2::new(100.0, 80.0), Color::WHITE),
 			Color::BLACK,
 		)?;
+
+		// Show players money
+		let money = Text::new(format!("Money: {:} ℓ", self.world.state.player.money));
+		self.draw_text_with_halo(
+			ctx,
+			quad_ctx,
+			&money,
+			(Point2::new(0.0, 0.0), Color::WHITE),
+			Color::BLACK,
+		)?;
+
+		// Show the current amount of fish in the ship
+		let fish = Text::new(format!(
+			"Fish: {:} kg",
+			self.world.state.player.vehicle.fish.0
+		));
+		self.draw_text_with_halo(
+			ctx,
+			quad_ctx,
+			&fish,
+			(Point2::new(0.0, 20.0), Color::WHITE),
+			Color::BLACK,
+		)?;
+
+		if let Some(t) = self.world.state.get_trading() {
+			if t.players_fish_amount() > 0 {
+				if t.has_player_valid_speed() {
+					// Trading is possible
+
+					let mut text = Text::new("Press 'S' to sell fish");
+					text.set_font(Default::default(), PxScale::from(32.));
+					graphics::draw(
+						ctx,
+						quad_ctx,
+						&text,
+						(Point2::new(0.0, screen_coords.h / 2.), Color::BLACK),
+					)?;
+				} else {
+					// Player is too fast for trading
+
+					let mut text = Text::new("Slow down for trading");
+					text.set_font(Default::default(), PxScale::from(32.));
+					graphics::draw(
+						ctx,
+						quad_ctx,
+						&text,
+						(Point2::new(0.0, screen_coords.h / 2.), Color::BLACK),
+					)?;
+				}
+			} else {
+				// No fish to sell
+
+				let mut text = Text::new("You need more fish");
+				text.set_font(Default::default(), PxScale::from(32.));
+				graphics::draw(
+					ctx,
+					quad_ctx,
+					&text,
+					(Point2::new(0.0, screen_coords.h / 2.), Color::BLACK),
+				)?;
+			}
+		}
 
 		// Print version info
 		draw_version(ctx, quad_ctx)?;

@@ -195,7 +195,7 @@ impl Tick {
 /// Amount of fish in kilograms
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
-pub struct Fish(pub f32);
+pub struct Fish(pub u32);
 
 
 
