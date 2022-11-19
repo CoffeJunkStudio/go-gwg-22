@@ -313,4 +313,16 @@ impl Terrain {
 		// Just do a conventional AABB check, given that `min` is now the origin.
 		mapped_mini_x.0.x < mapped_mini_max.0.x && mapped_mini_x.0.y < mapped_mini_max.0.y
 	}
+
+	/// Remaps `x` into the torus starting at `min`
+	pub fn torus_remap(&self, min: Location, x: Location) -> Location {
+		// First move all points relative to `min`
+		let mini_x = Location((x - min).0);
+
+		// Remap onto the torus
+		let mapped_mini_x = self.map_loc_on_torus(mini_x);
+
+		// Readd our "origin" point
+		Location(mapped_mini_x.0 + min.0)
+	}
 }

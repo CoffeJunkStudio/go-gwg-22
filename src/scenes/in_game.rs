@@ -419,17 +419,26 @@ impl Scene<GlobalState> for Game {
 		let tile_image_size = 256.;
 		let tile_anim_image_size = 512.;
 
+		let full_tile = logic::glm::vec1(logic::TILE_SIZE as f32).xx();
+		let half_tile = full_tile * 0.5;
+		// Quarter tile size, but going right and up for better visuals
+		let quarter_tile = logic::glm::vec2(
+			logic::TILE_SIZE as f32 * 0.25,
+			logic::TILE_SIZE as f32 * -0.25,
+		);
+
 		// Calculate the top left and bottom right corner where to start and stop drawing the tiles.
 		let (left_top, right_bottom) = {
 			let scm_x = screen_coords.w / pixel_per_meter;
 			let scm_y = screen_coords.h / pixel_per_meter;
 			let dst = Distance::new(scm_x * 0.5, scm_y * 0.5);
 
-			let lt = TileCoord::try_from((player_pos - dst).max(Location::ORIGIN)).expect("no lt");
-			let rb = TileCoord::try_from(player_pos + dst).expect("no rb");
+			let lt = player_pos - dst - Distance(full_tile);
+			let rb = player_pos + dst + Distance(full_tile);
 
 			(lt, rb)
 		};
+
 
 		// Water wave animation, adding half the wind to the offset
 		self.water_wave_offset += self.world.state.wind.0 * timer::delta(ctx).as_secs_f32() / 4.;
@@ -446,75 +455,84 @@ impl Scene<GlobalState> for Game {
 
 		// Draw the waves (notice the draw order is given way below via the `draw_and_clear`
 		// TODO: draw the wave in wave size i.e. twice the size of a tile.
-		for x in left_top.x.saturating_sub(1)..(right_bottom.x + 2) {
-			for y in left_top.y.saturating_sub(1)..(right_bottom.y + 2) {
-				let tc = TileCoord::new(x, y);
-				if let Some(_) = self.world.init.terrain.try_get(tc) {
-					let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_anim_image_size;
+		for (tc, _tile) in self.world.init.terrain.iter() {
+			if self
+				.world
+				.init
+				.terrain
+				.torus_bounds_check(left_top, right_bottom, tc.to_location())
+			{
+				let remapped = self
+					.world
+					.init
+					.terrain
+					.torus_remap(left_top, tc.to_location());
 
-					// Quarter tile size, but going right and up for better visuals
-					let quarter_tile = logic::glm::vec2(
-						logic::TILE_SIZE as f32 * 0.25,
-						logic::TILE_SIZE as f32 * -0.25,
-					);
-					let half_tile = logic::glm::vec1(logic::TILE_SIZE as f32 * 0.5).xx();
-					let loc = tc.to_location().0 - half_tile;
+				let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_anim_image_size;
 
-					// Add the offset
-					let wave_1 = loc + self.water_wave_offset;
+				let loc = remapped.0 - half_tile;
 
-					let f1 = (timer::time() * 0.5).sin().powi(6) as f32 * 0.8 + 0.2;
-					let f2 = (timer::time() * 0.5).cos().powi(6) as f32 * 0.8 + 0.2;
+				// Add the offset
+				let wave_1 = loc + self.water_wave_offset;
 
-					let param = DrawParam::new()
-						.dest(self.location_to_screen_coords(ctx, Location(wave_1)))
-						.scale(logic::glm::vec2(scale, scale))
-						.color(Color::new(f1, f1, f1, 1.));
-					self.terrain_batches.water_anim.add(param);
+				let f1 = (timer::time() * 0.5).sin().powi(6) as f32 * 0.8 + 0.2;
+				let f2 = (timer::time() * 0.5).cos().powi(6) as f32 * 0.8 + 0.2;
 
-					let param = DrawParam::new()
-						.dest(self.location_to_screen_coords(ctx, Location(wave_1 - quarter_tile)))
-						.scale(logic::glm::vec2(scale, scale))
-						.color(Color::new(f2, f2, f2, 1.));
-					self.terrain_batches.water_anim.add(param);
+				let param = DrawParam::new()
+					.dest(self.location_to_screen_coords(ctx, Location(wave_1)))
+					.scale(logic::glm::vec2(scale, scale))
+					.color(Color::new(f1, f1, f1, 1.));
+				self.terrain_batches.water_anim.add(param);
 
-					// Add the offset
-					let wave_2 = loc + self.water_wave_2_offset;
+				let param = DrawParam::new()
+					.dest(self.location_to_screen_coords(ctx, Location(wave_1 - quarter_tile)))
+					.scale(logic::glm::vec2(scale, scale))
+					.color(Color::new(f2, f2, f2, 1.));
+				self.terrain_batches.water_anim.add(param);
 
-					let param = DrawParam::new()
-						.dest(self.location_to_screen_coords(ctx, Location(wave_2)))
-						.scale(logic::glm::vec2(scale, scale));
-					self.terrain_batches.water_anim_2.add(param);
-				}
+				// Add the offset
+				let wave_2 = loc + self.water_wave_2_offset;
+
+				let param = DrawParam::new()
+					.dest(self.location_to_screen_coords(ctx, Location(wave_2)))
+					.scale(logic::glm::vec2(scale, scale));
+				self.terrain_batches.water_anim_2.add(param);
 			}
 		}
 
 		// Draw the tile background
-		for x in left_top.x.saturating_sub(1)..(right_bottom.x + 1) {
-			for y in left_top.y.saturating_sub(1)..(right_bottom.y + 1) {
-				let tc = TileCoord::new(x, y);
-				if let Some(tile) = self.world.init.terrain.try_get(tc) {
-					let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_image_size;
-					let loc =
-						tc.to_location().0 - logic::glm::vec1(logic::TILE_SIZE as f32 * 0.5).xx();
-					let param = DrawParam::new()
-						.dest(self.location_to_screen_coords(ctx, Location(loc)))
-						.scale(logic::glm::vec2(scale, scale));
+		for (tc, tile) in self.world.init.terrain.iter() {
+			if self
+				.world
+				.init
+				.terrain
+				.torus_bounds_check(left_top, right_bottom, tc.to_location())
+			{
+				let remapped = self
+					.world
+					.init
+					.terrain
+					.torus_remap(left_top, tc.to_location());
 
-					let batch = {
-						if tile.0 < -5 {
-							&mut self.terrain_batches.deep
-						} else if tile.0 < 0 {
-							&mut self.terrain_batches.shallow
-						} else if tile.0 < 1 {
-							&mut self.terrain_batches.beach
-						} else {
-							&mut self.terrain_batches.land
-						}
-					};
+				let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_image_size;
+				let loc = remapped.0 - half_tile;
+				let param = DrawParam::new()
+					.dest(self.location_to_screen_coords(ctx, Location(loc)))
+					.scale(logic::glm::vec2(scale, scale));
 
-					batch.add(param);
-				}
+				let batch = {
+					if tile.0 < -5 {
+						&mut self.terrain_batches.deep
+					} else if tile.0 < 0 {
+						&mut self.terrain_batches.shallow
+					} else if tile.0 < 1 {
+						&mut self.terrain_batches.beach
+					} else {
+						&mut self.terrain_batches.land
+					}
+				};
+
+				batch.add(param);
 			}
 		}
 
