@@ -275,4 +275,42 @@ impl Terrain {
 			}
 		}
 	}
+
+	/// Returns the corresponding normalized location on the terrain of the give location.
+	///
+	/// This function essentially calculates the positive modulo of the given location and the size of the terrain.
+	pub fn map_loc_on_torus(&self, mut loc: Location) -> Location {
+		// Map the location on the Torus-world
+		loc.0.x = loc.0.x.rem_euclid(self.map_size());
+		loc.0.y = loc.0.y.rem_euclid(self.map_size());
+		// Apparently, floating-point rems, may return a value as big as `rhs`
+		// So we need to fix that
+		// Maybe we could use one day `next_down()` instead
+		if loc.0.x == self.map_size() {
+			loc.0.x = 0.0;
+		}
+		if loc.0.y == self.map_size() {
+			loc.0.y = 0.0;
+		}
+
+		loc
+	}
+
+	/// Returns wether `x` lies between `min` and `max` on a Torus world.
+	///
+	/// This check is a conventional AABB check if `min` <= `max` (for each
+	/// component), it becomes a wrapping check, if `max` < `min`, meaning
+	/// that, `x` needs to be outside the conventional AABB.
+	pub fn torus_bounds_check(&self, min: Location, max: Location, x: Location) -> bool {
+		// First move all points relative to `min`
+		let mini_x = Location((x - min).0);
+		let mini_max = Location((max - min).0);
+
+		// Remap onto the torus
+		let mapped_mini_x = self.map_loc_on_torus(mini_x);
+		let mapped_mini_max = self.map_loc_on_torus(mini_max);
+
+		// Just do a conventional AABB check, given that `min` is now the origin.
+		mapped_mini_x.0.x < mapped_mini_max.0.x && mapped_mini_x.0.y < mapped_mini_max.0.y
+	}
 }

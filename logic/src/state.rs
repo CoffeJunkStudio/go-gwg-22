@@ -253,17 +253,7 @@ impl WorldState {
 			p.vehicle.pos.0 += distance;
 
 			// Keep the player on the Torus-world
-			p.vehicle.pos.0.x = p.vehicle.pos.0.x.rem_euclid(init.terrain.map_size());
-			p.vehicle.pos.0.y = p.vehicle.pos.0.y.rem_euclid(init.terrain.map_size());
-			// Apparently, floating-point rems, may return a value as big as `rhs`
-			// So we need to fix that
-			// Maybe we could use one day `next_down()` instead
-			if p.vehicle.pos.0.x == init.terrain.map_size() {
-				p.vehicle.pos.0.x = 0.0;
-			}
-			if p.vehicle.pos.0.y == init.terrain.map_size() {
-				p.vehicle.pos.0.y = 0.0;
-			}
+			p.vehicle.pos = init.terrain.map_loc_on_torus(p.vehicle.pos);
 
 			// Terrain interaction
 			// First check whether the player is still on the map, and if so
