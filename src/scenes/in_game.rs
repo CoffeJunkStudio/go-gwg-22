@@ -439,6 +439,7 @@ impl Scene<GlobalState> for Game {
 			(lt, rb)
 		};
 
+		let terrain = &self.world.init.terrain;
 
 		// Water wave animation, adding half the wind to the offset
 		self.water_wave_offset += self.world.state.wind.0 * timer::delta(ctx).as_secs_f32() / 4.;
@@ -455,18 +456,9 @@ impl Scene<GlobalState> for Game {
 
 		// Draw the waves (notice the draw order is given way below via the `draw_and_clear`
 		// TODO: draw the wave in wave size i.e. twice the size of a tile.
-		for (tc, _tile) in self.world.init.terrain.iter() {
-			if self
-				.world
-				.init
-				.terrain
-				.torus_bounds_check(left_top, right_bottom, tc.to_location())
-			{
-				let remapped = self
-					.world
-					.init
-					.terrain
-					.torus_remap(left_top, tc.to_location());
+		for (tc, _tile) in terrain.iter() {
+			if terrain.torus_bounds_check(left_top, right_bottom, tc.to_location()) {
+				let remapped = terrain.torus_remap(left_top, tc.to_location());
 
 				let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_anim_image_size;
 
@@ -501,18 +493,9 @@ impl Scene<GlobalState> for Game {
 		}
 
 		// Draw the tile background
-		for (tc, tile) in self.world.init.terrain.iter() {
-			if self
-				.world
-				.init
-				.terrain
-				.torus_bounds_check(left_top, right_bottom, tc.to_location())
-			{
-				let remapped = self
-					.world
-					.init
-					.terrain
-					.torus_remap(left_top, tc.to_location());
+		for (tc, tile) in terrain.iter() {
+			if terrain.torus_bounds_check(left_top, right_bottom, tc.to_location()) {
+				let remapped = terrain.torus_remap(left_top, tc.to_location());
 
 				let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_image_size;
 				let loc = remapped.0 - half_tile;
@@ -584,36 +567,47 @@ impl Scene<GlobalState> for Game {
 
 		// Draw the resources (i.e. fishys)
 		for resource in &self.world.state.resources {
-			let resource_pos =
-				resource.loc.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE).xx() * 0.5;
-			let dest = self.location_to_screen_coords(ctx, Location(resource_pos));
+			if terrain.torus_bounds_check(left_top, right_bottom, resource.loc) {
+				let remapped = terrain.torus_remap(left_top, resource.loc);
 
-			let batch = &mut self.resource_batches.fishes[usize::from(resource.variant)];
+				let resource_pos =
+					remapped.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE).xx() * 0.5;
+				let dest = self.location_to_screen_coords(ctx, Location(resource_pos));
 
-			let resource_scale = logic::glm::vec1(
-				logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter / batch.params().width as f32,
-			)
-			.xx();
-			let param = DrawParam::new().dest(dest).scale(resource_scale);
+				let batch = &mut self.resource_batches.fishes[usize::from(resource.variant)];
 
-			batch.add_frame(0.0, -f64::from(resource.ori), 0.0, param);
+				let resource_scale = logic::glm::vec1(
+					logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter / batch.params().width as f32,
+				)
+				.xx();
+				let param = DrawParam::new().dest(dest).scale(resource_scale);
+
+				batch.add_frame(0.0, -f64::from(resource.ori), 0.0, param);
+			}
 		}
 
 		// Draw harbors
 		for harbor in &self.world.state.harbors {
-			let harbor_scale = logic::glm::vec1(
-				2. * logic::HARBOR_SIZE * pixel_per_meter
-					/ self.building_batches.harbor.params().width as f32,
-			)
-			.xx();
-			let harbor_pos = harbor.loc.0 - logic::glm::vec1(2. * logic::HARBOR_SIZE).xx() * 0.5;
-			let param = DrawParam::new()
-				.dest(self.location_to_screen_coords(ctx, Location(harbor_pos)))
-				.scale(harbor_scale);
+			if terrain.torus_bounds_check(left_top, right_bottom, harbor.loc) {
+				let remapped = terrain.torus_remap(left_top, harbor.loc);
 
-			self.building_batches
-				.harbor
-				.add_frame(0.0, f64::from(harbor.orientation), 0.0, param);
+				let harbor_scale = logic::glm::vec1(
+					2. * logic::HARBOR_SIZE * pixel_per_meter
+						/ self.building_batches.harbor.params().width as f32,
+				)
+				.xx();
+				let harbor_pos = remapped.0 - logic::glm::vec1(2. * logic::HARBOR_SIZE).xx() * 0.5;
+				let param = DrawParam::new()
+					.dest(self.location_to_screen_coords(ctx, Location(harbor_pos)))
+					.scale(harbor_scale);
+
+				self.building_batches.harbor.add_frame(
+					0.0,
+					f64::from(harbor.orientation),
+					0.0,
+					param,
+				);
+			}
 		}
 
 		// Draw and clear sprite batches
