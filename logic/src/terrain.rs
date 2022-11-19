@@ -317,7 +317,7 @@ impl Terrain {
 	/// Remaps `x` into the torus starting at `min`
 	pub fn torus_remap(&self, min: Location, x: Location) -> Location {
 		// First move all points relative to `min`
-		let mini_x = Location((x - min).0);
+		let mini_x = Location(x.0 - min.0);
 
 		// Remap onto the torus
 		let mapped_mini_x = self.map_loc_on_torus(mini_x);

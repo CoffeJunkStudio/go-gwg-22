@@ -427,10 +427,12 @@ impl Scene<GlobalState> for Game {
 			logic::TILE_SIZE as f32 * -0.25,
 		);
 
+		let terrain = &self.world.init.terrain;
+
 		// Calculate the top left and bottom right corner where to start and stop drawing the tiles.
 		let (left_top, right_bottom) = {
-			let scm_x = screen_coords.w / pixel_per_meter;
-			let scm_y = screen_coords.h / pixel_per_meter;
+			let scm_x = (screen_coords.w / pixel_per_meter).min(terrain.map_size() - 3.*logic::TILE_SIZE as f32);
+			let scm_y = (screen_coords.h / pixel_per_meter).min(terrain.map_size() - 3.*logic::TILE_SIZE as f32);
 			let dst = Distance::new(scm_x * 0.5, scm_y * 0.5);
 
 			let lt = player_pos - dst - Distance(full_tile);
@@ -438,8 +440,6 @@ impl Scene<GlobalState> for Game {
 
 			(lt, rb)
 		};
-
-		let terrain = &self.world.init.terrain;
 
 		// Water wave animation, adding half the wind to the offset
 		self.water_wave_offset += self.world.state.wind.0 * timer::delta(ctx).as_secs_f32() / 4.;
