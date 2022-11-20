@@ -386,7 +386,10 @@ impl Scene<GlobalState> for Game {
 
 		if let Some(mut trade) = self.world.state.get_trading() {
 			if is_key_pressed(ctx, KeyCode::S) {
-				trade.sell_fish(1);
+				let res = trade.sell_fish(1);
+				if res > 0 {
+					self.sound.play(ctx).unwrap();
+				}
 			}
 		}
 
