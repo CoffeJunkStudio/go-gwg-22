@@ -74,6 +74,8 @@ pub struct Game {
 	sound: audio::Source,
 	sound_fishy: audio::Source,
 	music_0: audio::Source,
+	water_sound_0: audio::Source,
+	water_sound_1: audio::Source,
 	full_screen: bool,
 	world: World,
 	input: Input,
@@ -96,7 +98,11 @@ impl Game {
 	) -> gwg::GameResult<Self> {
 		let opts = &*crate::OPTIONS;
 
-		let seed: u64 = opts.seed.as_ref().map(|s| wyhash(s.as_bytes(), 0)).unwrap_or(gwg::timer::time().floor() as u64);
+		let seed: u64 = opts
+			.seed
+			.as_ref()
+			.map(|s| wyhash(s.as_bytes(), 0))
+			.unwrap_or(gwg::timer::time().floor() as u64);
 
 		println!(
 			"{:.3} [game] loading music...",
@@ -106,6 +112,23 @@ impl Game {
 		music_0.set_repeat(true);
 		if !opts.no_sound {
 			music_0.play(ctx)?;
+		}
+
+		println!(
+			"{:.3} [game] loading sounds...",
+			gwg::timer::time_since_start(ctx).as_secs_f64()
+		);
+		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
+		let sound_fishy = audio::Source::new(ctx, "/sound/fischie.ogg")?;
+
+		let mut water_sound_0 = audio::Source::new(ctx, "/sound/waterssoftloop.ogg")?;
+		water_sound_0.set_repeat(true);
+		let mut water_sound_1 = audio::Source::new(ctx, "/sound/waterstrongloop.ogg")?;
+		water_sound_1.set_repeat(true);
+		if !opts.no_sound {
+			water_sound_0.play(ctx)?;
+			water_sound_1.set_volume(ctx, 0.)?;
+			water_sound_1.play(ctx)?;
 		}
 
 		println!(
@@ -166,13 +189,6 @@ impl Game {
 			harbor: AssetBatch::from_config(ctx, quad_ctx, &render_config, "harbour-00").unwrap(),
 		};
 
-		println!(
-			"{:.3} [game] loading sounds...",
-			gwg::timer::time_since_start(ctx).as_secs_f64()
-		);
-		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
-		let sound_fishy = audio::Source::new(ctx, "/sound/fischie.ogg")?;
-
 
 		println!(
 			"{:.3} [game] generating world...",
@@ -199,6 +215,8 @@ impl Game {
 			sound,
 			sound_fishy,
 			music_0,
+			water_sound_0,
+			water_sound_1,
 			full_screen: false,
 			world,
 			input: Input::default(),
@@ -376,7 +394,7 @@ impl Scene<GlobalState> for Game {
 	) -> SceneSwitch<GlobalState> {
 		use gwg::input::keyboard::is_key_pressed;
 
-		let opts = &* crate::OPTIONS;
+		let opts = &*crate::OPTIONS;
 
 		while gwg::timer::check_update_time(ctx, TICKS_PER_SECOND.into()) {
 			let mut rudder = 0.0;
@@ -410,6 +428,23 @@ impl Scene<GlobalState> for Game {
 				}
 			}
 		}
+
+		// Water wave sound
+		let water_per_wind_speed = 1. / 2.;
+		let relative_water_seed = {
+			let water_seed = self.world.state.wind.0 * water_per_wind_speed;
+			let ship_seed = self.world.state.player.vehicle.velocity;
+			ship_seed.metric_distance(&water_seed)
+		};
+		let normalized_rel_water_speed = {
+			(relative_water_seed / (2. * logic::MAX_WIND_SPEED * water_per_wind_speed))
+				.clamp(0., 1.)
+				.powi(2)
+		};
+		self.water_sound_1
+			.set_volume(ctx, normalized_rel_water_speed * 2.)
+			.unwrap();
+
 
 		if is_key_pressed(ctx, KeyCode::Escape) {
 			SceneSwitch::Pop
