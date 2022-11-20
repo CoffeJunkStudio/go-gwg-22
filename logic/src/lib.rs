@@ -48,7 +48,7 @@ const VEHICLE_DEADWEIGHT: f32 = 100.0;
 pub const RESOURCE_PACK_FISH_SIZE: f32 = 0.8;
 
 /// The amount of fuel in each fuel resource pack
-pub const RESOURCE_PACK_FISH_AMOUNT: Fish = Fish(1);
+pub const RESOURCE_PACK_FISH_AMOUNT: Fish = Fish(20);
 
 /// Scalar factor influencing the strength of ground based friction.
 ///
