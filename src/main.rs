@@ -46,6 +46,10 @@ struct Opts {
 	/// Disable sounds
 	#[structopt(long)]
 	no_sound: bool,
+
+	/// Use a fixed game world seed
+	#[structopt(long)]
+	seed: Option<String>,
 }
 impl Opts {
 	fn to_debugging_conf(&self) -> logic::DebuggingConf {

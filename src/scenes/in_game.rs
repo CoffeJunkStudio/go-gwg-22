@@ -32,6 +32,7 @@ use logic::Input;
 use logic::World;
 use logic::TICKS_PER_SECOND;
 use logic::TILE_SIZE;
+use wyhash::wyhash;
 
 use super::GlobalState;
 use crate::assets::asset_batch::image_batch;
@@ -94,9 +95,8 @@ impl Game {
 		quad_ctx: &mut gwg::miniquad::GraphicsContext,
 	) -> gwg::GameResult<Self> {
 		let opts = &*crate::OPTIONS;
-		// TODO: make it configurable or randomize (e.g. use an timestamp),
-		//       or implement both.
-		let seed: u64 = 44;
+
+		let seed: u64 = opts.seed.as_ref().map(|s| wyhash(s.as_bytes(), 0)).unwrap_or(gwg::timer::time().floor() as u64);
 
 		println!(
 			"{:.3} [game] loading music...",
