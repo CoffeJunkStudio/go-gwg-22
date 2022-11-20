@@ -840,7 +840,7 @@ impl Scene<GlobalState> for Game {
 			self.full_screen = !self.full_screen;
 			println!("{}", self.full_screen);
 			good_web_game::graphics::set_fullscreen(quad_ctx, self.full_screen);
-			good_web_game::graphics::set_drawable_size(quad_ctx, 600, 480);
+			//good_web_game::graphics::set_drawable_size(quad_ctx, 600, 480);
 		}
 	}
 
