@@ -416,8 +416,8 @@ impl Scene<GlobalState> for Game {
 		gwg::graphics::clear(ctx, quad_ctx, [red, green, blue, 1.0].into());
 
 		// Tile sizes
-		let tile_image_size = 256.;
-		let tile_anim_image_size = 512.;
+		let tile_image_size = 64.;
+		let tile_anim_image_size = 64.;
 
 		let full_tile = logic::glm::vec1(logic::TILE_SIZE as f32).xx();
 		let half_tile = full_tile * 0.5;
