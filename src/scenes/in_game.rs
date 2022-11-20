@@ -32,6 +32,8 @@ use logic::Input;
 use logic::World;
 use logic::TICKS_PER_SECOND;
 use logic::TILE_SIZE;
+use rand::SeedableRng;
+use rand::seq::SliceRandom;
 use wyhash::wyhash;
 
 use super::GlobalState;
@@ -72,7 +74,9 @@ pub struct Game {
 	resource_batches: ResourceBatches,
 	building_batches: BuildingBatches,
 	sound: audio::Source,
-	sound_fishy: audio::Source,
+	sound_fishy_1: audio::Source,
+	sound_fishy_2: audio::Source,
+	sound_fishy_3: audio::Source,
 	music_0: audio::Source,
 	water_sound_0: audio::Source,
 	water_sound_1: audio::Source,
@@ -119,7 +123,9 @@ impl Game {
 			gwg::timer::time_since_start(ctx).as_secs_f64()
 		);
 		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
-		let sound_fishy = audio::Source::new(ctx, "/sound/fischie.ogg")?;
+		let sound_fishy_1 = audio::Source::new(ctx, "/sound/fischie.ogg")?;
+		let sound_fishy_2 = audio::Source::new(ctx, "/sound/fischie2.ogg")?;
+		let sound_fishy_3 = audio::Source::new(ctx, "/sound/fischie3.ogg")?;
 
 		let mut water_sound_0 = audio::Source::new(ctx, "/sound/waterssoftloop.ogg")?;
 		water_sound_0.set_repeat(true);
@@ -212,8 +218,9 @@ impl Game {
 			ship_batches,
 			resource_batches,
 			building_batches,
-			sound,
-			sound_fishy,
+			sound,sound_fishy_1,
+			sound_fishy_2,
+			sound_fishy_3,
 			music_0,
 			water_sound_0,
 			water_sound_1,
@@ -396,6 +403,8 @@ impl Scene<GlobalState> for Game {
 
 		let opts = &*crate::OPTIONS;
 
+		let mut rng = wyhash::WyRng::seed_from_u64((gwg::timer::time() * 1000.) as u64);
+
 		while gwg::timer::check_update_time(ctx, TICKS_PER_SECOND.into()) {
 			let mut rudder = 0.0;
 
@@ -414,7 +423,12 @@ impl Scene<GlobalState> for Game {
 			if !opts.no_sound {
 				for ev in events {
 					match ev {
-						Event::Fishy => self.sound_fishy.play(ctx).unwrap(),
+						Event::Fishy => {
+							let fishies = [&self.sound_fishy_1,&self.sound_fishy_2,&self.sound_fishy_3];
+							let sound = fishies .choose(&mut rng).unwrap();
+
+							sound.play(ctx).unwrap();
+						}
 					}
 				}
 			}
