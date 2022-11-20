@@ -42,6 +42,10 @@ struct Opts {
 	#[cfg(feature = "dev")]
 	#[structopt(long)]
 	fixed_wind: Option<f32>,
+
+	/// Disable sounds
+	#[structopt(long)]
+	no_sound: bool,
 }
 impl Opts {
 	fn to_debugging_conf(&self) -> logic::DebuggingConf {

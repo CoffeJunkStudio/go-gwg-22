@@ -72,6 +72,7 @@ pub struct Game {
 	building_batches: BuildingBatches,
 	sound: audio::Source,
 	sound_fishy: audio::Source,
+	music_0: audio::Source,
 	full_screen: bool,
 	world: World,
 	input: Input,
@@ -92,9 +93,20 @@ impl Game {
 		ctx: &mut gwg::Context,
 		quad_ctx: &mut gwg::miniquad::GraphicsContext,
 	) -> gwg::GameResult<Self> {
+		let opts = &*crate::OPTIONS;
 		// TODO: make it configurable or randomize (e.g. use an timestamp),
 		//       or implement both.
 		let seed: u64 = 44;
+
+		println!(
+			"{:.3} [game] loading music...",
+			gwg::timer::time_since_start(ctx).as_secs_f64()
+		);
+		let mut music_0 = audio::Source::new(ctx, "/music/sailing-chanty.ogg")?;
+		music_0.set_repeat(true);
+		if !opts.no_sound {
+			music_0.play(ctx)?;
+		}
 
 		println!(
 			"{:.3} [game] loading config...",
@@ -186,6 +198,7 @@ impl Game {
 			building_batches,
 			sound,
 			sound_fishy,
+			music_0,
 			full_screen: false,
 			world,
 			input: Input::default(),
@@ -363,6 +376,8 @@ impl Scene<GlobalState> for Game {
 	) -> SceneSwitch<GlobalState> {
 		use gwg::input::keyboard::is_key_pressed;
 
+		let opts = &* crate::OPTIONS;
+
 		while gwg::timer::check_update_time(ctx, TICKS_PER_SECOND.into()) {
 			let mut rudder = 0.0;
 
@@ -377,9 +392,12 @@ impl Scene<GlobalState> for Game {
 			self.input.rudder = BiPolarFraction::from_f32(rudder).unwrap();
 			let events = self.world.state.update(&self.world.init, &self.input);
 
-			for ev in events {
-				match ev {
-					Event::Fishy => self.sound_fishy.play(ctx).unwrap(),
+			// Play event sounds
+			if !opts.no_sound {
+				for ev in events {
+					match ev {
+						Event::Fishy => self.sound_fishy.play(ctx).unwrap(),
+					}
 				}
 			}
 		}
@@ -387,7 +405,7 @@ impl Scene<GlobalState> for Game {
 		if let Some(mut trade) = self.world.state.get_trading() {
 			if is_key_pressed(ctx, KeyCode::S) {
 				let res = trade.sell_fish(1);
-				if res > 0 {
+				if !opts.no_sound && res > 0 {
 					self.sound.play(ctx).unwrap();
 				}
 			}
@@ -842,7 +860,9 @@ impl Scene<GlobalState> for Game {
 		}
 
 		if keycode == KeyCode::A {
-			self.sound.play(ctx).unwrap()
+			self.sound.play(ctx).unwrap();
+			self.music_0.stop(ctx).unwrap();
+			self.music_0.play(ctx).unwrap();
 		}
 
 		if keycode == KeyCode::KpAdd {
