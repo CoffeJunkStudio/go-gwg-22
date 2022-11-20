@@ -431,8 +431,10 @@ impl Scene<GlobalState> for Game {
 
 		// Calculate the top left and bottom right corner where to start and stop drawing the tiles.
 		let (left_top, right_bottom) = {
-			let scm_x = (screen_coords.w / pixel_per_meter).min(terrain.map_size() - 3.*logic::TILE_SIZE as f32);
-			let scm_y = (screen_coords.h / pixel_per_meter).min(terrain.map_size() - 3.*logic::TILE_SIZE as f32);
+			let scm_x = (screen_coords.w / pixel_per_meter)
+				.min(terrain.map_size() - 3. * logic::TILE_SIZE as f32);
+			let scm_y = (screen_coords.h / pixel_per_meter)
+				.min(terrain.map_size() - 3. * logic::TILE_SIZE as f32);
 			let dst = Distance::new(scm_x * 0.5, scm_y * 0.5);
 
 			let lt = player_pos - dst - Distance(full_tile);
@@ -499,21 +501,35 @@ impl Scene<GlobalState> for Game {
 
 				let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_image_size;
 				let loc = remapped.0 - half_tile;
-				let param = DrawParam::new()
-					.dest(self.location_to_screen_coords(ctx, Location(loc)))
-					.scale(logic::glm::vec2(scale, scale));
+				let dest = self.location_to_screen_coords(ctx, Location(loc));
 
-				let batch = {
+				let max_depth = -18;
+				let max_heigh = 2;
+
+				let (batch, rel) = {
 					if tile.0 < -5 {
-						&mut self.terrain_batches.deep
+						(
+							&mut self.terrain_batches.deep,
+							(tile.0 + 5) as f32 / (max_depth + 5) as f32,
+						)
 					} else if tile.0 < 0 {
-						&mut self.terrain_batches.shallow
+						(
+							&mut self.terrain_batches.shallow,
+							(tile.0 + 0) as f32 / (max_depth + 0) as f32,
+						)
 					} else if tile.0 < 1 {
-						&mut self.terrain_batches.beach
+						(&mut self.terrain_batches.beach, 0.0)
 					} else {
-						&mut self.terrain_batches.land
+						(&mut self.terrain_batches.land, 0.0)
 					}
 				};
+
+				let c = 1.0 - 0.5 * rel.clamp(0., 1.);
+
+				let param = DrawParam::new()
+					.dest(dest)
+					.scale(logic::glm::vec2(scale, scale))
+					.color(Color::new(c, c, c, 1.));
 
 				batch.add(param);
 			}
