@@ -580,7 +580,15 @@ impl Scene<GlobalState> for Game {
 					logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter / batch.params().width as f32,
 				)
 				.xx();
-				let param = DrawParam::new().dest(dest).scale(resource_scale);
+
+				let depth = ((resource.params.0 + 10) as f32 / 10.).clamp(0., 1.);
+				let d_color = depth;
+				let d_alpha = (depth * 2. / 3.) + 0.2;
+
+				let param = DrawParam::new()
+					.dest(dest)
+					.scale(resource_scale)
+					.color(Color::new(d_color, d_color, d_color, d_alpha));
 
 				batch.add_frame(0.0, -f64::from(resource.ori), 0.0, param);
 			}
