@@ -98,7 +98,7 @@ impl Generator for PerlinNoise {
 
 		// One harbour per 128 tiles (on average)
 		let harbor_amount =
-			(setting.edge_length as f32 * setting.edge_length as f32 / 128.).max(1.0);
+			(setting.edge_length as f32 * setting.edge_length as f32 / 256.).max(1.0);
 
 		let harbors = (0..(harbor_amount as u32))
 			.map(|_| {
