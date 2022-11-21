@@ -32,8 +32,8 @@ use logic::Input;
 use logic::World;
 use logic::TICKS_PER_SECOND;
 use logic::TILE_SIZE;
-use rand::SeedableRng;
 use rand::seq::SliceRandom;
+use rand::SeedableRng;
 use wyhash::wyhash;
 
 use super::GlobalState;
@@ -74,6 +74,8 @@ pub struct Game {
 	resource_batches: ResourceBatches,
 	building_batches: BuildingBatches,
 	sound: audio::Source,
+	fail_sound: audio::Source,
+	sell_sound: audio::Source,
 	sound_fishy_1: audio::Source,
 	sound_fishy_2: audio::Source,
 	sound_fishy_3: audio::Source,
@@ -123,15 +125,20 @@ impl Game {
 			gwg::timer::time_since_start(ctx).as_secs_f64()
 		);
 		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
+		let fail_sound = audio::Source::new(ctx, "/sound/invalid.ogg")?;
 		let sound_fishy_1 = audio::Source::new(ctx, "/sound/fischie.ogg")?;
 		let sound_fishy_2 = audio::Source::new(ctx, "/sound/fischie2.ogg")?;
 		let sound_fishy_3 = audio::Source::new(ctx, "/sound/fischie3.ogg")?;
 
+		let mut sell_sound = audio::Source::new(ctx, "/sound/sell-sound.ogg")?;
+		sell_sound.set_repeat(true);
 		let mut water_sound_0 = audio::Source::new(ctx, "/sound/waterssoftloop.ogg")?;
 		water_sound_0.set_repeat(true);
 		let mut water_sound_1 = audio::Source::new(ctx, "/sound/waterstrongloop.ogg")?;
 		water_sound_1.set_repeat(true);
 		if !opts.no_sound {
+			sell_sound.set_volume(ctx, 0.)?;
+			sell_sound.play(ctx)?;
 			water_sound_0.play(ctx)?;
 			water_sound_1.set_volume(ctx, 0.)?;
 			water_sound_1.play(ctx)?;
@@ -218,7 +225,10 @@ impl Game {
 			ship_batches,
 			resource_batches,
 			building_batches,
-			sound,sound_fishy_1,
+			sound,
+			fail_sound,
+			sell_sound,
+			sound_fishy_1,
 			sound_fishy_2,
 			sound_fishy_3,
 			music_0,
@@ -424,24 +434,36 @@ impl Scene<GlobalState> for Game {
 				for ev in events {
 					match ev {
 						Event::Fishy => {
-							let fishies = [&self.sound_fishy_1,&self.sound_fishy_2,&self.sound_fishy_3];
-							let sound = fishies .choose(&mut rng).unwrap();
+							let fishies = [
+								&self.sound_fishy_1,
+								&self.sound_fishy_2,
+								&self.sound_fishy_3,
+							];
+							let sound = fishies.choose(&mut rng).unwrap();
 
 							sound.play(ctx).unwrap();
-						}
+						},
 					}
 				}
 			}
 		}
 
+		let mut did_trade_successful = false;
 		if let Some(mut trade) = self.world.state.get_trading() {
 			if is_key_pressed(ctx, KeyCode::S) {
 				let res = trade.sell_fish(1);
-				if !opts.no_sound && res > 0 {
-					self.sound.play(ctx).unwrap();
+				if let Some(proceeds) = res {
+					if proceeds > 0 {
+						did_trade_successful = true;
+					} else {
+						self.fail_sound.play(ctx).unwrap();
+					}
 				}
 			}
 		}
+		self.sell_sound
+			.set_volume(ctx, did_trade_successful as u8 as f32)
+			.unwrap();
 
 		// Water wave sound
 		let water_per_wind_speed = 1. / 2.;
