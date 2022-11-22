@@ -26,6 +26,7 @@ cfg-if = "1.0"
 structopt = "0.3.26"
 lazy_static = "1.4"
 wyhash = "0.5.0"
+enum-map = "2.3"
 
 # Pin Miniquad, because the newer 0.3.14 is broken!
 miniquad = "=0.3.13"

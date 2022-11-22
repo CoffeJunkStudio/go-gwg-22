@@ -1,6 +1,7 @@
 use std::f32::consts::PI;
 use std::f32::consts::TAU;
 
+use enum_map::Enum;
 use nalgebra_glm::Vec2;
 use rand::Rng;
 use serde::Deserialize;
@@ -519,6 +520,8 @@ pub struct Harbor {
 #[derive(Debug, Copy, Clone)]
 #[derive(Serialize, Deserialize)]
 pub struct Vehicle {
+	/// The ship hull type
+	pub hull: ShipHull,
 	/// Absolute position in meters
 	pub pos: Location,
 	/// Current movement in m/s
@@ -607,6 +610,7 @@ impl Vehicle {
 impl Default for Vehicle {
 	fn default() -> Self {
 		Self {
+			hull: Default::default(),
 			pos: Default::default(),
 			sail: Default::default(),
 			heading: Default::default(),
@@ -618,10 +622,70 @@ impl Default for Vehicle {
 	}
 }
 
-/// Represents the engine of a car
+
+/// Represents the type or upgrade level of the sail
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Enum)]
+#[derive(Serialize, Deserialize)]
+pub enum ShipHull {
+	#[default]
+	Small,
+	Bigger,
+}
+impl ShipHull {
+	pub fn upgrade(self) -> Option<Self> {
+		use ShipHull::*;
+		match self {
+			Small => Some(Bigger),
+			Bigger => None,
+		}
+	}
+
+	pub fn value(self) -> u64 {
+		use ShipHull::*;
+		match self {
+			Small => 1_000,
+			Bigger => 2_000,
+		}
+	}
+}
+
+/// Represents the type or upgrade level of the sail
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Enum)]
+#[derive(Serialize, Deserialize)]
+pub enum SailKind {
+	Cog,
+	#[default]
+	Bermuda,
+	Schooner,
+}
+impl SailKind {
+	pub fn upgrade(self) -> Option<Self> {
+		use SailKind::*;
+		match self {
+			Cog => Some(Bermuda),
+			Bermuda => Some(Schooner),
+			Schooner => None,
+		}
+	}
+
+	pub fn value(self) -> u64 {
+		use SailKind::*;
+		match self {
+			Cog => 1_000,
+			Bermuda => 2_000,
+			Schooner => 3_000,
+		}
+	}
+}
+
+/// Represents the sail of the ship
 #[derive(Debug, Default, Copy, Clone)]
 #[derive(Serialize, Deserialize)]
 pub struct Sail {
+	/// The sail type
+	pub kind: SailKind,
 	/// Current engagement of the break pedal (1.0 is full breaking, 0.0 is no-breaking)
 	pub condition: Fraction,
 	/// Current state of the gear box.

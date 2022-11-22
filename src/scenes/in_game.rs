@@ -1,5 +1,6 @@
 use std::ops::DerefMut;
 
+use enum_map::enum_map;
 use good_web_game as gwg;
 use gwg::audio;
 use gwg::cgmath::Point2;
@@ -169,14 +170,35 @@ impl Game {
 		);
 		let ship_batches = ShipBatches {
 			basic: ShipSprites {
-				body: AssetBatch::from_config(ctx, quad_ctx, &render_config, "ship-00")?,
-				sail: vec![
+				body: enum_map! {
+					logic::state::ShipHull::Small => AssetBatch::from_config(ctx, quad_ctx, &render_config, "ship-00")?,
+					logic::state::ShipHull::Bigger => AssetBatch::from_config(ctx, quad_ctx, &render_config, "ship-01")?,
+				},
+				sail: enum_map! {
+					logic::state::SailKind::Cog => vec![
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-02-0")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-02-1")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-02-2")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-02-3")?,
+				],
+				logic::state::SailKind::Bermuda => vec![
 					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-0")?,
 					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-1")?,
 					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-2")?,
 					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-3")?,
 					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-00-4")?,
 				],
+				logic::state::SailKind::Schooner => vec![
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-01-0")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-01-1")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-01-2")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-01-3")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-01-4")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-01-5")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-01-6")?,
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, "sail-01-7")?,
+				]
+				},
 			},
 		};
 
@@ -627,20 +649,21 @@ impl Scene<GlobalState> for Game {
 			}
 		}
 
-		// Draw the player ship
-		let ship_scale = logic::glm::vec1(
-			2.5 * logic::VEHICLE_SIZE * pixel_per_meter
-				/ self.ship_batches.basic.body.params().width as f32,
-		)
-		.xx();
 		let ship_pos = self.world.state.player.vehicle.pos.0
 			- logic::glm::vec1(2.5 * logic::VEHICLE_SIZE).xx() * 0.5;
-		let param = DrawParam::new()
-			.dest(self.location_to_screen_coords(ctx, Location(ship_pos)))
-			.scale(ship_scale);
+		let ship_screen_loc = self.location_to_screen_coords(ctx, Location(ship_pos));
+
+		let body = &mut self.ship_batches.basic.body[self.world.state.player.vehicle.hull];
+
+		// Draw the player ship
+		let ship_scale = logic::glm::vec1(
+			2.5 * logic::VEHICLE_SIZE * pixel_per_meter / body.params().width as f32,
+		)
+		.xx();
+		let param = DrawParam::new().dest(ship_screen_loc).scale(ship_scale);
 		let heading = f64::from(self.world.state.player.vehicle.heading);
 		let ship_heading = -heading + std::f64::consts::PI;
-		self.ship_batches.basic.body.add_frame(
+		body.add_frame(
 			0.0,
 			ship_heading,
 			f64::from(self.world.state.player.vehicle.angle_of_list),
@@ -648,23 +671,24 @@ impl Scene<GlobalState> for Game {
 		);
 
 		// Draw the player sail
-		let max_sail = self.ship_batches.basic.sail.len() - 1;
 		let sail_reefing = match self.world.state.player.vehicle.sail.reefing {
 			logic::state::Reefing::Reefed(n) => n,
 		};
 
-		let sail_ass = &mut self.ship_batches.basic.sail[usize::from(sail_reefing).min(max_sail)];
+		let sail = &mut self.ship_batches.basic.sail[self.world.state.player.vehicle.sail.kind];
+		let max_sail = sail.len() - 1;
+		let effective_reefing = usize::from(sail_reefing).min(max_sail);
+
+		let sail_ass = &mut sail[effective_reefing];
 		let sail_scale = logic::glm::vec1(
 			2.5 * logic::VEHICLE_SIZE * pixel_per_meter / sail_ass.params().width as f32,
 		)
 		.xx();
-		let sail_param = DrawParam::new()
-			.dest(self.location_to_screen_coords(ctx, Location(ship_pos)))
-			.scale(sail_scale);
+		let sail_param = DrawParam::new().dest(ship_screen_loc).scale(sail_scale);
 		let orientation = f64::from(self.world.state.player.vehicle.sail.orientation);
 		let sail_orient = -orientation + std::f64::consts::PI;
 
-		let sail_ass = &mut self.ship_batches.basic.sail[usize::from(sail_reefing).min(max_sail)];
+		let sail_ass = &mut sail[effective_reefing];
 		sail_ass.add_frame(
 			// We need the sail orientation, minus the heading (because the model is in a rotating frame), plus a half turn (because the model is half way turned around).
 			sail_orient - ship_heading + std::f64::consts::PI,
@@ -748,16 +772,20 @@ impl Scene<GlobalState> for Game {
 					&mut self.terrain_batches.beach,
 					&mut self.terrain_batches.land,
 				])
-				.chain([
-					self.building_batches.harbor.deref_mut(),
-					self.ship_batches.basic.body.deref_mut(),
-				])
+				.chain([self.building_batches.harbor.deref_mut()])
+				.chain(
+					self.ship_batches
+						.basic
+						.body
+						.values_mut()
+						.map(|s| s.deref_mut()),
+				)
 				.chain(
 					self.ship_batches
 						.basic
 						.sail
-						.iter_mut()
-						.map(DerefMut::deref_mut),
+						.values_mut()
+						.flat_map(|s| s.iter_mut().map(DerefMut::deref_mut)),
 				),
 		)?;
 
@@ -869,34 +897,44 @@ impl Scene<GlobalState> for Game {
 		)?;
 
 		if let Some(t) = self.world.state.get_trading() {
-			if t.players_fish_amount() > 0 {
-				if t.has_player_valid_speed() {
-					// Trading is possible
+			if t.has_player_valid_speed() {
+				// Trading is possible
 
-					let mut text = Text::new("Press 'S' to sell fish");
-					text.set_font(Default::default(), PxScale::from(32.));
-					graphics::draw(
-						ctx,
-						quad_ctx,
-						&text,
-						(Point2::new(0.0, screen_coords.h / 2.), Color::BLACK),
-					)?;
-				} else {
-					// Player is too fast for trading
+				let mut text = Text::new("Welcome at the harbor");
+				text.set_font(Default::default(), PxScale::from(32.));
+				let h = text.dimensions(ctx).h;
+				graphics::draw(
+					ctx,
+					quad_ctx,
+					&text,
+					(Point2::new(0.0, screen_coords.h / 2. - h), Color::BLACK),
+				)?;
 
-					let mut text = Text::new("Slow down for trading");
-					text.set_font(Default::default(), PxScale::from(32.));
-					graphics::draw(
-						ctx,
-						quad_ctx,
-						&text,
-						(Point2::new(0.0, screen_coords.h / 2.), Color::BLACK),
-					)?;
-				}
+				let mut text = Text::new("Controls");
+				text.set_font(Default::default(), PxScale::from(28.));
+				graphics::draw(
+					ctx,
+					quad_ctx,
+					&text,
+					(Point2::new(0.0, screen_coords.h / 2.), Color::BLACK),
+				)?;
+				let h = text.dimensions(ctx).h;
+
+				let mut text = Text::new(format!(
+					"S: sell fish at {} ℓ/kg\nU: upgrade sail\nH: buy new hull",
+					t.get_price_for_fish()
+				));
+				text.set_font(Default::default(), PxScale::from(20.));
+				graphics::draw(
+					ctx,
+					quad_ctx,
+					&text,
+					(Point2::new(0.0, screen_coords.h / 2. + h), Color::BLACK),
+				)?;
 			} else {
-				// No fish to sell
+				// Player is too fast for trading
 
-				let mut text = Text::new("You need more fish");
+				let mut text = Text::new("You are too fast to interact with the harbor");
 				text.set_font(Default::default(), PxScale::from(32.));
 				graphics::draw(
 					ctx,
@@ -944,6 +982,48 @@ impl Scene<GlobalState> for Game {
 		}
 		if keycode == KeyCode::Kp0 {
 			self.zoom_factor_exp = 0;
+		}
+		if keycode == KeyCode::U {
+			let current_sail = self.world.state.player.vehicle.sail.kind;
+			// Check whether the player is at a harbor
+			if let Some(t) = self.world.state.get_trading() {
+				if t.has_player_valid_speed() {
+					if let Some(up) = current_sail.upgrade() {
+						// You get half a refund on your old gear
+						let upgrade_cost = up.value() - current_sail.value() / 2;
+						if self.world.state.player.money >= upgrade_cost {
+							self.world.state.player.money -= upgrade_cost;
+							self.world.state.player.vehicle.sail.kind = up;
+						} else {
+							println!("You have insufficient funds")
+						}
+					} else {
+						// Already at the top gear
+						println!("You already have the best sail")
+					}
+				}
+			}
+		}
+		if keycode == KeyCode::H {
+			let current_hull = self.world.state.player.vehicle.hull;
+			// Check whether the player is at a harbor
+			if let Some(t) = self.world.state.get_trading() {
+				if t.has_player_valid_speed() {
+					if let Some(up) = current_hull.upgrade() {
+						// You get half a refund on your old gear
+						let upgrade_cost = up.value() - current_hull.value() / 2;
+						if self.world.state.player.money >= upgrade_cost {
+							self.world.state.player.money -= upgrade_cost;
+							self.world.state.player.vehicle.hull = up;
+						} else {
+							println!("You have insufficient funds")
+						}
+					} else {
+						// Already at the top gear
+						println!("You already have the best hull")
+					}
+				}
+			}
 		}
 
 		// Reefing input

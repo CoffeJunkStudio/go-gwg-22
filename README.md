@@ -33,6 +33,8 @@ Use the up and down arrow key to set sail and take in the sail, respectively.
 
 You can use the plus and minus sign on the key pad to zoom in and out.
 
+When you are at a harbour, you can sell fish with `S`, upgrade your sail with `U`,
+and buy a new hull with `H`.
 
 
 Prerequisites

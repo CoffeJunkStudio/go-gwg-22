@@ -1,7 +1,10 @@
 use asset_config::AssetConfig;
+use enum_map::EnumMap;
 use good_web_game as gwg;
 use good_web_game::graphics::spritebatch::SpriteBatch;
 use good_web_game::GameResult;
+use logic::state::SailKind;
+use logic::state::ShipHull;
 use nalgebra::Point2;
 
 use self::asset_batch::AssetBatch;
@@ -35,8 +38,8 @@ pub struct TerrainBatches {
 
 /// Asset of one ship
 pub struct ShipSprites {
-	pub body: AssetBatch,
-	pub sail: Vec<AssetBatch>,
+	pub body: EnumMap<ShipHull, AssetBatch>,
+	pub sail: EnumMap<SailKind, Vec<AssetBatch>>,
 }
 
 /// Ship asset bundle

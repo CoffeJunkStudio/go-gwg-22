@@ -1256,6 +1256,7 @@ dependencies = [
  "asset-config",
  "built",
  "cfg-if",
+ "enum-map",
  "good-web-game",
  "lazy_static",
  "logic",
