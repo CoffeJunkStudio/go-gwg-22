@@ -3,6 +3,7 @@
 
 use std::f32::consts::TAU;
 
+use nalgebra_glm::vec2;
 use noise::Seedable;
 use rand::Rng;
 
@@ -92,8 +93,21 @@ impl Generator for PerlinNoise {
 		let resource_amount =
 			setting.edge_length as f32 * setting.edge_length as f32 * setting.resource_density;
 
-		let resources = (0..(resource_amount as u32))
-			.map(|_| ResourcePack::new(terrain.random_location(&mut rng), &mut rng))
+		let school_size = 3;
+		let resources = (0..(resource_amount as u32 / school_size))
+			.flat_map(|_| {
+				let loc = terrain.random_location(&mut rng);
+				let org = ResourcePack::new(loc, &mut rng);
+
+				(0..school_size)
+					.map(|_| {
+						let mut clone = org.clone();
+						clone.phase += rng.gen_range(0.0..TAU) / 20.;
+						clone.origin.0 += vec2(rng.gen(), rng.gen()) * 1.;
+						clone
+					})
+					.collect::<Vec<_>>()
+			})
 			.collect();
 
 		// One harbour per 128 tiles (on average)

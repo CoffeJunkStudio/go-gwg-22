@@ -112,6 +112,10 @@ pub struct ResourcePack {
 	pub params: (i8, i8),
 	/// Animation phase offset
 	pub phase: f32,
+	/// Animation speed
+	pub speed_factor: u32,
+	/// Whether to play the animation backwards
+	pub backwards: bool,
 }
 impl ResourcePack {
 	pub fn new<R: Rng>(loc: Location, mut rng: R) -> Self {
@@ -121,17 +125,22 @@ impl ResourcePack {
 			loc: Default::default(),
 			ori: 0.,
 			origin: loc,
-			params: (rng.gen_range(-9..=-1), rng.gen_range(2..=10)),
+			params: (rng.gen_range(-9..=-1), rng.gen_range(2..=10)), // (0,0) for starfish
 			phase: rng.gen_range(0.0..TAU),
+			speed_factor: 10, // 1 for starfish
+			backwards: rng.gen(),
 		}
 	}
 
 	pub fn update(&mut self, current_tick: Tick) {
-		let duration = 1 + self.params.0.unsigned_abs() + self.params.1.unsigned_abs();
+		let forwardness = (1 - 2 * self.backwards as i8) as f32;
+
+		let duration = u32::from(1 + self.params.0.unsigned_abs() + self.params.1.unsigned_abs())
+			* 10 / self.speed_factor;
 		let duration =
 			u32::from(duration) * (FISH_ANIM_BASE_DURATION * u32::from(TICKS_PER_SECOND));
-		let progress =
-			self.phase + TAU * (current_tick.0 % u64::from(duration)) as f32 / duration as f32;
+		let progress = forwardness
+			* (self.phase + TAU * (current_tick.0 % u64::from(duration)) as f32 / duration as f32);
 
 		// Normal function
 		let base = vec2(progress.sin(), progress.cos());
@@ -155,7 +164,7 @@ impl ResourcePack {
 			(progress * self.params.1 as f32).cos() * self.params.1 as f32,
 			-(progress * self.params.1 as f32).sin() * self.params.1 as f32,
 		);
-		let d_vec = d_base + d_first + d_second;
+		let d_vec = forwardness * (d_base + d_first + d_second);
 
 		self.ori = f32::atan2(d_vec.y, d_vec.x);
 	}
