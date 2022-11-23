@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Rust Version
+      run: rustc --version
     - name: Install prerequisites
       run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
     - name: Check out git repo
@@ -37,6 +39,8 @@ jobs:
     needs: test
 
     steps:
+    - name: Rust Version
+      run: rustc --version
     - name: Install prerequisites
       run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev
     - name: Check out git repo
@@ -58,6 +62,8 @@ jobs:
     needs: test
 
     steps:
+    - name: Rust Version
+      run: rustc --version
     - name: Install prerequisites
       run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev libudev-dev gcc-mingw-w64-x86-64
     - name: Check out git repo
@@ -81,6 +87,8 @@ jobs:
     needs: test
 
     steps:
+    - name: Rust Version
+      run: rustc --version
     - name: Install prerequisites
       run: apt-get update && apt-get install -y --no-install-recommends
     - name: Check out git repo
@@ -104,6 +112,8 @@ jobs:
     needs: test
 
     steps:
+    - name: Rust Version
+      run: rustc --version
     - name: Install prerequisites
       run: apt-get update && apt-get install -y --no-install-recommends libz-dev git
     # Intentionally checking out git repo AFTER installing the prerequisites as actions/checkout@v3 seems to do some weird checkout if git is not installed
