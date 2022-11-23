@@ -624,13 +624,18 @@ impl Default for Vehicle {
 
 
 /// Represents the type or upgrade level of the sail
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(Enum)]
 #[derive(Serialize, Deserialize)]
 pub enum ShipHull {
-	#[default]
 	Small,
 	Bigger,
+}
+// TODO: use the `#[default]` attribute one day instead
+impl Default for ShipHull {
+	fn default() -> Self {
+		Self::Small
+	}
 }
 impl ShipHull {
 	pub fn upgrade(self) -> Option<Self> {
@@ -651,14 +656,20 @@ impl ShipHull {
 }
 
 /// Represents the type or upgrade level of the sail
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(Enum)]
 #[derive(Serialize, Deserialize)]
 pub enum SailKind {
 	Cog,
-	#[default]
 	Bermuda,
 	Schooner,
+}
+// TODO: use the `#[default]` attribute one day instead
+impl Default for SailKind {
+	fn default() -> Self {
+		// TODO: use `Cog` instead
+		Self::Bermuda
+	}
 }
 impl SailKind {
 	pub fn upgrade(self) -> Option<Self> {
