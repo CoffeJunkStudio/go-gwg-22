@@ -154,11 +154,9 @@ impl WorldState {
 
 			// Speed cheat
 			if init.dbg.ship_engine {
-				let max_speed = 15.;
-				let rel_speed = match p.vehicle.sail.reefing {
-					Reefing::Reefed(n) => (f32::from(n) / 4.).powi(2).min(1.0),
-				};
-				let speed = max_speed * rel_speed;
+				let speed_per_sail_area = 1. / 20.;
+				let sail_area = p.vehicle.sail.sail_area();
+				let speed = sail_area * speed_per_sail_area;
 
 				if p.vehicle.velocity.norm() < speed {
 					let tang_speed = p.vehicle.velocity.dot(&p.vehicle.tangent_vec());
@@ -200,11 +198,7 @@ impl WorldState {
 
 
 				let static_ship_area = 1.;
-				let max_sail_area = 200.;
-				let rel_area = match p.vehicle.sail.reefing {
-					Reefing::Reefed(n) => (f32::from(n) / 4.).min(1.0),
-				};
-				let sail_area = max_sail_area * rel_area;
+				let sail_area = p.vehicle.sail.sail_area();
 
 				let prop = sail_drag * sail_area + apparent_wind * static_ship_area;
 
@@ -799,6 +793,23 @@ impl SailKind {
 			Schooner => 3_000,
 		}
 	}
+
+	pub fn max_reefing(self) -> Reefing {
+		let reefs = match self {
+			Self::Cog => 3,
+			Self::Bermuda => 4,
+			Self::Schooner => 7,
+		};
+		Reefing(reefs)
+	}
+
+	pub fn max_area(self) -> f32 {
+		match self {
+			Self::Cog => 300.,
+			Self::Bermuda => 200.,
+			Self::Schooner => 500.,
+		}
+	}
 }
 
 /// Represents the sail of the ship
@@ -819,6 +830,13 @@ impl Sail {
 	pub fn orientation_vec(&self) -> Vec2 {
 		Vec2::new(self.orientation.cos(), self.orientation.sin())
 	}
+
+	pub fn sail_area(self) -> f32 {
+		let max_area = self.kind.max_area();
+		let rel_sail = (f32::from(self.reefing.0) / f32::from(self.kind.max_reefing().0)).min(1.0);
+
+		max_area * rel_sail.powi(2)
+	}
 }
 
 /// Represents the dynamic state of a player
@@ -832,34 +850,28 @@ pub struct Player {
 
 /// Represents the currently deployed sail amount.
 ///
-/// It influences the proportion of the wind that can be
+/// It influences the proportion of the wind that can be used to propel the ship.
+///
+/// The reefing levels range from zero (no sail) to some sail specific maximum,
+/// see [SailKind].
 ///
 /// Notice that gears are zero-indexed, thus `Gear::Forward(0)` is the first (and lowest) gear in forward direction.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(Serialize, Deserialize)]
-pub enum Reefing {
-	/// Reefing level from zero (no sail) to some ship specific maximum.
-	Reefed(u8),
-}
+pub struct Reefing(u8);
+
 impl Reefing {
 	/// Shift up a gear, may switch to forward
 	pub fn increase(self) -> Self {
-		match self {
-			Self::Reefed(n) => Self::Reefed(n.saturating_add(1)),
-		}
+		Self(self.0.saturating_add(1))
 	}
 
 	/// Shift down a gear, may switch to reverse
 	pub fn decrease(self) -> Self {
-		match self {
-			Self::Reefed(0) => Self::Reefed(0),
-			Self::Reefed(n) => Self::Reefed(n - 1),
-		}
+		Self(self.0.saturating_sub(1))
 	}
-}
-impl Default for Reefing {
-	fn default() -> Self {
-		// first gear forward
-		Self::Reefed(0)
+
+	pub fn value(self) -> u8 {
+		self.0
 	}
 }

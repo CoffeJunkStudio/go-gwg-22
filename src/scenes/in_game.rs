@@ -671,9 +671,7 @@ impl Scene<GlobalState> for Game {
 		);
 
 		// Draw the player sail
-		let sail_reefing = match self.world.state.player.vehicle.sail.reefing {
-			logic::state::Reefing::Reefed(n) => n,
-		};
+		let sail_reefing = self.world.state.player.vehicle.sail.reefing.value();
 
 		let sail = &mut self.ship_batches.basic.sail[self.world.state.player.vehicle.sail.kind];
 		let max_sail = sail.len() - 1;
@@ -1044,6 +1042,11 @@ impl Scene<GlobalState> for Game {
 		if keycode == KeyCode::Up {
 			// TODO: limit reefing
 			self.input.reefing = self.input.reefing.increase();
+
+			let max_reefing = self.world.state.player.vehicle.sail.kind.max_reefing();
+			if self.input.reefing > max_reefing {
+				self.input.reefing = max_reefing;
+			}
 		} else if keycode == KeyCode::Down {
 			self.input.reefing = self.input.reefing.decrease();
 		}
