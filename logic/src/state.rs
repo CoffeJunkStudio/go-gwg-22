@@ -6,7 +6,9 @@ use enum_map::Enum;
 use nalgebra_glm::Vec2;
 use rand::Rng;
 use serde::Deserialize;
+use rand_distr::Beta;
 use serde::Serialize;
+use rand::distributions::Distribution;
 
 use crate::terrain::TileCoord;
 use crate::units::BiPolarFraction;
@@ -111,6 +113,9 @@ impl WorldState {
 			} else {
 				// Normal randomized wind
 
+				// Using a beta distribution with α=5, β=2 for the Magnitude
+				let beta = Beta::new(5.0, 2.0).unwrap();
+
 				let interval = u64::from(TICKS_PER_SECOND) * u64::from(WIND_CHANGE_INTERVAL);
 				let earlier = self.timestamp.0 / interval;
 				let later = earlier + 1;
@@ -124,7 +129,7 @@ impl WorldState {
 					);
 
 					let angle = rng.gen::<f32>() * std::f32::consts::TAU;
-					let magnitude = rng.gen::<f32>() * MAX_WIND_SPEED;
+					let magnitude = beta.sample(&mut rng) * MAX_WIND_SPEED;
 					Wind::from_polar(angle, magnitude)
 				};
 				let late = {
@@ -135,7 +140,7 @@ impl WorldState {
 					);
 
 					let angle = rng.gen::<f32>() * std::f32::consts::TAU;
-					let magnitude = rng.gen::<f32>() * MAX_WIND_SPEED;
+					let magnitude = beta.sample(&mut rng) * MAX_WIND_SPEED;
 					Wind::from_polar(angle, magnitude)
 				};
 

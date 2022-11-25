@@ -12,6 +12,7 @@ dev = []
 [dependencies]
 rand = { version = "0.8.5", default_features = false }
 rand_pcg = "0.3.1"
+rand_distr = "0.4.3"
 structopt = "0.3.26"
 lazy_static = "1.4"
 noise = "0.7.0"
