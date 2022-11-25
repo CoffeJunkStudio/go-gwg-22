@@ -14,8 +14,7 @@ Or get the "stable" version from our [itch.io page][itchio].
 
 [good-web-game]: https://crates.io/crates/good-web-game
 [preview]: https://coffejunkstudio.github.io/go-gwg-22/
-[itchio]: https://coffejunkstudio.itch.io/plenty-of-fish-in-the-sea?secret=5ZPYs4Hk9oiPTYzBzm4Nenx2fg
-
+[itchio]: https://coffejunkstudio.itch.io/plenty-of-fish?secret=fHOi58o4GNbMuuYhHvLTumPb1ZU
 
 Game Play
 ---------
