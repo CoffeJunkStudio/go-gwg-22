@@ -900,17 +900,20 @@ impl Scene<GlobalState> for Game {
 			if t.has_player_valid_speed() {
 				// Trading is possible
 
-				let mut text = Text::new("Welcome at the harbor");
+				let mut text = Text::new("Welcome to the harbor");
 				text.set_font(Default::default(), PxScale::from(32.));
 				let h = text.dimensions(ctx).h;
 				graphics::draw(
 					ctx,
 					quad_ctx,
 					&text,
-					(Point2::new(0.0, screen_coords.h / 2. - h), Color::BLACK),
+					(
+						Point2::new(0.0, screen_coords.h / 2. - h - 5.),
+						Color::BLACK,
+					),
 				)?;
 
-				let mut text = Text::new("Controls");
+				let mut text = Text::new("Your opportunities:");
 				text.set_font(Default::default(), PxScale::from(28.));
 				graphics::draw(
 					ctx,
@@ -920,10 +923,29 @@ impl Scene<GlobalState> for Game {
 				)?;
 				let h = text.dimensions(ctx).h;
 
-				let mut text = Text::new(format!(
-					"S: sell fish at {} ℓ/kg\nU: upgrade sail\nH: buy new hull",
-					t.get_price_for_fish()
-				));
+				let selling = {
+					if t.players_fish_amount() > 0 {
+						format!("S: sell fish at {} ℓ/kg", t.get_price_for_fish())
+					} else {
+						"You need more fish!".to_string()
+					}
+				};
+				let up_sail = {
+					if let Some(price) = t.get_price_for_sail_upgrade() {
+						format!("U: upgrade sail for {} ℓ", price)
+					} else {
+						"You have the best sail already".to_string()
+					}
+				};
+				let up_hull = {
+					if let Some(price) = t.get_price_of_hull_upgrade() {
+						format!("H: buy a new ship hull for {} ℓ", price)
+					} else {
+						"You have the best ship already".to_string()
+					}
+				};
+
+				let mut text = Text::new(format!("{selling}\n{up_sail}\n{up_hull}",));
 				text.set_font(Default::default(), PxScale::from(20.));
 				graphics::draw(
 					ctx,
@@ -984,43 +1006,35 @@ impl Scene<GlobalState> for Game {
 			self.zoom_factor_exp = 0;
 		}
 		if keycode == KeyCode::U {
-			let current_sail = self.world.state.player.vehicle.sail.kind;
 			// Check whether the player is at a harbor
-			if let Some(t) = self.world.state.get_trading() {
+			if let Some(mut t) = self.world.state.get_trading() {
 				if t.has_player_valid_speed() {
-					if let Some(up) = current_sail.upgrade() {
-						// You get half a refund on your old gear
-						let upgrade_cost = up.value() - current_sail.value() / 2;
-						if self.world.state.player.money >= upgrade_cost {
-							self.world.state.player.money -= upgrade_cost;
-							self.world.state.player.vehicle.sail.kind = up;
-						} else {
-							println!("You have insufficient funds")
-						}
-					} else {
-						// Already at the top gear
-						println!("You already have the best sail")
+					let n = t.upgrade_sail();
+					match n {
+						Ok(()) => {
+							// success
+						},
+						Err(e) => {
+							// Failed
+							println!("Failed to upgrade sail: {e}");
+						},
 					}
 				}
 			}
 		}
 		if keycode == KeyCode::H {
-			let current_hull = self.world.state.player.vehicle.hull;
 			// Check whether the player is at a harbor
-			if let Some(t) = self.world.state.get_trading() {
+			if let Some(mut t) = self.world.state.get_trading() {
 				if t.has_player_valid_speed() {
-					if let Some(up) = current_hull.upgrade() {
-						// You get half a refund on your old gear
-						let upgrade_cost = up.value() - current_hull.value() / 2;
-						if self.world.state.player.money >= upgrade_cost {
-							self.world.state.player.money -= upgrade_cost;
-							self.world.state.player.vehicle.hull = up;
-						} else {
-							println!("You have insufficient funds")
-						}
-					} else {
-						// Already at the top gear
-						println!("You already have the best hull")
+					let n = t.upgrade_hull();
+					match n {
+						Ok(()) => {
+							// success
+						},
+						Err(e) => {
+							// Failed
+							println!("Failed to upgrade sail: {e}");
+						},
 					}
 				}
 			}

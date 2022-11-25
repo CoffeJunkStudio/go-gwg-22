@@ -1,5 +1,6 @@
 use std::f32::consts::PI;
 use std::f32::consts::TAU;
+use std::fmt;
 
 use enum_map::Enum;
 use nalgebra_glm::Vec2;
@@ -454,6 +455,96 @@ impl TradeOption<'_> {
 		self.base_price
 	}
 
+	/// Returns the price for upgrading the sail to the next level (if any)
+	///
+	/// Returns `None` if already at max level
+	pub fn get_price_for_sail_upgrade(&self) -> Option<u64> {
+		self.state
+			.player
+			.vehicle
+			.sail
+			.kind
+			.upgrade()
+			.map(|s| s.value())
+	}
+
+	/// Returns the price for upgrading the sail to the next level (if any)
+	///
+	/// Returns `None` if already at max level
+	pub fn get_price_of_hull_upgrade(&self) -> Option<u64> {
+		self.state.player.vehicle.hull.upgrade().map(|s| s.value())
+	}
+
+	/// Try to upgrade the sail to the next level (if any)
+	///
+	/// This function, if successful, will advance the ships sail level, and
+	/// reduce the players money accordingly.
+	///
+	/// Returns `Ok` if successful.
+	pub fn upgrade_sail(&mut self) -> Result<(), UpgradeError> {
+		// Do not trade if the player is too fast
+		if !self.has_player_valid_speed() {
+			// Player not docked
+			return Err(UpgradeError::NotDocked);
+		}
+
+		let sail = &mut self.state.player.vehicle.sail.kind;
+		let upgrade_opt = sail.upgrade();
+
+		if let Some(upgrade) = upgrade_opt {
+			let upgrade_cost = upgrade.value();
+
+			let money = &mut self.state.player.money;
+			if *money >= upgrade_cost {
+				*money -= upgrade_cost;
+				*sail = upgrade;
+
+				Ok(())
+			} else {
+				// Insufficient funds
+				Err(UpgradeError::InsufficientFunds)
+			}
+		} else {
+			// Already at max level
+			Err(UpgradeError::MaxLevel)
+		}
+	}
+
+	/// Try to upgrade the hull to the next level (if any)
+	///
+	/// This function, if successful, will advance the ships hull level, and
+	/// reduce the players money accordingly.
+	///
+	/// Returns `Ok` if successful.
+	pub fn upgrade_hull(&mut self) -> Result<(), UpgradeError> {
+		// Do not trade if the player is too fast
+		if !self.has_player_valid_speed() {
+			// Player not docked
+			return Err(UpgradeError::NotDocked);
+		}
+
+		let hull = &mut self.state.player.vehicle.hull;
+		let upgrade_opt = hull.upgrade();
+
+		if let Some(upgrade) = upgrade_opt {
+			let upgrade_cost = upgrade.value();
+
+			let money = &mut self.state.player.money;
+			if *money >= upgrade_cost {
+				*money -= upgrade_cost;
+				*hull = upgrade;
+
+				Ok(())
+			} else {
+				// Insufficient funds
+				Err(UpgradeError::InsufficientFunds)
+			}
+		} else {
+			// Already at max level
+			Err(UpgradeError::MaxLevel)
+		}
+	}
+
 	/// The monetary volume traded so far, in money
 	pub fn get_traded_volume(&self) -> u64 {
 		u64::from(self.traded_fish_amount) * self.base_price
@@ -504,6 +595,25 @@ impl TradeOption<'_> {
 	}
 }
 
+
+/// Represents the reason for the failure of upgrading gear
+#[derive(Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize)]
+pub enum UpgradeError {
+	NotDocked,
+	InsufficientFunds,
+	MaxLevel,
+}
+impl fmt::Display for UpgradeError {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		let msg = match self {
+			Self::NotDocked => "Not docked at harbor",
+			Self::InsufficientFunds => "Insufficient funds",
+			Self::MaxLevel => "Already at max sail level",
+		};
+		write!(f, "{}", msg)
+	}
+}
 
 /// Represents the car of a player
 #[derive(Debug, Copy, Clone)]
