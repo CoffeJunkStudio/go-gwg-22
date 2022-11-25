@@ -64,7 +64,7 @@ const METERS_PER_SCREEN_DIAGONAL: f32 = 30.;
 /// The default (i.e. initial) zoom factor exponent
 ///
 /// Also see: [Game::zoom_factor_exp]
-const DEFAULT_ZOOM_LEVEL: i32 = 0;
+const DEFAULT_ZOOM_LEVEL: i32 = -2;
 
 
 
