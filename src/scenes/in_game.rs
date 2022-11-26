@@ -682,13 +682,13 @@ impl Scene<GlobalState> for Game {
 		// Calculate the top left and bottom right corner where to start and stop drawing the tiles.
 		let (left_top, right_bottom) = {
 			let scm_x = (screen_coords.w / pixel_per_meter)
-				.min(terrain.map_size() - 3. * logic::TILE_SIZE as f32);
+				.min(terrain.map_size() - 5. * logic::TILE_SIZE as f32);
 			let scm_y = (screen_coords.h / pixel_per_meter)
-				.min(terrain.map_size() - 3. * logic::TILE_SIZE as f32);
+				.min(terrain.map_size() - 5. * logic::TILE_SIZE as f32);
 			let dst = Distance::new(scm_x * 0.5, scm_y * 0.5);
 
-			let lt = player_pos - dst - Distance(full_tile);
-			let rb = player_pos + dst + Distance(full_tile);
+			let lt = player_pos - dst - Distance(full_tile * 2.);
+			let rb = player_pos + dst + Distance(full_tile * 2.);
 
 			(lt, rb)
 		};
