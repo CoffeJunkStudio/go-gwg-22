@@ -43,9 +43,9 @@ struct Opts {
 	#[structopt(long)]
 	fixed_wind: Option<f32>,
 
-	/// Disable sounds
-	#[structopt(long)]
-	no_sound: bool,
+	/// Disables all sounds and music.
+	#[structopt(short, long)]
+	muted: bool,
 
 	/// Use a fixed game world seed
 	#[structopt(long)]

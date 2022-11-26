@@ -139,8 +139,7 @@ impl ResourcePack {
 		// The total animation cycle duration
 		let duration = u32::from(1 + self.params.0.unsigned_abs() + self.params.1.unsigned_abs())
 			* 10 / self.speed_factor;
-		let duration =
-			duration * (FISH_ANIM_BASE_DURATION * u32::from(TICKS_PER_SECOND));
+		let duration = duration * (FISH_ANIM_BASE_DURATION * u32::from(TICKS_PER_SECOND));
 		// The current progress through the animation
 		let progress = forwardness
 			* (self.phase + TAU * (current_tick.0 % u64::from(duration)) as f32 / duration as f32);

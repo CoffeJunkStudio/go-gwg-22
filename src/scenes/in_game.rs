@@ -1,5 +1,6 @@
 use std::ops::DerefMut;
 
+use cfg_if::cfg_if;
 use enum_map::enum_map;
 use good_web_game as gwg;
 use gwg::audio;
@@ -68,13 +69,17 @@ const METERS_PER_SCREEN_DIAGONAL: f32 = 30.;
 const DEFAULT_ZOOM_LEVEL: i32 = -2;
 
 
-
-// #[derive(Debug)] `audio::Source` dose not implement Debug!
-pub struct Game {
+struct Images {
 	terrain_batches: TerrainBatches,
 	ship_batches: ShipBatches,
 	resource_batches: ResourceBatches,
 	building_batches: BuildingBatches,
+}
+
+struct Audios {
+	sound_enabled: bool,
+	music_enabled: bool,
+
 	sound: audio::Source,
 	fail_sound: audio::Source,
 	sell_sound: audio::Source,
@@ -85,6 +90,15 @@ pub struct Game {
 	music_0: audio::Source,
 	water_sound_0: audio::Source,
 	water_sound_1: audio::Source,
+}
+
+// #[derive(Debug)] `audio::Source` dose not implement Debug!
+pub struct Game {
+	/// The drawables
+	images: Images,
+	/// The audio files
+	audios: Audios,
+
 	full_screen: bool,
 	world: World,
 	input: Input,
@@ -113,13 +127,24 @@ impl Game {
 			.map(|s| wyhash(s.as_bytes(), 0))
 			.unwrap_or(gwg::timer::time().floor() as u64);
 
+		let sound_enabled = !opts.muted;
+		cfg_if! {
+			if #[cfg(target_family = "wasm")] {
+				// TODO: without a main menu, we need first user-input before
+				// we can enable music, thus we disable it so it is enablable.
+				let music_enabled = false;
+			} else {
+				let music_enabled = !opts.muted;
+			}
+		}
+
 		println!(
 			"{:.3} [game] loading music...",
 			gwg::timer::time_since_start(ctx).as_secs_f64()
 		);
 		let mut music_0 = audio::Source::new(ctx, "/music/sailing-chanty.ogg")?;
 		music_0.set_repeat(true);
-		if !opts.no_sound {
+		if music_enabled {
 			music_0.play(ctx)?;
 		}
 
@@ -140,12 +165,14 @@ impl Game {
 		water_sound_0.set_repeat(true);
 		let mut water_sound_1 = audio::Source::new(ctx, "/sound/waterstrongloop.ogg")?;
 		water_sound_1.set_repeat(true);
-		if !opts.no_sound {
+		if sound_enabled {
 			sell_sound.set_volume(ctx, 0.)?;
 			sell_sound.play(ctx)?;
-			water_sound_0.play(ctx)?;
 			water_sound_1.set_volume(ctx, 0.)?;
 			water_sound_1.play(ctx)?;
+		}
+		if music_enabled {
+			water_sound_0.play(ctx)?;
 		}
 
 		println!(
@@ -246,20 +273,26 @@ impl Game {
 		world.init.dbg = crate::OPTIONS.to_debugging_conf();
 
 		let s = Game {
-			terrain_batches,
-			ship_batches,
-			resource_batches,
-			building_batches,
-			sound,
-			fail_sound,
-			sell_sound,
-			upgrade_sound,
-			sound_fishy_1,
-			sound_fishy_2,
-			sound_fishy_3,
-			music_0,
-			water_sound_0,
-			water_sound_1,
+			images: Images {
+				terrain_batches,
+				ship_batches,
+				resource_batches,
+				building_batches,
+			},
+			audios: Audios {
+				sound_enabled,
+				music_enabled,
+				sound,
+				fail_sound,
+				sell_sound,
+				upgrade_sound,
+				sound_fishy_1,
+				sound_fishy_2,
+				sound_fishy_3,
+				music_0,
+				water_sound_0,
+				water_sound_1,
+			},
 			full_screen: false,
 			world,
 			input: Input::default(),
@@ -456,14 +489,14 @@ impl Scene<GlobalState> for Game {
 			let events = self.world.state.update(&self.world.init, &self.input);
 
 			// Play event sounds
-			if !opts.no_sound {
+			if self.audios.sound_enabled {
 				for ev in events {
 					match ev {
 						Event::Fishy => {
 							let fishies = [
-								&self.sound_fishy_1,
-								&self.sound_fishy_2,
-								&self.sound_fishy_3,
+								&self.audios.sound_fishy_1,
+								&self.audios.sound_fishy_2,
+								&self.audios.sound_fishy_3,
 							];
 							let sound = fishies.choose(&mut rng).unwrap();
 
@@ -482,14 +515,15 @@ impl Scene<GlobalState> for Game {
 					if proceeds > 0 {
 						did_trade_successful = true;
 					} else {
-						if !opts.no_sound {
-							self.fail_sound.play(ctx).unwrap();
+						if self.audios.sound_enabled {
+							self.audios.fail_sound.play(ctx).unwrap();
 						}
 					}
 				}
 			}
 		}
-		self.sell_sound
+		self.audios
+			.sell_sound
 			.set_volume(ctx, did_trade_successful as u8 as f32)
 			.unwrap();
 
@@ -505,7 +539,8 @@ impl Scene<GlobalState> for Game {
 				.clamp(0., 1.)
 				.powi(2)
 		};
-		self.water_sound_1
+		self.audios
+			.water_sound_1
 			.set_volume(ctx, normalized_rel_water_speed * 2.)
 			.unwrap();
 
@@ -596,13 +631,13 @@ impl Scene<GlobalState> for Game {
 					.dest(self.location_to_screen_coords(ctx, Location(wave_1)))
 					.scale(logic::glm::vec2(scale, scale))
 					.color(Color::new(f1, f1, f1, 1.));
-				self.terrain_batches.water_anim.add(param);
+				self.images.terrain_batches.water_anim.add(param);
 
 				let param = DrawParam::new()
 					.dest(self.location_to_screen_coords(ctx, Location(wave_1 - quarter_tile)))
 					.scale(logic::glm::vec2(scale, scale))
 					.color(Color::new(f2, f2, f2, 1.));
-				self.terrain_batches.water_anim.add(param);
+				self.images.terrain_batches.water_anim.add(param);
 
 				// Add the offset
 				let wave_2 = loc + self.water_wave_2_offset;
@@ -610,7 +645,7 @@ impl Scene<GlobalState> for Game {
 				let param = DrawParam::new()
 					.dest(self.location_to_screen_coords(ctx, Location(wave_2)))
 					.scale(logic::glm::vec2(scale, scale));
-				self.terrain_batches.water_anim_2.add(param);
+				self.images.terrain_batches.water_anim_2.add(param);
 			}
 		}
 
@@ -629,18 +664,18 @@ impl Scene<GlobalState> for Game {
 				let (batch, rel) = {
 					if tile.0 < -5 {
 						(
-							&mut self.terrain_batches.deep,
+							&mut self.images.terrain_batches.deep,
 							(tile.0 + 5) as f32 / (max_depth + 5) as f32,
 						)
 					} else if tile.0 < 0 {
 						(
-							&mut self.terrain_batches.shallow,
+							&mut self.images.terrain_batches.shallow,
 							(tile.0 + 0) as f32 / (max_depth + 0) as f32,
 						)
 					} else if tile.0 < 1 {
-						(&mut self.terrain_batches.beach, 0.0)
+						(&mut self.images.terrain_batches.beach, 0.0)
 					} else {
-						(&mut self.terrain_batches.land, 0.0)
+						(&mut self.images.terrain_batches.land, 0.0)
 					}
 				};
 
@@ -659,7 +694,7 @@ impl Scene<GlobalState> for Game {
 			- logic::glm::vec1(2.5 * logic::VEHICLE_SIZE).xx() * 0.5;
 		let ship_screen_loc = self.location_to_screen_coords(ctx, Location(ship_pos));
 
-		let body = &mut self.ship_batches.basic.body[self.world.state.player.vehicle.hull];
+		let body = &mut self.images.ship_batches.basic.body[self.world.state.player.vehicle.hull];
 
 		// Draw the player ship
 		let ship_scale = logic::glm::vec1(
@@ -680,7 +715,7 @@ impl Scene<GlobalState> for Game {
 		let sail_reefing = self.world.state.player.vehicle.sail.reefing.value();
 
 		let sail_kind = self.world.state.player.vehicle.sail.kind;
-		let sail = &mut self.ship_batches.basic.sail[sail_kind];
+		let sail = &mut self.images.ship_batches.basic.sail[sail_kind];
 		let max_sail = sail.len() - 1;
 		let effective_reefing = usize::from(sail_reefing).min(max_sail);
 
@@ -717,7 +752,7 @@ impl Scene<GlobalState> for Game {
 					remapped.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE).xx() * 0.5;
 				let dest = self.location_to_screen_coords(ctx, Location(resource_pos));
 
-				let batch = &mut self.resource_batches.fishes[usize::from(resource.variant)];
+				let batch = &mut self.images.resource_batches.fishes[usize::from(resource.variant)];
 
 				let resource_scale = logic::glm::vec1(
 					logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter / batch.params().width as f32,
@@ -744,7 +779,7 @@ impl Scene<GlobalState> for Game {
 
 				let harbor_scale = logic::glm::vec1(
 					2. * logic::HARBOR_SIZE * pixel_per_meter
-						/ self.building_batches.harbor.params().width as f32,
+						/ self.images.building_batches.harbor.params().width as f32,
 				)
 				.xx();
 				let harbor_pos = remapped.0 - logic::glm::vec1(2. * logic::HARBOR_SIZE).xx() * 0.5;
@@ -752,7 +787,7 @@ impl Scene<GlobalState> for Game {
 					.dest(self.location_to_screen_coords(ctx, Location(harbor_pos)))
 					.scale(harbor_scale);
 
-				self.building_batches.harbor.add_frame(
+				self.images.building_batches.harbor.add_frame(
 					0.0,
 					f64::from(harbor.orientation),
 					0.0,
@@ -768,31 +803,34 @@ impl Scene<GlobalState> for Game {
 			quad_ctx,
 			[].into_iter()
 				.chain([
-					&mut self.terrain_batches.deep,
-					&mut self.terrain_batches.shallow,
+					&mut self.images.terrain_batches.deep,
+					&mut self.images.terrain_batches.shallow,
 				])
 				.chain(
-					self.resource_batches
+					self.images
+						.resource_batches
 						.fishes
 						.iter_mut()
 						.map(DerefMut::deref_mut),
 				)
 				.chain([
-					&mut self.terrain_batches.water_anim,
-					&mut self.terrain_batches.water_anim_2,
-					&mut self.terrain_batches.beach,
-					&mut self.terrain_batches.land,
+					&mut self.images.terrain_batches.water_anim,
+					&mut self.images.terrain_batches.water_anim_2,
+					&mut self.images.terrain_batches.beach,
+					&mut self.images.terrain_batches.land,
 				])
-				.chain([self.building_batches.harbor.deref_mut()])
+				.chain([self.images.building_batches.harbor.deref_mut()])
 				.chain(
-					self.ship_batches
+					self.images
+						.ship_batches
 						.basic
 						.body
 						.values_mut()
 						.map(|s| s.deref_mut()),
 				)
 				.chain(
-					self.ship_batches
+					self.images
+						.ship_batches
 						.basic
 						.sail
 						.values_mut()
@@ -993,21 +1031,18 @@ impl Scene<GlobalState> for Game {
 		quad_ctx: &mut gwg::miniquad::Context,
 		keycode: gwg::miniquad::KeyCode,
 	) {
-		let opts = &*crate::OPTIONS;
-		let with_sound = !opts.no_sound;
-
 		if keycode == KeyCode::Escape {
 			gwg::event::quit(ctx);
 		}
 
 		if keycode == KeyCode::Enter || keycode == KeyCode::KpEnter {
-			self.sound.play(ctx).unwrap()
+			self.audios.sound.play(ctx).unwrap()
 		}
 
 		if keycode == KeyCode::A {
-			self.sound.play(ctx).unwrap();
-			self.music_0.stop(ctx).unwrap();
-			self.music_0.play(ctx).unwrap();
+			self.audios.sound.play(ctx).unwrap();
+			self.audios.music_0.stop(ctx).unwrap();
+			self.audios.music_0.play(ctx).unwrap();
 		}
 
 		if keycode == KeyCode::KpAdd {
@@ -1027,15 +1062,15 @@ impl Scene<GlobalState> for Game {
 					match n {
 						Ok(()) => {
 							// success
-							if with_sound {
-								self.upgrade_sound.play(ctx).unwrap();
+							if self.audios.sound_enabled {
+								self.audios.upgrade_sound.play(ctx).unwrap();
 							}
 						},
 						Err(e) => {
 							// Failed
 							println!("Failed to upgrade sail: {e}");
-							if with_sound {
-								self.fail_sound.play(ctx).unwrap();
+							if self.audios.sound_enabled {
+								self.audios.fail_sound.play(ctx).unwrap();
 							}
 						},
 					}
@@ -1050,15 +1085,15 @@ impl Scene<GlobalState> for Game {
 					match n {
 						Ok(()) => {
 							// success
-							if with_sound {
-								self.upgrade_sound.play(ctx).unwrap();
+							if self.audios.sound_enabled {
+								self.audios.upgrade_sound.play(ctx).unwrap();
 							}
 						},
 						Err(e) => {
 							// Failed
 							println!("Failed to upgrade sail: {e}");
-							if with_sound {
-								self.fail_sound.play(ctx).unwrap();
+							if self.audios.sound_enabled {
+								self.audios.fail_sound.play(ctx).unwrap();
 							}
 						},
 					}
