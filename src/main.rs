@@ -43,9 +43,23 @@ struct Opts {
 	#[structopt(long)]
 	fixed_wind: Option<f32>,
 
+	/// Specifies the resource factor, cheat.
+	#[cfg(feature = "dev")]
+	#[structopt(long)]
+	resource_factor_cheat: Option<f32>,
+
+	/// Specifies the starting money, cheat.
+	#[cfg(feature = "dev")]
+	#[structopt(long)]
+	money_cheat: Option<u64>,
+
 	/// Disables all sounds and music.
 	#[structopt(short, long)]
 	muted: bool,
+
+	/// Sets the map size. Bigger maps might reduce performance.
+	#[structopt(short = "s", long, default_value = "32")]
+	map_size: u16,
 
 	/// Use a fixed game world seed
 	#[structopt(long)]

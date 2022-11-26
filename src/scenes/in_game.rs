@@ -261,15 +261,31 @@ impl Game {
 		);
 		// Generate world
 		let noise = PerlinNoise;
+		let resource_density = {
+			cfg_if!{
+				if #[cfg(feature = "dev")] {
+					opts.resource_factor_cheat.unwrap_or(1.0)
+				} else {
+					1.0
+				}
+			}
+		};
 		let settings = Setting {
-			edge_length: 32,
-			resource_density: 1.0,
+			edge_length: opts.map_size,
+			resource_density,
 		};
 
 		let mut rng = logic::StdRng::new(0xcafef00dd15ea5e5, seed.into());
 		let mut world = noise.generate(&settings, &mut rng);
 		world.state.player.vehicle.heading = 1.0;
 		world.state.player.vehicle.pos = world.init.terrain.random_passable_location(&mut rng);
+		cfg_if!{
+			if #[cfg(feature = "dev")] {
+				if let Some(money) = opts.money_cheat {
+					world.state.player.money = money;
+				}
+			}
+		}
 		world.init.dbg = crate::OPTIONS.to_debugging_conf();
 
 		let s = Game {
