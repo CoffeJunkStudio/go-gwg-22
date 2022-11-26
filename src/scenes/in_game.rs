@@ -78,6 +78,7 @@ pub struct Game {
 	sound: audio::Source,
 	fail_sound: audio::Source,
 	sell_sound: audio::Source,
+	upgrade_sound: audio::Source,
 	sound_fishy_1: audio::Source,
 	sound_fishy_2: audio::Source,
 	sound_fishy_3: audio::Source,
@@ -128,6 +129,7 @@ impl Game {
 		);
 		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
 		let fail_sound = audio::Source::new(ctx, "/sound/invalid.ogg")?;
+		let upgrade_sound = audio::Source::new(ctx, "/sound/upgrade.ogg")?;
 		let sound_fishy_1 = audio::Source::new(ctx, "/sound/fischie.ogg")?;
 		let sound_fishy_2 = audio::Source::new(ctx, "/sound/fischie2.ogg")?;
 		let sound_fishy_3 = audio::Source::new(ctx, "/sound/fischie3.ogg")?;
@@ -251,6 +253,7 @@ impl Game {
 			sound,
 			fail_sound,
 			sell_sound,
+			upgrade_sound,
 			sound_fishy_1,
 			sound_fishy_2,
 			sound_fishy_3,
@@ -990,6 +993,9 @@ impl Scene<GlobalState> for Game {
 		quad_ctx: &mut gwg::miniquad::Context,
 		keycode: gwg::miniquad::KeyCode,
 	) {
+		let opts = &*crate::OPTIONS;
+		let with_sound = !opts.no_sound;
+
 		if keycode == KeyCode::Escape {
 			gwg::event::quit(ctx);
 		}
@@ -1011,7 +1017,7 @@ impl Scene<GlobalState> for Game {
 			self.zoom_factor_exp = self.zoom_factor_exp.saturating_sub(1);
 		}
 		if keycode == KeyCode::Kp0 {
-			self.zoom_factor_exp = 0;
+			self.zoom_factor_exp = DEFAULT_ZOOM_LEVEL;
 		}
 		if keycode == KeyCode::U {
 			// Check whether the player is at a harbor
@@ -1021,10 +1027,16 @@ impl Scene<GlobalState> for Game {
 					match n {
 						Ok(()) => {
 							// success
+							if with_sound {
+								self.upgrade_sound.play(ctx).unwrap();
+							}
 						},
 						Err(e) => {
 							// Failed
 							println!("Failed to upgrade sail: {e}");
+							if with_sound {
+								self.fail_sound.play(ctx).unwrap();
+							}
 						},
 					}
 				}
@@ -1038,10 +1050,16 @@ impl Scene<GlobalState> for Game {
 					match n {
 						Ok(()) => {
 							// success
+							if with_sound {
+								self.upgrade_sound.play(ctx).unwrap();
+							}
 						},
 						Err(e) => {
 							// Failed
 							println!("Failed to upgrade sail: {e}");
+							if with_sound {
+								self.fail_sound.play(ctx).unwrap();
+							}
 						},
 					}
 				}
@@ -1050,9 +1068,9 @@ impl Scene<GlobalState> for Game {
 
 		// Reefing input
 		if keycode == KeyCode::Up {
-			// TODO: limit reefing
 			self.input.reefing = self.input.reefing.increase();
 
+			// Limit reefing
 			let max_reefing = self.world.state.player.vehicle.sail.kind.max_reefing();
 			if self.input.reefing > max_reefing {
 				self.input.reefing = max_reefing;
@@ -1065,7 +1083,6 @@ impl Scene<GlobalState> for Game {
 			self.full_screen = !self.full_screen;
 			println!("{}", self.full_screen);
 			good_web_game::graphics::set_fullscreen(quad_ctx, self.full_screen);
-			//good_web_game::graphics::set_drawable_size(quad_ctx, 600, 480);
 		}
 	}
 
