@@ -295,11 +295,88 @@ impl DivAssign for BiPolarFraction {
 	}
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Serialize, Deserialize)]
+pub enum TileType {
+	DeepWater,
+	ShallowWater,
+	Beach,
+	Grass,
+}
+impl TileType {
+	pub const fn lowest(self) -> Elevation {
+		match self {
+			Self::DeepWater => Elevation::DEEPEST,
+			Self::ShallowWater => Elevation::SHALLOW_WATER,
+			Self::Beach => Elevation::BEACH,
+			Self::Grass => Elevation::GRASS,
+		}
+	}
+
+	pub const fn highest(self) -> Elevation {
+		match self {
+			Self::DeepWater => Elevation::SHALLOW_WATER.lower(),
+			Self::ShallowWater => Elevation::BEACH.lower(),
+			Self::Beach => Elevation::GRASS.lower(),
+			Self::Grass => Elevation::HIGHEST,
+		}
+	}
+}
+
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 #[derive(Serialize, Deserialize)]
 pub struct Elevation(pub i16);
 impl Elevation {
-	pub fn is_passable(self) -> bool {
+	const BEACH: Elevation = Elevation(0);
+	pub const DEEPEST: Elevation = Elevation(-18);
+	const GRASS: Elevation = Elevation(1);
+	pub const HIGHEST: Elevation = Elevation(2);
+	const SHALLOW_WATER: Elevation = Elevation(-5);
+
+	/// Returns the next lower elevation
+	pub const fn lower(self) -> Self {
+		Self(self.0.saturating_sub(1))
+	}
+
+	/// Returns the next higher elevation
+	pub const fn higher(self) -> Self {
+		Self(self.0.saturating_add(1))
+	}
+
+	/// Returns true for tiles which may be traversed by the player
+	pub const fn is_passable(self) -> bool {
 		self.0 < 0
+	}
+
+	/// Classifies the tile into tile types
+	pub const fn classify(self) -> TileType {
+		// Some
+		const DEEP_WATER_TOP: i16 = TileType::DeepWater.highest().0;
+		const SHALLOW_WATER_BOT: i16 = TileType::ShallowWater.lowest().0;
+		const SHALLOW_WATER_TOP: i16 = TileType::ShallowWater.highest().0;
+		const BEACH_BOT: i16 = TileType::Beach.lowest().0;
+		const BEACH_TOP: i16 = TileType::Beach.highest().0;
+		const GRASS_BOT: i16 = TileType::Grass.lowest().0;
+
+		match self.0 {
+			i16::MIN..=DEEP_WATER_TOP => TileType::DeepWater,
+			SHALLOW_WATER_BOT..=SHALLOW_WATER_TOP => TileType::ShallowWater,
+			BEACH_BOT..=BEACH_TOP => TileType::Beach,
+			GRASS_BOT.. => TileType::Grass,
+		}
+	}
+
+	/// Gives the normalized relative height within that tile type.
+	///
+	/// The returned value means:
+	///
+	/// * `0.0` means it is at the lowest elevation of it's tile type,
+	/// * `1.0` means it is at the highest elevation of it's tile type.
+	///
+	pub fn relative_height(self) -> f32 {
+		let ty = self.classify();
+
+		f32::from(self.0.saturating_sub(ty.lowest().0)) / f32::from(ty.highest().0 - ty.lowest().0)
 	}
 }

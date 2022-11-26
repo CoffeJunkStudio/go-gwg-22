@@ -33,6 +33,7 @@ use logic::terrain::TileCoord;
 use logic::units::BiPolarFraction;
 use logic::units::Distance;
 use logic::units::Location;
+use logic::units::TileType;
 use logic::Input;
 use logic::World;
 use logic::TICKS_PER_SECOND;
@@ -715,28 +716,20 @@ impl Scene<GlobalState> for Game {
 				let loc = remapped.0 - half_tile;
 				let dest = self.location_to_screen_coords(ctx, Location(loc));
 
-				let max_depth = -18;
-				let _max_heigh = 2;
-
-				let (batch, rel) = {
-					if tile.0 < -5 {
-						(
-							&mut self.images.terrain_batches.deep,
-							(tile.0 + 5) as f32 / (max_depth + 5) as f32,
-						)
-					} else if tile.0 < 0 {
-						(
-							&mut self.images.terrain_batches.shallow,
-							(tile.0 + 0) as f32 / (max_depth + 0) as f32,
-						)
-					} else if tile.0 < 1 {
-						(&mut self.images.terrain_batches.beach, 0.0)
-					} else {
-						(&mut self.images.terrain_batches.land, 0.0)
-					}
+				let rel = match tile.classify() {
+					TileType::DeepWater => tile.relative_height(),
+					TileType::ShallowWater => tile.relative_height() * 0.5 + 0.5,
+					TileType::Beach => 1.0,
+					TileType::Grass => 1.0,
+				};
+				let batch = match tile.classify() {
+					TileType::DeepWater => &mut self.images.terrain_batches.deep,
+					TileType::ShallowWater => &mut self.images.terrain_batches.shallow,
+					TileType::Beach => &mut self.images.terrain_batches.beach,
+					TileType::Grass => &mut self.images.terrain_batches.land,
 				};
 
-				let c = 1.0 - 0.5 * rel.clamp(0., 1.);
+				let c = 0.5 + 0.5 * rel.clamp(0., 1.);
 
 				let param = DrawParam::new()
 					.dest(dest)
