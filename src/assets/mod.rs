@@ -38,37 +38,43 @@ pub struct TerrainBatches {
 	/// Represents inward land
 	pub grass: SpriteBatch,
 
-	/// Shallow to deep water corner transition
+	/// Solid mask for shallow water
+	pub shallow_solid: SpriteBatch,
+	/// Shallow to deep water corner transition mask
 	pub shallow_c1: SpriteBatch,
-	/// Shallow to deep water 1-side transition
+	/// Shallow to deep water 1-side transition mask
 	pub shallow_s1: SpriteBatch,
-	/// Shallow to deep water 2-side transition
+	/// Shallow to deep water 2-side transition mask
 	pub shallow_s2: SpriteBatch,
-	/// Shallow to deep water 3-side transition
+	/// Shallow to deep water 3-side transition mask
 	pub shallow_s3: SpriteBatch,
-	/// Shallow to deep water 4-side transition
+	/// Shallow to deep water 4-side transition mask
 	pub shallow_s4: SpriteBatch,
 
-	/// Beach to water corner transition
+	/// Solid mask for beach
+	pub beach_solid: SpriteBatch,
+	/// Beach to water corner transition mask
 	pub beach_c1: SpriteBatch,
-	/// Beach to water 1-side transition
+	/// Beach to water 1-side transition mask
 	pub beach_s1: SpriteBatch,
-	/// Beach to water 2-side transition
+	/// Beach to water 2-side transition mask
 	pub beach_s2: SpriteBatch,
-	/// Beach to water 3-side transition
+	/// Beach to water 3-side transition mask
 	pub beach_s3: SpriteBatch,
-	/// Beach to water 4-side transition
+	/// Beach to water 4-side transition mask
 	pub beach_s4: SpriteBatch,
 
-	/// Grass to others corner transition
+	/// Solid mask for grass
+	pub grass_solid: SpriteBatch,
+	/// Grass to others corner transition mask
 	pub grass_c1: SpriteBatch,
-	/// Grass to others 1-side transition
+	/// Grass to others 1-side transition mask
 	pub grass_s1: SpriteBatch,
-	/// Grass to others 2-side transition
+	/// Grass to others 2-side transition mask
 	pub grass_s2: SpriteBatch,
-	/// Grass to others 3-side transition
+	/// Grass to others 3-side transition mask
 	pub grass_s3: SpriteBatch,
-	/// Grass to others 4-side transition
+	/// Grass to others 4-side transition mask
 	pub grass_s4: SpriteBatch,
 
 	/// An animation layer for water waves
@@ -78,6 +84,7 @@ pub struct TerrainBatches {
 }
 
 impl TerrainBatches {
+	/// Gives the sprite for the tile of the given type
 	pub fn tile_sprite(&mut self, tt: TileType) -> &mut SpriteBatch {
 		match tt {
 			TileType::DeepWater => &mut self.deep,
@@ -87,6 +94,17 @@ impl TerrainBatches {
 		}
 	}
 
+	/// Gives the solid mask for the tile of the given type
+	pub fn tile_mask_solid(&mut self, tt: TileType) -> &mut SpriteBatch {
+		match tt {
+			TileType::DeepWater => unimplemented!("There are not masks for Deep Water"),
+			TileType::ShallowWater => &mut self.shallow_solid,
+			TileType::Beach => &mut self.beach_solid,
+			TileType::Grass => &mut self.grass_solid,
+		}
+	}
+
+	/// Gives the corner mask for the tile of the given type
 	pub fn tile_mask_c1(&mut self, tt: TileType) -> &mut SpriteBatch {
 		match tt {
 			TileType::DeepWater => unimplemented!("There are not masks for Deep Water"),
@@ -96,6 +114,7 @@ impl TerrainBatches {
 		}
 	}
 
+	/// Gives the single side mask for the tile of the given type
 	pub fn tile_mask_s1(&mut self, tt: TileType) -> &mut SpriteBatch {
 		match tt {
 			TileType::DeepWater => unimplemented!("There are not masks for Deep Water"),
@@ -105,10 +124,12 @@ impl TerrainBatches {
 		}
 	}
 
+	/// Returns all sprite batches for shallow water
 	pub fn shallow_batches(&mut self) -> (&mut SpriteBatch, Vec<&mut SpriteBatch>) {
 		(
 			&mut self.shallow,
 			vec![
+				&mut self.shallow_solid,
 				&mut self.shallow_c1,
 				&mut self.shallow_s1,
 				&mut self.shallow_s2,
@@ -118,10 +139,12 @@ impl TerrainBatches {
 		)
 	}
 
+	/// Returns all sprite batches for beach
 	pub fn beach_batches(&mut self) -> (&mut SpriteBatch, Vec<&mut SpriteBatch>) {
 		(
 			&mut self.beach,
 			vec![
+				&mut self.beach_solid,
 				&mut self.beach_c1,
 				&mut self.beach_s1,
 				&mut self.beach_s2,
@@ -131,10 +154,12 @@ impl TerrainBatches {
 		)
 	}
 
+	/// Returns all sprite batches for grass
 	pub fn grass_batches(&mut self) -> (&mut SpriteBatch, Vec<&mut SpriteBatch>) {
 		(
 			&mut self.grass,
 			vec![
+				&mut self.grass_solid,
 				&mut self.grass_c1,
 				&mut self.grass_s1,
 				&mut self.grass_s2,

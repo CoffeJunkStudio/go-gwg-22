@@ -216,18 +216,21 @@ impl Game {
 			beach: image_batch(ctx, quad_ctx, "img/sand.png")?,
 			grass: image_batch(ctx, quad_ctx, "img/grass.png")?,
 
+			shallow_solid: SpriteBatch::new(Image::solid(ctx, quad_ctx, 1, Color::WHITE)?),
 			shallow_c1: image_batch(ctx, quad_ctx, "img/mask_shallow_c1.png")?,
 			shallow_s1: image_batch(ctx, quad_ctx, "img/mask_shallow_s1.png")?,
 			shallow_s2: image_batch(ctx, quad_ctx, "img/mask_shallow_s2.png")?,
 			shallow_s3: image_batch(ctx, quad_ctx, "img/mask_shallow_s3.png")?,
 			shallow_s4: image_batch(ctx, quad_ctx, "img/mask_shallow_s4.png")?,
 
+			beach_solid: SpriteBatch::new(Image::solid(ctx, quad_ctx, 1, Color::WHITE)?),
 			beach_c1: image_batch(ctx, quad_ctx, "img/mask_sand_c1.png")?,
 			beach_s1: image_batch(ctx, quad_ctx, "img/mask_sand_s1.png")?,
 			beach_s2: image_batch(ctx, quad_ctx, "img/mask_sand_s2.png")?,
 			beach_s3: image_batch(ctx, quad_ctx, "img/mask_sand_s3.png")?,
 			beach_s4: image_batch(ctx, quad_ctx, "img/mask_sand_s4.png")?,
 
+			grass_solid: SpriteBatch::new(Image::solid(ctx, quad_ctx, 1, Color::WHITE)?),
 			grass_c1: image_batch(ctx, quad_ctx, "img/mask_grass_c1.png")?,
 			grass_s1: image_batch(ctx, quad_ctx, "img/mask_grass_s1.png")?,
 			grass_s2: image_batch(ctx, quad_ctx, "img/mask_grass_s2.png")?,
@@ -741,42 +744,6 @@ impl Scene<GlobalState> for Game {
 			}
 		}
 
-		// Draw the tile background
-		for (tc, tile) in terrain.iter() {
-			if terrain.torus_bounds_check(left_top, right_bottom, tc.to_location()) {
-				let remapped = terrain.torus_remap(left_top, tc.to_location());
-
-				let scale = logic::TILE_SIZE as f32 * pixel_per_meter / tile_image_size;
-				let loc = remapped.0 - half_tile;
-				let dest = self.location_to_screen_coords(ctx, Location(loc));
-
-				/*
-				let rel = match tile.classify() {
-					TileType::DeepWater => tile.relative_height(),
-					TileType::ShallowWater => tile.relative_height() * 0.5 + 0.5,
-					TileType::Beach => 1.0,
-					TileType::Grass => 1.0,
-				}; */
-				let rel = 1.0_f32;
-
-				let batch = match tile.classify() {
-					TileType::DeepWater => &mut self.images.terrain_batches.deep,
-					TileType::ShallowWater => &mut self.images.terrain_batches.shallow,
-					TileType::Beach => &mut self.images.terrain_batches.beach,
-					TileType::Grass => &mut self.images.terrain_batches.grass,
-				};
-
-				let c = 0.5 + 0.5 * rel.clamp(0., 1.);
-
-				let param = DrawParam::new()
-					.dest(dest)
-					.scale(logic::glm::vec2(scale, scale))
-					.color(Color::new(c, c, c, 1.));
-
-				batch.add(param);
-			}
-		}
-
 		let ship_pos = self.world.state.player.vehicle.pos.0
 			- logic::glm::vec1(2.5 * logic::VEHICLE_SIZE).xx() * 0.5;
 		let ship_screen_loc = self.location_to_screen_coords(ctx, Location(ship_pos));
@@ -883,31 +850,6 @@ impl Scene<GlobalState> for Game {
 			}
 		}
 
-		// Draw and clear sprite batches
-		// This defines the draw order.
-		draw_and_clear(
-			ctx,
-			quad_ctx,
-			[].into_iter()
-				.chain([
-					&mut self.images.terrain_batches.deep,
-					&mut self.images.terrain_batches.shallow,
-				])
-				.chain(
-					self.images
-						.resource_batches
-						.fishes
-						.iter_mut()
-						.map(DerefMut::deref_mut),
-				)
-				.chain([
-					&mut self.images.terrain_batches.water_anim,
-					&mut self.images.terrain_batches.water_anim_2,
-					&mut self.images.terrain_batches.beach,
-					&mut self.images.terrain_batches.grass,
-				]),
-		)?;
-
 		// Draw the tile background
 		for (tc, tile) in terrain.iter() {
 			if terrain.torus_bounds_check(left_top, right_bottom, tc.to_location()) {
@@ -918,13 +860,36 @@ impl Scene<GlobalState> for Game {
 				let loc = remapped.0 - half_tile;
 				let dest = self.location_to_screen_coords(ctx, Location(loc));
 
-				let c = 1.;
+				// Depth shading
+
+				/*
+				let rel = match tile.classify() {
+					TileType::DeepWater => tile.relative_height(),
+					TileType::ShallowWater => tile.relative_height() * 0.5 + 0.5,
+					TileType::Beach => 1.0,
+					TileType::Grass => 1.0,
+				};
+				*/
+				let rel = 1.0_f32;
+				let c = 0.5 + 0.5 * rel.clamp(0., 1.);
+
 				let param = DrawParam::new()
 					.dest(dest)
 					.scale(logic::glm::vec2(scale, scale))
 					.color(Color::new(c, c, c, 1.));
 
 				let class = tile.classify();
+
+				// Main tile
+
+				self.images.terrain_batches.tile_sprite(class).add(param);
+				if class != TileType::DeepWater {
+					let solid_mask_param = param.scale(logic::glm::vec2(screen_size, screen_size));
+					self.images
+						.terrain_batches
+						.tile_mask_solid(class)
+						.add(solid_mask_param);
+				}
 
 				// Edges
 
@@ -1059,8 +1024,29 @@ impl Scene<GlobalState> for Game {
 			graphics::draw(ctx, quad_ctx, trans_canvas, (Point2::new(0., 0.),))
 		}
 
+		// Draw and clear sprite batches
+		// This defines the draw order.
+		draw_and_clear(ctx, quad_ctx, [&mut self.images.terrain_batches.deep])?;
+
 		let (tile, mask) = self.images.terrain_batches.shallow_batches();
 		draw_mask_n_tiles(ctx, quad_ctx, mask_canvas, trans_canvas, mask, tile)?;
+
+		draw_and_clear(
+			ctx,
+			quad_ctx,
+			[].into_iter()
+				.chain(
+					self.images
+						.resource_batches
+						.fishes
+						.iter_mut()
+						.map(DerefMut::deref_mut),
+				)
+				.chain([
+					&mut self.images.terrain_batches.water_anim,
+					&mut self.images.terrain_batches.water_anim_2,
+				]),
+		)?;
 
 		let (tile2, mask2) = self.images.terrain_batches.beach_batches();
 		draw_mask_n_tiles(ctx, quad_ctx, mask_canvas, trans_canvas, mask2, tile2)?;
