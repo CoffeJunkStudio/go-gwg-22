@@ -1,4 +1,5 @@
 use std::ops::DerefMut;
+use std::path::Path;
 
 use cfg_if::cfg_if;
 use enum_map::enum_map;
@@ -12,6 +13,7 @@ use gwg::graphics::draw;
 use gwg::graphics::Color;
 use gwg::graphics::DrawMode;
 use gwg::graphics::DrawParam;
+use gwg::graphics::Image;
 use gwg::graphics::MeshBuilder;
 use gwg::graphics::PxScale;
 use gwg::graphics::Rect;
@@ -49,9 +51,8 @@ use crate::assets::ResourceBatches;
 use crate::assets::ShipBatches;
 use crate::assets::ShipSprites;
 use crate::assets::TerrainBatches;
+use crate::assets::UiImages;
 use crate::draw_version;
-
-
 
 /// Zoom factor exponentiation base.
 ///
@@ -68,18 +69,33 @@ const METERS_PER_SCREEN_DIAGONAL: f32 = 30.;
 /// Also see: [Game::zoom_factor_exp]
 const DEFAULT_ZOOM_LEVEL: i32 = -2;
 
+trait Mix {
+	fn mix(&self, other: &Self, mix_factor: f32) -> Self;
+}
 
-struct Images {
+impl Mix for Color {
+	fn mix(&self, other: &Self, mix_factor: f32) -> Self {
+		Self::new(
+			(1.0 - mix_factor) * self.r + mix_factor * other.r,
+			(1.0 - mix_factor) * self.g + mix_factor * other.g,
+			(1.0 - mix_factor) * self.b + mix_factor * other.b,
+			(1.0 - mix_factor) * self.a + mix_factor * other.a,
+		)
+	}
+}
+
+pub struct Images {
 	terrain_batches: TerrainBatches,
 	ship_batches: ShipBatches,
 	resource_batches: ResourceBatches,
 	building_batches: BuildingBatches,
+	ui: UiImages,
 }
 
+// #[derive(Debug)] `audio::Source` dose not implement Debug!
 struct Audios {
 	sound_enabled: bool,
 	music_enabled: bool,
-
 	sound: audio::Source,
 	fail_sound: audio::Source,
 	sell_sound: audio::Source,
@@ -254,6 +270,15 @@ impl Game {
 			harbor: AssetBatch::from_config(ctx, quad_ctx, &render_config, "harbour-00").unwrap(),
 		};
 
+		println!(
+			"{:.3} [game] loading ui...",
+			gwg::timer::time_since_start(ctx).as_secs_f64()
+		);
+		let ui = UiImages {
+			wind_direction_indicator: Image::new(ctx, quad_ctx, Path::new("img/wind-arrow.png"))
+				.unwrap(),
+			wind_speed_colors: vec![Color::GREEN, Color::YELLOW, Color::RED],
+		};
 
 		println!(
 			"{:.3} [game] generating world...",
@@ -294,6 +319,7 @@ impl Game {
 				ship_batches,
 				resource_batches,
 				building_batches,
+				ui,
 			},
 			audios: Audios {
 				sound_enabled,
@@ -576,7 +602,6 @@ impl Scene<GlobalState> for Game {
 			.set_volume(ctx, normalized_rel_water_speed * 2.)
 			.unwrap();
 
-
 		if is_key_pressed(ctx, KeyCode::Escape) {
 			SceneSwitch::Pop
 		} else {
@@ -586,7 +611,7 @@ impl Scene<GlobalState> for Game {
 
 	fn draw(
 		&mut self,
-		_glob: &mut GlobalState,
+		glob: &mut GlobalState,
 		ctx: &mut gwg::Context,
 		quad_ctx: &mut gwg::miniquad::Context,
 	) -> gwg::GameResult<()> {
@@ -872,6 +897,8 @@ impl Scene<GlobalState> for Game {
 
 		// Draw some debugging stuff
 		self.draw_debugging(ctx, quad_ctx)?;
+
+		self.draw_ui(glob, ctx, quad_ctx)?;
 
 		// From the text example
 		// Source: https://github.com/ggez/good-web-game/blob/master/examples/text.rs
@@ -1176,5 +1203,56 @@ impl Scene<GlobalState> for Game {
 		let coordinates = graphics::Rect::new(0., 0., w, h);
 
 		graphics::set_screen_coordinates(context, coordinates).expect("Can't resize the window");
+	}
+}
+
+impl Game {
+	fn draw_ui(
+		&mut self,
+		_glob: &mut GlobalState,
+		ctx: &mut gwg::Context,
+		quad_ctx: &mut gwg::miniquad::Context,
+	) -> gwg::GameResult<()> {
+		let screen_coords = gwg::graphics::screen_coordinates(ctx);
+
+		let normed_wind_speed = self.world.state.wind.magnitude() / logic::MAX_WIND_SPEED;
+		let n_colors = self.images.ui.wind_speed_colors.len();
+		let color_idx_f32 = n_colors.saturating_sub(1) as f32 * normed_wind_speed;
+		let color_idx1 = color_idx_f32 as usize;
+		let color_idx2 = (color_idx1 + 1).min(n_colors.saturating_sub(1));
+		let mix_factor = color_idx_f32.fract();
+
+		let color1 = &self.images.ui.wind_speed_colors[color_idx1];
+		let color2 = &self.images.ui.wind_speed_colors[color_idx2];
+
+		let color = color1.mix(color2, mix_factor);
+
+		let mut wind_text = Text::new(format!(
+			"{:.2} bf, {:.0}°",
+			self.world.state.wind.magnitude(),
+			self.world.state.wind.angle().to_degrees(),
+		));
+		wind_text.set_font(Default::default(), PxScale::from(20.));
+
+		let p = DrawParam::new()
+			.dest(Point2::new(
+				screen_coords.w - 128.0,
+				screen_coords.h - 128.0 - wind_text.height(ctx),
+			))
+			.offset(Point2::new(0.5, 0.5))
+			.color(color)
+			.scale(logic::glm::vec1(normed_wind_speed).xx())
+			.rotation(self.world.state.wind.angle() + std::f32::consts::FRAC_PI_2);
+		gwg::graphics::draw(ctx, quad_ctx, &self.images.ui.wind_direction_indicator, p)?;
+
+		let p = DrawParam::new()
+			.dest(Point2::new(
+				screen_coords.w - 128.0 - wind_text.width(ctx) * 0.5,
+				screen_coords.h - wind_text.height(ctx),
+			))
+			.color(color);
+		self.draw_text_with_halo(ctx, quad_ctx, &wind_text, p, Color::BLACK)?;
+
+		Ok(())
 	}
 }

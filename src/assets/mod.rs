@@ -3,21 +3,28 @@ use enum_map::EnumMap;
 use good_web_game as gwg;
 use good_web_game::graphics::spritebatch::SpriteBatch;
 use good_web_game::GameResult;
+use gwg::graphics::Color;
+use gwg::graphics::Image;
 use logic::state::SailKind;
 use logic::state::ShipHull;
 use nalgebra::Point2;
 
 use self::asset_batch::AssetBatch;
 
-
 pub mod asset_batch;
-
 
 /// The location of the asset configuration file
 const ASSET_CONFIG_STR: &str = include_str!(concat!(
 	env!("CARGO_MANIFEST_DIR"),
 	"/asset-repo/render_assets.toml"
 ));
+
+/// UI assets bundle
+pub struct UiImages {
+	/// Image to indicate the direction of the wind
+	pub wind_direction_indicator: Image,
+	pub wind_speed_colors: Vec<Color>,
+}
 
 /// Terrain assets bundle
 pub struct TerrainBatches {
@@ -57,12 +64,10 @@ pub struct BuildingBatches {
 	pub harbor: AssetBatch,
 }
 
-
 /// Load the asset configuration file
 pub fn load_asset_config() -> AssetConfig {
 	toml::from_str(ASSET_CONFIG_STR).unwrap()
 }
-
 
 /// Dispatch the draw calls of all given sprite batches and clears them
 pub fn draw_and_clear<'a>(
