@@ -428,6 +428,24 @@ impl Game {
 			};
 			draw(ctx, quad_ctx, &mesh, (Point2::new(0., 0.),))?;
 
+			// Fishies bounding box
+			let mesh = {
+				let mut mb = MeshBuilder::new();
+
+				for r in &self.world.state.resources {
+					mb.circle(
+						DrawMode::Stroke(StrokeOptions::DEFAULT),
+						self.location_to_screen_coords(ctx, r.loc),
+						0.5 * logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter,
+						1.0,
+						Color::MAGENTA,
+					)?;
+				}
+
+				mb.build(ctx, quad_ctx)?
+			};
+			draw(ctx, quad_ctx, &mesh, (Point2::new(0., 0.),))?;
+
 			// Ship bounding box
 			let mesh = MeshBuilder::new()
 				.circle(
@@ -465,8 +483,6 @@ impl Game {
 				)?
 				.build(ctx, quad_ctx)?;
 			draw(ctx, quad_ctx, &mesh, (Point2::new(0., 0.),))?;
-
-			// TODO: fishies collision boxes
 		}
 
 		Ok(())
