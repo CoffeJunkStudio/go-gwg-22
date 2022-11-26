@@ -127,37 +127,43 @@ impl TerrainBatches {
 		self.grass_s4.set_blend_mode(Some(BlendMode::Multiply));
 	}
 
-	pub fn shallow_batches(&mut self) -> (&mut SpriteBatch,Vec<&mut SpriteBatch>) {
-		(&mut self.shallow,
-		vec![
-			&mut self.shallow_c1,
-			&mut self.shallow_s1,
-			&mut self.shallow_s2,
-			&mut self.shallow_s3,
-			&mut self.shallow_s4,
-		])
+	pub fn shallow_batches(&mut self) -> (&mut SpriteBatch, Vec<&mut SpriteBatch>) {
+		(
+			&mut self.shallow,
+			vec![
+				&mut self.shallow_c1,
+				&mut self.shallow_s1,
+				&mut self.shallow_s2,
+				&mut self.shallow_s3,
+				&mut self.shallow_s4,
+			],
+		)
 	}
 
-	pub fn beach_batches(&mut self) -> (&mut SpriteBatch,Vec<&mut SpriteBatch>) {
-		(&mut self.beach,
-		vec![
-			&mut self.beach_c1,
-			&mut self.beach_s1,
-			&mut self.beach_s2,
-			&mut self.beach_s3,
-			&mut self.beach_s4,
-		])
+	pub fn beach_batches(&mut self) -> (&mut SpriteBatch, Vec<&mut SpriteBatch>) {
+		(
+			&mut self.beach,
+			vec![
+				&mut self.beach_c1,
+				&mut self.beach_s1,
+				&mut self.beach_s2,
+				&mut self.beach_s3,
+				&mut self.beach_s4,
+			],
+		)
 	}
 
-	pub fn grass_batches(&mut self) -> (&mut SpriteBatch,Vec<&mut SpriteBatch>) {
-		(&mut self.grass,
-		vec![
-			&mut self.grass_c1,
-			&mut self.grass_s1,
-			&mut self.grass_s2,
-			&mut self.grass_s3,
-			&mut self.grass_s4,
-		])
+	pub fn grass_batches(&mut self) -> (&mut SpriteBatch, Vec<&mut SpriteBatch>) {
+		(
+			&mut self.grass,
+			vec![
+				&mut self.grass_c1,
+				&mut self.grass_s1,
+				&mut self.grass_s2,
+				&mut self.grass_s3,
+				&mut self.grass_s4,
+			],
+		)
 	}
 }
 

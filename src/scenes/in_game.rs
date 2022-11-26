@@ -4,14 +4,14 @@ use std::path::Path;
 use cfg_if::cfg_if;
 use enum_map::enum_map;
 use good_web_game as gwg;
-use gwg::GameResult;
 use gwg::audio;
 use gwg::cgmath::Point2;
 use gwg::goodies::scene::Scene;
 use gwg::goodies::scene::SceneSwitch;
 use gwg::graphics;
-use gwg::graphics::BlendMode;
 use gwg::graphics::draw;
+use gwg::graphics::spritebatch::SpriteBatch;
+use gwg::graphics::BlendMode;
 use gwg::graphics::Canvas;
 use gwg::graphics::Color;
 use gwg::graphics::DrawMode;
@@ -24,9 +24,9 @@ use gwg::graphics::Rect;
 use gwg::graphics::StrokeOptions;
 use gwg::graphics::Text;
 use gwg::graphics::Transform;
-use gwg::graphics::spritebatch::SpriteBatch;
 use gwg::miniquad::KeyCode;
 use gwg::timer;
+use gwg::GameResult;
 use logic::generator::Generator;
 use logic::generator::PerlinNoise;
 use logic::generator::Setting;
@@ -979,105 +979,97 @@ impl Scene<GlobalState> for Game {
 
 				// Corners
 
-				let ne = terrain.get(terrain.north_of(terrain.east_of(tc))).classify();
+				let ne = terrain
+					.get(terrain.north_of(terrain.east_of(tc)))
+					.classify();
 				if class < ne {
 					self.images.terrain_batches.tile_sprite(ne).add(param);
 					let param_rot = param.clone();
-					self.images
-						.terrain_batches
-						.tile_mask_c1(ne)
-						.add(param_rot);
+					self.images.terrain_batches.tile_mask_c1(ne).add(param_rot);
 				}
-				let se = terrain.get(terrain.south_of(terrain.east_of(tc))).classify();
+				let se = terrain
+					.get(terrain.south_of(terrain.east_of(tc)))
+					.classify();
 				if class < se {
 					self.images.terrain_batches.tile_sprite(se).add(param);
 					let param_rot = param
 						.clone()
 						.rotation(std::f32::consts::PI / 2.)
 						.dest(dest + logic::glm::vec2(screen_size, 0.));
-					self.images
-						.terrain_batches
-						.tile_mask_c1(se)
-						.add(param_rot);
+					self.images.terrain_batches.tile_mask_c1(se).add(param_rot);
 				}
-				let sw = terrain.get(terrain.south_of(terrain.west_of(tc))).classify();
+				let sw = terrain
+					.get(terrain.south_of(terrain.west_of(tc)))
+					.classify();
 				if class < sw {
 					self.images.terrain_batches.tile_sprite(sw).add(param);
 					let param_rot = param
 						.clone()
 						.rotation(std::f32::consts::PI)
 						.dest(dest + logic::glm::vec2(screen_size, screen_size));
-					self.images
-						.terrain_batches
-						.tile_mask_c1(sw)
-						.add(param_rot);
+					self.images.terrain_batches.tile_mask_c1(sw).add(param_rot);
 				}
-				let nw = terrain.get(terrain.north_of(terrain.west_of(tc))).classify();
+				let nw = terrain
+					.get(terrain.north_of(terrain.west_of(tc)))
+					.classify();
 				if class < nw {
 					self.images.terrain_batches.tile_sprite(nw).add(param);
 					let param_rot = param
 						.clone()
 						.rotation(-std::f32::consts::PI / 2.)
 						.dest(dest + logic::glm::vec2(0., screen_size));
-					self.images
-						.terrain_batches
-						.tile_mask_c1(nw)
-						.add(param_rot);
+					self.images.terrain_batches.tile_mask_c1(nw).add(param_rot);
 				}
 			}
 		}
 
 		// The Mask itself is draw multiplicative
-		self.terrain_transition_mask_canvas.set_blend_mode(Some(BlendMode::Multiply));
+		self.terrain_transition_mask_canvas
+			.set_blend_mode(Some(BlendMode::Multiply));
 
 		let mask_canvas = &self.terrain_transition_mask_canvas;
 		let trans_canvas = &self.terrain_transition_canvas;
 
 		fn draw_mask_n_tiles(
-		ctx: &mut gwg::Context,
-		quad_ctx: &mut gwg::miniquad::Context,mask_canvas:&Canvas,trans_canvas:&Canvas,mask:Vec<&mut SpriteBatch>,tile:&mut SpriteBatch) -> GameResult {
+			ctx: &mut gwg::Context,
+			quad_ctx: &mut gwg::miniquad::Context,
+			mask_canvas: &Canvas,
+			trans_canvas: &Canvas,
+			mask: Vec<&mut SpriteBatch>,
+			tile: &mut SpriteBatch,
+		) -> GameResult {
 			// The mask canvas, needs to be cleared with white
-		graphics::set_canvas(ctx, Some(mask_canvas));
-		graphics::clear(ctx, quad_ctx, [1.0, 1.0, 1.0, 0.0].into());
+			graphics::set_canvas(ctx, Some(mask_canvas));
+			graphics::clear(ctx, quad_ctx, [1.0, 1.0, 1.0, 0.0].into());
 
-		// Drawing the mask
-		draw_and_clear(ctx, quad_ctx, mask)?;
+			// Drawing the mask
+			draw_and_clear(ctx, quad_ctx, mask)?;
 
-		// The Tile canvas
-		graphics::set_canvas(ctx, Some(&trans_canvas));
-		graphics::clear(ctx, quad_ctx, [0.0, 0.0, 0.0, 0.0].into());
+			// The Tile canvas
+			graphics::set_canvas(ctx, Some(&trans_canvas));
+			graphics::clear(ctx, quad_ctx, [0.0, 0.0, 0.0, 0.0].into());
 
-		// Drawing the tile
-		draw_and_clear(ctx, quad_ctx, [tile])?;
+			// Drawing the tile
+			draw_and_clear(ctx, quad_ctx, [tile])?;
 
-		// And multiplying the mask on top
-		graphics::draw(
-			ctx,
-			quad_ctx,
-			mask_canvas,
-			(Point2::new(0., 0.),),
-		)?;
+			// And multiplying the mask on top
+			graphics::draw(ctx, quad_ctx, mask_canvas, (Point2::new(0., 0.),))?;
 
-		// Switch back to the screen
-		graphics::set_canvas(ctx, None);
+			// Switch back to the screen
+			graphics::set_canvas(ctx, None);
 
-		// Draw the transition tiles
-		graphics::draw(
-			ctx,
-			quad_ctx,
-			trans_canvas,
-			(Point2::new(0., 0.),),
-		)
+			// Draw the transition tiles
+			graphics::draw(ctx, quad_ctx, trans_canvas, (Point2::new(0., 0.),))
 		}
 
-		let (tile,mask) = self.images.terrain_batches.shallow_batches();
-		draw_mask_n_tiles(ctx,quad_ctx,mask_canvas,trans_canvas, mask, tile)?;
+		let (tile, mask) = self.images.terrain_batches.shallow_batches();
+		draw_mask_n_tiles(ctx, quad_ctx, mask_canvas, trans_canvas, mask, tile)?;
 
-		let (tile2,mask2) = self.images.terrain_batches.beach_batches();
-		draw_mask_n_tiles(ctx,quad_ctx,mask_canvas,trans_canvas, mask2, tile2)?;
+		let (tile2, mask2) = self.images.terrain_batches.beach_batches();
+		draw_mask_n_tiles(ctx, quad_ctx, mask_canvas, trans_canvas, mask2, tile2)?;
 
-		let (tile3,mask3) = self.images.terrain_batches.grass_batches();
-		draw_mask_n_tiles(ctx,quad_ctx,mask_canvas,trans_canvas, mask3, tile3)?;
+		let (tile3, mask3) = self.images.terrain_batches.grass_batches();
+		draw_mask_n_tiles(ctx, quad_ctx, mask_canvas, trans_canvas, mask3, tile3)?;
 
 
 		// Draw and clear sprite batches

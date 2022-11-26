@@ -41,7 +41,7 @@ impl Generator for WhiteNoise {
 		let mut terrain = Terrain::new(setting.edge_length);
 
 		for tt in terrain.iter_mut() {
-			*tt.1 = Elevation(rng.gen_range(Elevation::DEEPEST.0 .. Elevation::HIGHEST.0));
+			*tt.1 = Elevation(rng.gen_range(Elevation::DEEPEST.0..Elevation::HIGHEST.0));
 		}
 
 		// One resource per tile (on average)
