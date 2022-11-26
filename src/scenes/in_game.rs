@@ -287,7 +287,7 @@ impl Game {
 		// Generate world
 		let noise = PerlinNoise;
 		let resource_density = {
-			cfg_if!{
+			cfg_if! {
 				if #[cfg(feature = "dev")] {
 					opts.resource_factor_cheat.unwrap_or(1.0)
 				} else {
@@ -304,7 +304,7 @@ impl Game {
 		let mut world = noise.generate(&settings, &mut rng);
 		world.state.player.vehicle.heading = 1.0;
 		world.state.player.vehicle.pos = world.init.terrain.random_passable_location(&mut rng);
-		cfg_if!{
+		cfg_if! {
 			if #[cfg(feature = "dev")] {
 				if let Some(money) = opts.money_cheat {
 					world.state.player.money = money;
