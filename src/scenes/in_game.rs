@@ -25,6 +25,8 @@ use logic::generator::Setting;
 use logic::glm::vec1;
 use logic::glm::Vec2;
 use logic::state::Event;
+use logic::state::Sail;
+use logic::state::SailKind;
 use logic::terrain::TileCoord;
 use logic::units::BiPolarFraction;
 use logic::units::Distance;
@@ -673,7 +675,8 @@ impl Scene<GlobalState> for Game {
 		// Draw the player sail
 		let sail_reefing = self.world.state.player.vehicle.sail.reefing.value();
 
-		let sail = &mut self.ship_batches.basic.sail[self.world.state.player.vehicle.sail.kind];
+		let sail_kind = self.world.state.player.vehicle.sail.kind;
+		let sail = &mut self.ship_batches.basic.sail[sail_kind];
 		let max_sail = sail.len() - 1;
 		let effective_reefing = usize::from(sail_reefing).min(max_sail);
 
@@ -683,8 +686,14 @@ impl Scene<GlobalState> for Game {
 		)
 		.xx();
 		let sail_param = DrawParam::new().dest(ship_screen_loc).scale(sail_scale);
-		let orientation = f64::from(self.world.state.player.vehicle.sail.orientation);
-		let sail_orient = -orientation + std::f64::consts::PI;
+
+		let sail_orient = match sail_kind {
+			SailKind::Cog => -f64::from(self.world.state.player.vehicle.sail.orientation_rectangle),
+			SailKind::Bermuda | SailKind::Schooner => {
+				-f64::from(self.world.state.player.vehicle.sail.orientation_triangle)
+					+ std::f64::consts::PI
+			},
+		};
 
 		let sail_ass = &mut sail[effective_reefing];
 		sail_ass.add_frame(

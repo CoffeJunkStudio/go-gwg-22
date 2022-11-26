@@ -4,11 +4,11 @@ use std::fmt;
 
 use enum_map::Enum;
 use nalgebra_glm::Vec2;
-use rand::Rng;
-use serde::Deserialize;
-use rand_distr::Beta;
-use serde::Serialize;
 use rand::distributions::Distribution;
+use rand::Rng;
+use rand_distr::Beta;
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::terrain::TileCoord;
 use crate::units::BiPolarFraction;
@@ -187,15 +187,18 @@ impl WorldState {
 					normalize_angle_rel(diff)
 				};
 
-				let local_sail_angle =
-					(normalize_angle_rel(local_wind_angle + PI)).clamp(-PI / 2., PI / 2.) - PI;
-				p.vehicle.sail.orientation = local_sail_angle + ship_angle;
+				let local_triangle_sail_angle =
+					normalize_angle_rel(local_wind_angle + PI).clamp(-PI / 2., PI / 2.) - PI;
+				p.vehicle.sail.orientation_triangle = local_triangle_sail_angle + ship_angle;
+				let local_square_sail_angle =
+					normalize_angle_rel(local_wind_angle).clamp(-PI / 2., PI / 2.);
+				p.vehicle.sail.orientation_rectangle = local_square_sail_angle + ship_angle;
 
 
 				let sail_drag_ness = 1.
 					- p.vehicle
 						.sail
-						.orientation_vec()
+						.orientation_triangle_vec()
 						.dot(&apparent_wind.normalize())
 						.abs();
 
@@ -776,8 +779,7 @@ pub enum SailKind {
 // TODO: use the `#[default]` attribute one day instead
 impl Default for SailKind {
 	fn default() -> Self {
-		// TODO: use `Cog` instead
-		Self::Bermuda
+		Self::Cog
 	}
 }
 impl SailKind {
@@ -793,9 +795,9 @@ impl SailKind {
 	pub fn value(self) -> u64 {
 		use SailKind::*;
 		match self {
-			Cog => 1_000,
-			Bermuda => 2_000,
-			Schooner => 3_000,
+			Cog => 500,
+			Bermuda => 1_000,
+			Schooner => 2_000,
 		}
 	}
 
@@ -810,7 +812,8 @@ impl SailKind {
 
 	pub fn max_area(self) -> f32 {
 		match self {
-			Self::Cog => 300.,
+			// TODO: Maybe use 300, once lift-based sailing comes around
+			Self::Cog => 100.,
 			Self::Bermuda => 200.,
 			Self::Schooner => 500.,
 		}
@@ -827,15 +830,29 @@ pub struct Sail {
 	pub condition: Fraction,
 	/// Current state of the gear box.
 	pub reefing: Reefing,
-	/// Absolute sail orientation in radians, zero is word-X.
-	pub orientation: f32,
+	/// Absolute sail orientation for rectangle-rigged sails in radians, zero is word-X.
+	pub orientation_rectangle: f32,
+	/// Absolute sail orientation for triangle-rigged sails in radians, zero is word-X.
+	pub orientation_triangle: f32,
 }
 impl Sail {
-	/// Orientation as unit vector.
-	pub fn orientation_vec(&self) -> Vec2 {
-		Vec2::new(self.orientation.cos(), self.orientation.sin())
+	/// Square rigged orientation as unit vector.
+	pub fn orientation_rectangle_vec(&self) -> Vec2 {
+		Vec2::new(
+			self.orientation_rectangle.cos(),
+			self.orientation_rectangle.sin(),
+		)
 	}
 
+	/// Triangular rigged orientation as unit vector.
+	pub fn orientation_triangle_vec(&self) -> Vec2 {
+		Vec2::new(
+			self.orientation_triangle.cos(),
+			self.orientation_triangle.sin(),
+		)
+	}
+
+	/// The currently deployed area of the sail.
 	pub fn sail_area(self) -> f32 {
 		let max_area = self.kind.max_area();
 		let rel_sail = (f32::from(self.reefing.0) / f32::from(self.kind.max_reefing().0)).min(1.0);
