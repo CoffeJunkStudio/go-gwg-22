@@ -321,7 +321,7 @@ impl Game {
 			gwg::timer::time_since_start(ctx).as_secs_f64()
 		);
 		// Generate world
-		let noise = WhiteNoise;
+		let noise = PerlinNoise;
 		let resource_density = {
 			cfg_if! {
 				if #[cfg(feature = "dev")] {
