@@ -652,7 +652,7 @@ pub struct Vehicle {
 	///
 	/// Steering is always relative to `heading`.
 	///
-	/// See [Input::steering]
+	/// See [Input::rudder]
 	pub ruder: BiPolarFraction,
 	/// State of the engine
 	pub sail: Sail,
@@ -783,6 +783,7 @@ impl Default for SailKind {
 	}
 }
 impl SailKind {
+	/// Gives the next better sail kind, if any
 	pub fn upgrade(self) -> Option<Self> {
 		use SailKind::*;
 		match self {
@@ -792,6 +793,7 @@ impl SailKind {
 		}
 	}
 
+	/// Returns the nominal value of this sail (i.e. purchase cost)
 	pub fn value(self) -> u64 {
 		use SailKind::*;
 		match self {
@@ -801,6 +803,7 @@ impl SailKind {
 		}
 	}
 
+	/// Returns the highest supported reefing level of this sail.
 	pub fn max_reefing(self) -> Reefing {
 		let reefs = match self {
 			Self::Cog => 3,
@@ -810,6 +813,7 @@ impl SailKind {
 		Reefing(reefs)
 	}
 
+	/// Returns the sail area if at max reefing level.
 	pub fn max_area(self) -> f32 {
 		match self {
 			// TODO: Maybe use 300, once lift-based sailing comes around
@@ -865,7 +869,9 @@ impl Sail {
 #[derive(Debug, Default, Copy, Clone)]
 #[derive(Serialize, Deserialize)]
 pub struct Player {
+	/// The vehicle of the player
 	pub vehicle: Vehicle,
+	/// The current money of the player
 	pub money: u64,
 }
 
@@ -893,6 +899,11 @@ impl Reefing {
 		Self(self.0.saturating_sub(1))
 	}
 
+	/// The plain reefing value.
+	///
+	/// A value of zero means no sail at all.
+	/// A sail set is represented by the highs reefing value, which depends
+	/// on the sail kind.
 	pub fn value(self) -> u8 {
 		self.0
 	}

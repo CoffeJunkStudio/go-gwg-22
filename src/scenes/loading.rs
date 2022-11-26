@@ -111,7 +111,7 @@ impl<S: Loadable> Scene<GlobalState> for Loading<S> {
 		ctx: &mut Context,
 		quad_ctx: &mut GraphicsContext,
 	) -> GameResult<()> {
-		let size = graphics::drawable_size(&quad_ctx);
+		let size = graphics::drawable_size(quad_ctx);
 
 		//graphics::draw(ctx, quad_ctx, &Text::new("Loading ..."), (Point2::new(1.,1.),))?;
 

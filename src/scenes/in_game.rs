@@ -25,7 +25,6 @@ use logic::generator::Setting;
 use logic::glm::vec1;
 use logic::glm::Vec2;
 use logic::state::Event;
-use logic::state::Sail;
 use logic::state::SailKind;
 use logic::terrain::TileCoord;
 use logic::units::BiPolarFraction;
@@ -480,7 +479,9 @@ impl Scene<GlobalState> for Game {
 					if proceeds > 0 {
 						did_trade_successful = true;
 					} else {
-						self.fail_sound.play(ctx).unwrap();
+						if !opts.no_sound {
+							self.fail_sound.play(ctx).unwrap();
+						}
 					}
 				}
 			}
@@ -620,7 +621,7 @@ impl Scene<GlobalState> for Game {
 				let dest = self.location_to_screen_coords(ctx, Location(loc));
 
 				let max_depth = -18;
-				let max_heigh = 2;
+				let _max_heigh = 2;
 
 				let (batch, rel) = {
 					if tile.0 < -5 {

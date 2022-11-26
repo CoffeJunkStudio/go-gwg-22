@@ -133,16 +133,19 @@ impl ResourcePack {
 	}
 
 	pub fn update(&mut self, current_tick: Tick) {
+		// Forwardness factor, `1` if forward, `-1` if backwards
 		let forwardness = (1 - 2 * self.backwards as i8) as f32;
 
+		// The total animation cycle duration
 		let duration = u32::from(1 + self.params.0.unsigned_abs() + self.params.1.unsigned_abs())
 			* 10 / self.speed_factor;
 		let duration =
-			u32::from(duration) * (FISH_ANIM_BASE_DURATION * u32::from(TICKS_PER_SECOND));
+			duration * (FISH_ANIM_BASE_DURATION * u32::from(TICKS_PER_SECOND));
+		// The current progress through the animation
 		let progress = forwardness
 			* (self.phase + TAU * (current_tick.0 % u64::from(duration)) as f32 / duration as f32);
 
-		// Normal function
+		// The position function
 		let base = vec2(progress.sin(), progress.cos());
 		let first = vec2(
 			(progress * self.params.0 as f32).sin(),
@@ -154,7 +157,7 @@ impl ResourcePack {
 		);
 		self.loc = Location(self.origin.0 + base + first + second);
 
-		// Derivation
+		// Derivation of the position function (i.e. the orientation vector)
 		let d_base = vec2(progress.cos(), -progress.sin());
 		let d_first = vec2(
 			(progress * self.params.0 as f32).cos() * self.params.0 as f32,
@@ -200,7 +203,9 @@ impl World {
 #[derive(Debug, Clone)]
 #[derive(Serialize, Deserialize)]
 pub struct WorldInit {
+	/// Defines the map tiles
 	pub terrain: Terrain,
+	/// Random seed used for this game
 	pub seed: u64,
 	/// Debugging configuration
 	pub dbg: DebuggingConf,
@@ -212,8 +217,9 @@ pub struct WorldInit {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 #[derive(Serialize, Deserialize)]
 pub struct Input {
-	/// The active gear
+	/// The wanted reefing setting
 	pub reefing: Reefing,
+
 	/// The current steering as fraction from -1.0 to +1.0.
 	///
 	/// The meaning is as follows:
