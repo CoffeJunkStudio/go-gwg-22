@@ -3,9 +3,7 @@ use enum_map::EnumMap;
 use good_web_game as gwg;
 use good_web_game::graphics::spritebatch::SpriteBatch;
 use good_web_game::GameResult;
-use gwg::graphics::BlendMode;
 use gwg::graphics::Color;
-use gwg::graphics::Drawable;
 use gwg::graphics::Image;
 use logic::state::SailKind;
 use logic::state::ShipHull;
@@ -105,26 +103,6 @@ impl TerrainBatches {
 			TileType::Beach => &mut self.beach_s1,
 			TileType::Grass => &mut self.grass_s1,
 		}
-	}
-
-	pub fn set_blend_mode(&mut self) {
-		self.shallow_c1.set_blend_mode(Some(BlendMode::Multiply));
-		self.shallow_s1.set_blend_mode(Some(BlendMode::Multiply));
-		self.shallow_s2.set_blend_mode(Some(BlendMode::Multiply));
-		self.shallow_s3.set_blend_mode(Some(BlendMode::Multiply));
-		self.shallow_s4.set_blend_mode(Some(BlendMode::Multiply));
-
-		self.beach_c1.set_blend_mode(Some(BlendMode::Multiply));
-		self.beach_s1.set_blend_mode(Some(BlendMode::Multiply));
-		self.beach_s2.set_blend_mode(Some(BlendMode::Multiply));
-		self.beach_s3.set_blend_mode(Some(BlendMode::Multiply));
-		self.beach_s4.set_blend_mode(Some(BlendMode::Multiply));
-
-		self.grass_c1.set_blend_mode(Some(BlendMode::Multiply));
-		self.grass_s1.set_blend_mode(Some(BlendMode::Multiply));
-		self.grass_s2.set_blend_mode(Some(BlendMode::Multiply));
-		self.grass_s3.set_blend_mode(Some(BlendMode::Multiply));
-		self.grass_s4.set_blend_mode(Some(BlendMode::Multiply));
 	}
 
 	pub fn shallow_batches(&mut self) -> (&mut SpriteBatch, Vec<&mut SpriteBatch>) {

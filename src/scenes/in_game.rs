@@ -30,7 +30,6 @@ use gwg::GameResult;
 use logic::generator::Generator;
 use logic::generator::PerlinNoise;
 use logic::generator::Setting;
-use logic::generator::WhiteNoise;
 use logic::glm::vec1;
 use logic::glm::Vec2;
 use logic::state::Event;
@@ -566,8 +565,6 @@ impl Scene<GlobalState> for Game {
 	) -> SceneSwitch<GlobalState> {
 		use gwg::input::keyboard::is_key_pressed;
 
-		let opts = &*crate::OPTIONS;
-
 		let mut rng = wyhash::WyRng::seed_from_u64((gwg::timer::time() * 1000.) as u64);
 
 		while gwg::timer::check_update_time(ctx, TICKS_PER_SECOND.into()) {
@@ -1100,88 +1097,97 @@ impl Scene<GlobalState> for Game {
 		// Draw some debugging stuff
 		self.draw_debugging(ctx, quad_ctx)?;
 
+		// Draw UI elements
 		self.draw_ui(glob, ctx, quad_ctx)?;
 
-		// From the text example
-		// Source: https://github.com/ggez/good-web-game/blob/master/examples/text.rs
+		// Draw FPS, right top corner
 		let fps = timer::fps(ctx);
-		let fps_display = Text::new(format!("FPS: {:.1}", fps));
-		// When drawing through these calls, `DrawParam` will work as they are documented.
+		let fps_display = Text::new(format!("FPS: {:.0}", fps));
 		self.draw_text_with_halo(
 			ctx,
 			quad_ctx,
 			&fps_display,
-			(Point2::new(100.0, 0.0), Color::WHITE),
-			Color::BLACK,
-		)?;
-
-		// Current input state
-		let input_text = Text::new(format!("Input: {:?}", self.input));
-		self.draw_text_with_halo(
-			ctx,
-			quad_ctx,
-			&input_text,
-			(Point2::new(100.0, 20.0), Color::WHITE),
-			Color::BLACK,
-		)?;
-
-		// Current Wind
-		let input_text = Text::new(format!(
-			"Wind: {:.2} bf, {:.0}°",
-			self.world.state.wind.magnitude(),
-			self.world.state.wind.angle().to_degrees(),
-		));
-		self.draw_text_with_halo(
-			ctx,
-			quad_ctx,
-			&input_text,
-			(Point2::new(100.0, 40.0), Color::WHITE),
-			Color::BLACK,
-		)?;
-		self.draw_text_with_halo(
-			ctx,
-			quad_ctx,
-			&Text::new("→"),
 			(
-				Point2::new(70.0, 40.0),
-				self.world.state.wind.angle(),
+				Point2::new(screen_coords.w - fps_display.width(ctx), 0.0),
 				Color::WHITE,
 			),
 			Color::BLACK,
 		)?;
 
-		// Current Ship states
-		let input_text = Text::new(format!(
-			"Ship: {:.2} m/s, fish {:.0} kg",
-			self.world.state.player.vehicle.ground_speed(),
-			self.world.state.player.vehicle.fish.0
-		));
-		self.draw_text_with_halo(
-			ctx,
-			quad_ctx,
-			&input_text,
-			(Point2::new(100.0, 60.0), Color::WHITE),
-			Color::BLACK,
-		)?;
+		// Some Developer text
+		cfg_if! {
+			if #[cfg(feature = "dev")] {
+				let left_margin = 150.;
 
-		// Current Ship states
-		let input_text = Text::new(format!(
-			"Ori: {:.2}, List: {:.0}°",
-			self.world
-				.state
-				.player
-				.vehicle
-				.heading
-				.rem_euclid(std::f32::consts::TAU),
-			self.world.state.player.vehicle.angle_of_list.to_degrees()
-		));
-		self.draw_text_with_halo(
-			ctx,
-			quad_ctx,
-			&input_text,
-			(Point2::new(100.0, 80.0), Color::WHITE),
-			Color::BLACK,
-		)?;
+				// Current input state
+				let input_text = Text::new(format!("Input: {:?}", self.input));
+				self.draw_text_with_halo(
+					ctx,
+					quad_ctx,
+					&input_text,
+					(Point2::new(left_margin, 20.0), Color::WHITE),
+					Color::BLACK,
+				)?;
+
+				// Current Wind
+				let input_text = Text::new(format!(
+					"Wind: {:.2} m/s, {:.0}°",
+					self.world.state.wind.magnitude(),
+					self.world.state.wind.angle().to_degrees(),
+				));
+				self.draw_text_with_halo(
+					ctx,
+					quad_ctx,
+					&input_text,
+					(Point2::new(left_margin, 40.0), Color::WHITE),
+					Color::BLACK,
+				)?;
+				self.draw_text_with_halo(
+					ctx,
+					quad_ctx,
+					&Text::new("→"),
+					(
+						Point2::new(90.0, 60.0),
+						self.world.state.wind.angle(),
+						Color::WHITE,
+					),
+					Color::BLACK,
+				)?;
+
+				// Current Ship states
+				let input_text = Text::new(format!(
+					"Ship: {:.1} m/s, fish {:.0} kg",
+					self.world.state.player.vehicle.ground_speed(),
+					self.world.state.player.vehicle.fish.0
+				));
+				self.draw_text_with_halo(
+					ctx,
+					quad_ctx,
+					&input_text,
+					(Point2::new(left_margin, 60.0), Color::WHITE),
+					Color::BLACK,
+				)?;
+
+				// Current Ship states
+				let input_text = Text::new(format!(
+					"Ori: {:.0}°, List: {:.0}°",
+					self.world
+						.state
+						.player
+						.vehicle
+						.heading
+						.rem_euclid(std::f32::consts::TAU).to_degrees(),
+					self.world.state.player.vehicle.angle_of_list.to_degrees()
+				));
+				self.draw_text_with_halo(
+					ctx,
+					quad_ctx,
+					&input_text,
+					(Point2::new(left_margin, 80.0), Color::WHITE),
+					Color::BLACK,
+				)?;
+			}
+		}
 
 		// Show players money
 		let money = Text::new(format!("Money: {:} ℓ", self.world.state.player.money));
@@ -1431,31 +1437,43 @@ impl Game {
 
 		let color = color1.mix(color2, mix_factor);
 
-		let mut wind_text = Text::new(format!(
-			"{:.2} bf, {:.0}°",
-			self.world.state.wind.magnitude(),
-			self.world.state.wind.angle().to_degrees(),
-		));
-		wind_text.set_font(Default::default(), PxScale::from(20.));
+		let text_height = {
+			cfg_if! {
+				if #[cfg(feature = "dev")] {
+					let mut wind_text = Text::new(format!(
+						"{:.1} m/s, {:.0}°",
+						self.world.state.wind.magnitude(),
+						self.world.state.wind.angle()
+							.rem_euclid(std::f32::consts::TAU)
+							.to_degrees(),
+					));
+					wind_text.set_font(Default::default(), PxScale::from(20.));
+
+					let p = DrawParam::new()
+						.dest(Point2::new(
+							screen_coords.w - 128.0 - wind_text.width(ctx) * 0.5,
+							screen_coords.h - wind_text.height(ctx) - 5.,
+						))
+						.color(color);
+					self.draw_text_with_halo(ctx, quad_ctx, &wind_text, p, Color::BLACK)?;
+
+					wind_text.height(ctx)
+				} else {
+					0.
+				}
+			}
+		};
 
 		let p = DrawParam::new()
 			.dest(Point2::new(
 				screen_coords.w - 128.0,
-				screen_coords.h - 128.0 - wind_text.height(ctx),
+				screen_coords.h - 128.0 - text_height,
 			))
 			.offset(Point2::new(0.5, 0.5))
 			.color(color)
 			.scale(logic::glm::vec1(normed_wind_speed).xx())
 			.rotation(self.world.state.wind.angle() + std::f32::consts::FRAC_PI_2);
 		gwg::graphics::draw(ctx, quad_ctx, &self.images.ui.wind_direction_indicator, p)?;
-
-		let p = DrawParam::new()
-			.dest(Point2::new(
-				screen_coords.w - 128.0 - wind_text.width(ctx) * 0.5,
-				screen_coords.h - wind_text.height(ctx),
-			))
-			.color(color);
-		self.draw_text_with_halo(ctx, quad_ctx, &wind_text, p, Color::BLACK)?;
 
 		Ok(())
 	}
