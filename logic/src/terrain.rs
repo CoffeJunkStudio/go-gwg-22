@@ -164,6 +164,56 @@ impl Terrain {
 		}
 	}
 
+	/// Returns the tile coord west of the given one
+	pub fn west_of(&self, mut tc: TileCoord) -> TileCoord {
+		tc.x = {
+			match tc.x {
+				0 => self.edge_length - 1,
+				x => x - 1,
+			}
+		};
+
+		tc
+	}
+
+	/// Returns the tile coord east of the given one
+	pub fn east_of(&self, mut tc: TileCoord) -> TileCoord {
+		tc.x = {
+			if tc.x >= self.edge_length - 1 {
+				0
+			} else {
+				tc.x + 1
+			}
+		};
+
+		tc
+	}
+
+	/// Returns the tile coord north of the given one
+	pub fn north_of(&self, mut tc: TileCoord) -> TileCoord {
+		tc.y = {
+			match tc.y {
+				0 => self.edge_length - 1,
+				y => y - 1,
+			}
+		};
+
+		tc
+	}
+
+	/// Returns the tile coord south of the given one
+	pub fn south_of(&self, mut tc: TileCoord) -> TileCoord {
+		tc.y = {
+			if tc.y >= self.edge_length - 1 {
+				0
+			} else {
+				tc.y + 1
+			}
+		};
+
+		tc
+	}
+
 	/// Checks whether the given location is within the map boundary
 	pub fn contains(&self, loc: Location) -> bool {
 		0. <= loc.0.x && loc.0.x < self.edge_length as f32* TILE_SIZE as f32 && // nl

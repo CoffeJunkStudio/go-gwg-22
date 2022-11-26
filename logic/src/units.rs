@@ -7,6 +7,7 @@ use std::ops::MulAssign;
 use std::ops::Sub;
 use std::ops::SubAssign;
 
+use enum_map::Enum;
 use nalgebra_glm::Vec2;
 use serde::Deserialize;
 use serde::Serialize;
@@ -297,6 +298,7 @@ impl DivAssign for BiPolarFraction {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(Serialize, Deserialize)]
+#[derive(Enum)]
 pub enum TileType {
 	DeepWater,
 	ShallowWater,

@@ -4,15 +4,19 @@ use std::path::Path;
 use cfg_if::cfg_if;
 use enum_map::enum_map;
 use good_web_game as gwg;
+use gwg::GameResult;
 use gwg::audio;
 use gwg::cgmath::Point2;
 use gwg::goodies::scene::Scene;
 use gwg::goodies::scene::SceneSwitch;
 use gwg::graphics;
+use gwg::graphics::BlendMode;
 use gwg::graphics::draw;
+use gwg::graphics::Canvas;
 use gwg::graphics::Color;
 use gwg::graphics::DrawMode;
 use gwg::graphics::DrawParam;
+use gwg::graphics::Drawable;
 use gwg::graphics::Image;
 use gwg::graphics::MeshBuilder;
 use gwg::graphics::PxScale;
@@ -20,11 +24,13 @@ use gwg::graphics::Rect;
 use gwg::graphics::StrokeOptions;
 use gwg::graphics::Text;
 use gwg::graphics::Transform;
+use gwg::graphics::spritebatch::SpriteBatch;
 use gwg::miniquad::KeyCode;
 use gwg::timer;
 use logic::generator::Generator;
 use logic::generator::PerlinNoise;
 use logic::generator::Setting;
+use logic::generator::WhiteNoise;
 use logic::glm::vec1;
 use logic::glm::Vec2;
 use logic::state::Event;
@@ -116,6 +122,9 @@ pub struct Game {
 	/// The audio files
 	audios: Audios,
 
+	terrain_transition_canvas: Canvas,
+	terrain_transition_mask_canvas: Canvas,
+
 	full_screen: bool,
 	world: World,
 	input: Input,
@@ -206,7 +215,26 @@ impl Game {
 			deep: image_batch(ctx, quad_ctx, "img/deepwater0.png")?,
 			shallow: image_batch(ctx, quad_ctx, "img/shallowwater.png")?,
 			beach: image_batch(ctx, quad_ctx, "img/sand.png")?,
-			land: image_batch(ctx, quad_ctx, "img/grass.png")?,
+			grass: image_batch(ctx, quad_ctx, "img/grass.png")?,
+
+			shallow_c1: image_batch(ctx, quad_ctx, "img/mask_shallow_c1.png")?,
+			shallow_s1: image_batch(ctx, quad_ctx, "img/mask_shallow_s1.png")?,
+			shallow_s2: image_batch(ctx, quad_ctx, "img/mask_shallow_s2.png")?,
+			shallow_s3: image_batch(ctx, quad_ctx, "img/mask_shallow_s3.png")?,
+			shallow_s4: image_batch(ctx, quad_ctx, "img/mask_shallow_s4.png")?,
+
+			beach_c1: image_batch(ctx, quad_ctx, "img/mask_sand_c1.png")?,
+			beach_s1: image_batch(ctx, quad_ctx, "img/mask_sand_s1.png")?,
+			beach_s2: image_batch(ctx, quad_ctx, "img/mask_sand_s2.png")?,
+			beach_s3: image_batch(ctx, quad_ctx, "img/mask_sand_s3.png")?,
+			beach_s4: image_batch(ctx, quad_ctx, "img/mask_sand_s4.png")?,
+
+			grass_c1: image_batch(ctx, quad_ctx, "img/mask_grass_c1.png")?,
+			grass_s1: image_batch(ctx, quad_ctx, "img/mask_grass_s1.png")?,
+			grass_s2: image_batch(ctx, quad_ctx, "img/mask_grass_s2.png")?,
+			grass_s3: image_batch(ctx, quad_ctx, "img/mask_grass_s3.png")?,
+			grass_s4: image_batch(ctx, quad_ctx, "img/mask_grass_s4.png")?,
+
 			water_anim: image_batch(ctx, quad_ctx, "img/wateranim.png")?,
 			water_anim_2: image_batch(ctx, quad_ctx, "img/wateranim2.png")?,
 		};
@@ -282,11 +310,18 @@ impl Game {
 		};
 
 		println!(
+			"{:.3} [game] loading other stuff...",
+			gwg::timer::time_since_start(ctx).as_secs_f64()
+		);
+		let terrain_transition_canvas = Canvas::with_window_size(ctx, quad_ctx)?;
+		let terrain_transition_mask_canvas = Canvas::with_window_size(ctx, quad_ctx)?;
+
+		println!(
 			"{:.3} [game] generating world...",
 			gwg::timer::time_since_start(ctx).as_secs_f64()
 		);
 		// Generate world
-		let noise = PerlinNoise;
+		let noise = WhiteNoise;
 		let resource_density = {
 			cfg_if! {
 				if #[cfg(feature = "dev")] {
@@ -336,6 +371,8 @@ impl Game {
 				water_sound_0,
 				water_sound_1,
 			},
+			terrain_transition_canvas,
+			terrain_transition_mask_canvas,
 			full_screen: false,
 			world,
 			input: Input::default(),
@@ -716,17 +753,20 @@ impl Scene<GlobalState> for Game {
 				let loc = remapped.0 - half_tile;
 				let dest = self.location_to_screen_coords(ctx, Location(loc));
 
+				/*
 				let rel = match tile.classify() {
 					TileType::DeepWater => tile.relative_height(),
 					TileType::ShallowWater => tile.relative_height() * 0.5 + 0.5,
 					TileType::Beach => 1.0,
 					TileType::Grass => 1.0,
-				};
+				}; */
+				let rel = 1.0_f32;
+
 				let batch = match tile.classify() {
 					TileType::DeepWater => &mut self.images.terrain_batches.deep,
 					TileType::ShallowWater => &mut self.images.terrain_batches.shallow,
 					TileType::Beach => &mut self.images.terrain_batches.beach,
-					TileType::Grass => &mut self.images.terrain_batches.land,
+					TileType::Grass => &mut self.images.terrain_batches.grass,
 				};
 
 				let c = 0.5 + 0.5 * rel.clamp(0., 1.);
@@ -867,8 +907,185 @@ impl Scene<GlobalState> for Game {
 					&mut self.images.terrain_batches.water_anim,
 					&mut self.images.terrain_batches.water_anim_2,
 					&mut self.images.terrain_batches.beach,
-					&mut self.images.terrain_batches.land,
-				])
+					&mut self.images.terrain_batches.grass,
+				]),
+		)?;
+
+		// Draw the tile background
+		for (tc, tile) in terrain.iter() {
+			if terrain.torus_bounds_check(left_top, right_bottom, tc.to_location()) {
+				let remapped = terrain.torus_remap(left_top, tc.to_location());
+
+				let screen_size = logic::TILE_SIZE as f32 * pixel_per_meter;
+				let scale = screen_size / tile_image_size;
+				let loc = remapped.0 - half_tile;
+				let dest = self.location_to_screen_coords(ctx, Location(loc));
+
+				let c = 1.;
+				let param = DrawParam::new()
+					.dest(dest)
+					.scale(logic::glm::vec2(scale, scale))
+					.color(Color::new(c, c, c, 1.));
+
+				let class = tile.classify();
+
+				// Edges
+
+				let easter = terrain.get(terrain.east_of(tc)).classify();
+				if class < easter {
+					self.images.terrain_batches.tile_sprite(easter).add(param);
+					let param_rot = param.clone();
+					self.images
+						.terrain_batches
+						.tile_mask_s1(easter)
+						.add(param_rot);
+				}
+				let southern = terrain.get(terrain.south_of(tc)).classify();
+				if class < southern {
+					self.images.terrain_batches.tile_sprite(southern).add(param);
+					let param_rot = param
+						.clone()
+						.rotation(std::f32::consts::PI / 2.)
+						.dest(dest + logic::glm::vec2(screen_size, 0.));
+					self.images
+						.terrain_batches
+						.tile_mask_s1(southern)
+						.add(param_rot);
+				}
+				let western = terrain.get(terrain.west_of(tc)).classify();
+				if class < western {
+					self.images.terrain_batches.tile_sprite(western).add(param);
+					let param_rot = param
+						.clone()
+						.rotation(std::f32::consts::PI)
+						.dest(dest + logic::glm::vec2(screen_size, screen_size));
+					self.images
+						.terrain_batches
+						.tile_mask_s1(western)
+						.add(param_rot);
+				}
+				let norther = terrain.get(terrain.north_of(tc)).classify();
+				if class < norther {
+					self.images.terrain_batches.tile_sprite(norther).add(param);
+					let param_rot = param
+						.clone()
+						.rotation(-std::f32::consts::PI / 2.)
+						.dest(dest + logic::glm::vec2(0., screen_size));
+					self.images
+						.terrain_batches
+						.tile_mask_s1(norther)
+						.add(param_rot);
+				}
+
+				// Corners
+
+				let ne = terrain.get(terrain.north_of(terrain.east_of(tc))).classify();
+				if class < ne {
+					self.images.terrain_batches.tile_sprite(ne).add(param);
+					let param_rot = param.clone();
+					self.images
+						.terrain_batches
+						.tile_mask_c1(ne)
+						.add(param_rot);
+				}
+				let se = terrain.get(terrain.south_of(terrain.east_of(tc))).classify();
+				if class < se {
+					self.images.terrain_batches.tile_sprite(se).add(param);
+					let param_rot = param
+						.clone()
+						.rotation(std::f32::consts::PI / 2.)
+						.dest(dest + logic::glm::vec2(screen_size, 0.));
+					self.images
+						.terrain_batches
+						.tile_mask_c1(se)
+						.add(param_rot);
+				}
+				let sw = terrain.get(terrain.south_of(terrain.west_of(tc))).classify();
+				if class < sw {
+					self.images.terrain_batches.tile_sprite(sw).add(param);
+					let param_rot = param
+						.clone()
+						.rotation(std::f32::consts::PI)
+						.dest(dest + logic::glm::vec2(screen_size, screen_size));
+					self.images
+						.terrain_batches
+						.tile_mask_c1(sw)
+						.add(param_rot);
+				}
+				let nw = terrain.get(terrain.north_of(terrain.west_of(tc))).classify();
+				if class < nw {
+					self.images.terrain_batches.tile_sprite(nw).add(param);
+					let param_rot = param
+						.clone()
+						.rotation(-std::f32::consts::PI / 2.)
+						.dest(dest + logic::glm::vec2(0., screen_size));
+					self.images
+						.terrain_batches
+						.tile_mask_c1(nw)
+						.add(param_rot);
+				}
+			}
+		}
+
+		// The Mask itself is draw multiplicative
+		self.terrain_transition_mask_canvas.set_blend_mode(Some(BlendMode::Multiply));
+
+		let mask_canvas = &self.terrain_transition_mask_canvas;
+		let trans_canvas = &self.terrain_transition_canvas;
+
+		fn draw_mask_n_tiles(
+		ctx: &mut gwg::Context,
+		quad_ctx: &mut gwg::miniquad::Context,mask_canvas:&Canvas,trans_canvas:&Canvas,mask:Vec<&mut SpriteBatch>,tile:&mut SpriteBatch) -> GameResult {
+			// The mask canvas, needs to be cleared with white
+		graphics::set_canvas(ctx, Some(mask_canvas));
+		graphics::clear(ctx, quad_ctx, [1.0, 1.0, 1.0, 0.0].into());
+
+		// Drawing the mask
+		draw_and_clear(ctx, quad_ctx, mask)?;
+
+		// The Tile canvas
+		graphics::set_canvas(ctx, Some(&trans_canvas));
+		graphics::clear(ctx, quad_ctx, [0.0, 0.0, 0.0, 0.0].into());
+
+		// Drawing the tile
+		draw_and_clear(ctx, quad_ctx, [tile])?;
+
+		// And multiplying the mask on top
+		graphics::draw(
+			ctx,
+			quad_ctx,
+			mask_canvas,
+			(Point2::new(0., 0.),),
+		)?;
+
+		// Switch back to the screen
+		graphics::set_canvas(ctx, None);
+
+		// Draw the transition tiles
+		graphics::draw(
+			ctx,
+			quad_ctx,
+			trans_canvas,
+			(Point2::new(0., 0.),),
+		)
+		}
+
+		let (tile,mask) = self.images.terrain_batches.shallow_batches();
+		draw_mask_n_tiles(ctx,quad_ctx,mask_canvas,trans_canvas, mask, tile)?;
+
+		let (tile2,mask2) = self.images.terrain_batches.beach_batches();
+		draw_mask_n_tiles(ctx,quad_ctx,mask_canvas,trans_canvas, mask2, tile2)?;
+
+		let (tile3,mask3) = self.images.terrain_batches.grass_batches();
+		draw_mask_n_tiles(ctx,quad_ctx,mask_canvas,trans_canvas, mask3, tile3)?;
+
+
+		// Draw and clear sprite batches
+		// This defines the draw order.
+		draw_and_clear(
+			ctx,
+			quad_ctx,
+			[].into_iter()
 				.chain([self.images.building_batches.harbor.deref_mut()])
 				.chain(
 					self.images
@@ -1188,14 +1405,16 @@ impl Scene<GlobalState> for Game {
 	fn resize_event(
 		&mut self,
 		_glob: &mut GlobalState,
-		context: &mut gwg::Context,
-		_quad_ctx: &mut gwg::miniquad::GraphicsContext,
+		ctx: &mut gwg::Context,
+		quad_ctx: &mut gwg::miniquad::GraphicsContext,
 		w: f32,
 		h: f32,
 	) {
 		let coordinates = graphics::Rect::new(0., 0., w, h);
 
-		graphics::set_screen_coordinates(context, coordinates).expect("Can't resize the window");
+		graphics::set_screen_coordinates(ctx, coordinates).expect("Can't resize the window");
+		self.terrain_transition_canvas = Canvas::with_window_size(ctx, quad_ctx).unwrap();
+		self.terrain_transition_mask_canvas = Canvas::with_window_size(ctx, quad_ctx).unwrap();
 	}
 }
 
