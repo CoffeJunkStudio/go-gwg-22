@@ -1254,64 +1254,41 @@ impl Scene<GlobalState> for Game {
 		}
 
 		// Draw and clear sprite batches
-		// This defines the draw order.
-		draw_and_clear(ctx, quad_ctx, [&mut self.images.terrain_batches.deep])?;
+		// This here defines the draw order.
 
-		let (tile, mask) = self.images.terrain_batches.shallow_batches();
+		let res = &mut self.images.resource_batches;
+		let tiles = &mut self.images.terrain_batches;
+
+		// Start with the deep tiles
+		draw_and_clear(ctx, quad_ctx, [&mut tiles.deep])?;
+
+		// Then the shallow water tiles
+		let (tile, mask) = tiles.shallow_batches();
 		draw_mask_n_tiles(ctx, quad_ctx, mask_canvas, trans_canvas, mask, tile)?;
 
+		// Then fishies, and other doodads, as well as the wave layer
 		draw_and_clear(
 			ctx,
 			quad_ctx,
 			[].into_iter()
-				.chain(
-					self.images
-						.resource_batches
-						.starfishes
-						.iter_mut()
-						.map(DerefMut::deref_mut),
-				)
-				.chain(
-					self.images
-						.resource_batches
-						.fishes
-						.iter_mut()
-						.map(DerefMut::deref_mut),
-				)
-				.chain(
-					self.images
-						.resource_batches
-						.shoe
-						.iter_mut()
-						.map(DerefMut::deref_mut),
-				)
-				.chain([
-					&mut self.images.terrain_batches.water_anim,
-					&mut self.images.terrain_batches.water_anim_2,
-				]),
+				.chain(res.starfishes.iter_mut().map(DerefMut::deref_mut))
+				.chain(res.fishes.iter_mut().map(DerefMut::deref_mut))
+				.chain(res.shoe.iter_mut().map(DerefMut::deref_mut))
+				.chain([&mut tiles.water_anim, &mut tiles.water_anim_2]),
 		)?;
 
-		let (tile2, mask2) = self.images.terrain_batches.beach_batches();
+		// Then the beaches
+		let (tile2, mask2) = tiles.beach_batches();
 		draw_mask_n_tiles(ctx, quad_ctx, mask_canvas, trans_canvas, mask2, tile2)?;
 
-		draw_and_clear(
-			ctx,
-			quad_ctx,
-			[].into_iter().chain(
-				self.images
-					.resource_batches
-					.grass
-					.iter_mut()
-					.map(DerefMut::deref_mut),
-			),
-		);
+		// Just above them the sea grass
+		draw_and_clear(ctx, quad_ctx, res.grass.iter_mut().map(DerefMut::deref_mut))?;
 
-		let (tile3, mask3) = self.images.terrain_batches.grass_batches();
+		// And finally the grass land tiles
+		let (tile3, mask3) = tiles.grass_batches();
 		draw_mask_n_tiles(ctx, quad_ctx, mask_canvas, trans_canvas, mask3, tile3)?;
 
-
-		// Draw and clear sprite batches
-		// This defines the draw order.
+		// Then above all, the harbor and the player's ship
 		draw_and_clear(
 			ctx,
 			quad_ctx,
@@ -1454,6 +1431,7 @@ impl Scene<GlobalState> for Game {
 			Color::BLACK,
 		)?;
 
+		// The trading "interface"
 		if let Some(t) = self.world.state.get_trading() {
 			if t.has_player_valid_speed() {
 				// Trading is possible
@@ -1528,6 +1506,7 @@ impl Scene<GlobalState> for Game {
 		// Print version info
 		draw_version(ctx, quad_ctx)?;
 
+		// Finally, issue the draw call and what not, finishing this frame for good
 		gwg::graphics::present(ctx, quad_ctx)?;
 
 		Ok(())
