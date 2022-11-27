@@ -11,7 +11,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   ITCH_USERNAME: coffejunkstudio
-  ITCH_GAME_ID: plenty-of-fish-in-the-sea
+  ITCH_GAME_ID: plenty-of-fish
 
 jobs:
   # Preliminary compilation & tests
