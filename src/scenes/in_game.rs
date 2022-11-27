@@ -944,7 +944,7 @@ impl Scene<GlobalState> for Game {
 				let ne = terrain
 					.get(terrain.north_of(terrain.east_of(tc)))
 					.classify();
-				if class < ne {
+				if class < ne && (ne != norther && ne != easter) {
 					self.images.terrain_batches.tile_sprite(ne).add(param);
 					let param_rot = param.clone();
 					self.images.terrain_batches.tile_mask_c1(ne).add(param_rot);
@@ -952,7 +952,7 @@ impl Scene<GlobalState> for Game {
 				let se = terrain
 					.get(terrain.south_of(terrain.east_of(tc)))
 					.classify();
-				if class < se {
+				if class < se && (se != southern && se != easter) {
 					self.images.terrain_batches.tile_sprite(se).add(param);
 					let param_rot = param
 						.clone()
@@ -963,7 +963,7 @@ impl Scene<GlobalState> for Game {
 				let sw = terrain
 					.get(terrain.south_of(terrain.west_of(tc)))
 					.classify();
-				if class < sw {
+				if class < sw && (sw != southern && sw != western) {
 					self.images.terrain_batches.tile_sprite(sw).add(param);
 					let param_rot = param
 						.clone()
@@ -974,7 +974,7 @@ impl Scene<GlobalState> for Game {
 				let nw = terrain
 					.get(terrain.north_of(terrain.west_of(tc)))
 					.classify();
-				if class < nw {
+				if class < nw && (nw != norther && nw != western) {
 					self.images.terrain_batches.tile_sprite(nw).add(param);
 					let param_rot = param
 						.clone()
