@@ -139,7 +139,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-18)..Elevation(-12),
 			spawn_location: Elevation(-18)..Elevation(-12),
 			params_range: (-9..0, 2..11),
-			speed_factor: 9..11,
+			speed_factor: 90..110,
 		}
 		Self::Fish1 => {
 			weight: 20,
@@ -149,7 +149,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-5)..Elevation(0),
 			spawn_location: Elevation(-12)..Elevation(0),
 			params_range: (-9..0, 2..11),
-			speed_factor: 9..11,
+			speed_factor: 90..110,
 		}
 		Self::Fish2 => {
 			weight: 15,
@@ -159,7 +159,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-12)..Elevation(-5),
 			spawn_location: Elevation(-18)..Elevation(-5),
 			params_range: (-9..0, 2..11),
-			speed_factor: 9..11,
+			speed_factor: 90..110,
 		}
 		Self::Fish3 => {
 			weight: 8,
@@ -169,7 +169,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-12)..Elevation(-5),
 			spawn_location: Elevation(-12)..Elevation(0),
 			params_range: (-9..0, 2..11),
-			speed_factor: 9..11,
+			speed_factor: 90..110,
 		}
 		Self::Fish4 => {
 			weight: 5,
@@ -179,7 +179,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-5)..Elevation(0),
 			spawn_location: Elevation(-5)..Elevation(0),
 			params_range: (-9..0, 2..11),
-			speed_factor: 9..11,
+			speed_factor: 90..110,
 		}
 		Self::Fish5 => {
 			weight: 6,
@@ -189,7 +189,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-18)..Elevation(0),
 			spawn_location: Elevation(-18)..Elevation(0),
 			params_range: (-9..0, 2..11),
-			speed_factor: 9..11,
+			speed_factor: 90..110,
 		}
 		Self::Fish6 => {
 			weight: 7,
@@ -199,7 +199,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-18)..Elevation(0),
 			spawn_location: Elevation(-18)..Elevation(-5),
 			params_range: (-9..0, 2..11),
-			speed_factor: 9..11,
+			speed_factor: 90..110,
 		}
 		Self::Fish7 => {
 			weight: 18,
@@ -209,7 +209,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-12)..Elevation(-5),
 			spawn_location: Elevation(-12)..Elevation(-5),
 			params_range: (-9..0, 2..11),
-			speed_factor: 9..11,
+			speed_factor: 90..110,
 		}
 		Self::Starfish0 => {
 			weight: 3,
@@ -219,7 +219,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-3)..Elevation(0),
 			spawn_location: Elevation(-4)..Elevation(0),
 			params_range: (0..1,0..1),
-			speed_factor: 2..3,
+			speed_factor: 20..30,
 		}
 		Self::Starfish1 => {
 			weight: 5,
@@ -229,7 +229,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-1)..Elevation(0),
 			spawn_location: Elevation(-12)..Elevation(0),
 			params_range: (0..1,0..1),
-			speed_factor: 2..3,
+			speed_factor: 20..30,
 		}
 		Self::Starfish2 => {
 			weight: 4,
@@ -239,7 +239,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-5)..Elevation(0),
 			spawn_location: Elevation(-12)..Elevation(-5),
 			params_range: (0..1,0..1),
-			speed_factor: 2..3,
+			speed_factor: 20..30,
 		}
 		Self::Starfish3 => {
 			weight: 3,
@@ -249,7 +249,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-18)..Elevation(-12),
 			spawn_location: Elevation(-18)..Elevation(-12),
 			params_range: (0..1,0..1),
-			speed_factor: 2..3,
+			speed_factor: 20..30,
 		}
 		Self::Starfish4 => {
 			weight: 3,
@@ -259,7 +259,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-12)..Elevation(-5),
 			spawn_location: Elevation(-12)..Elevation(0),
 			params_range: (0..1,0..1),
-			speed_factor: 2..3,
+			speed_factor: 20..30,
 		}
 		Self::Grass0 => {
 			weight: 9,
@@ -269,7 +269,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-1)..Elevation(0),
 			spawn_location: Elevation(-4)..Elevation(0),
 			params_range: (0..1,0..1),
-			speed_factor: 1..2,
+			speed_factor: 1..10,
 		}
 		Self::Grass1 => {
 			weight: 10,
@@ -279,7 +279,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-1)..Elevation(0),
 			spawn_location: Elevation(-6)..Elevation(-3),
 			params_range: (0..1,0..1),
-			speed_factor: 1..2,
+			speed_factor: 5..15,
 		}
 		Self::Shoe => {
 			weight: 5,
@@ -289,7 +289,7 @@ enumeraties::props! {
 			spawn_elevation: Elevation(-5)..Elevation(-1),
 			spawn_location: Elevation(-18)..Elevation(0),
 			params_range: (0..1,0..1),
-			speed_factor: 1..2,
+			speed_factor: 1..20,
 		}
 	}
 }
@@ -343,7 +343,7 @@ impl ResourcePack {
 
 		// The total animation cycle duration
 		let duration = u32::from(1 + self.params.0.unsigned_abs() + self.params.1.unsigned_abs())
-			* 10 / self.speed_factor;
+			* 100 / self.speed_factor;
 		let duration = duration * (FISH_ANIM_BASE_DURATION * u32::from(TICKS_PER_SECOND));
 		// The current progress through the animation
 		let progress = forwardness

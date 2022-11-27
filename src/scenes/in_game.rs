@@ -1252,13 +1252,6 @@ impl Scene<GlobalState> for Game {
 				.chain(
 					self.images
 						.resource_batches
-						.grass
-						.iter_mut()
-						.map(DerefMut::deref_mut),
-				)
-				.chain(
-					self.images
-						.resource_batches
 						.starfishes
 						.iter_mut()
 						.map(DerefMut::deref_mut),
@@ -1285,6 +1278,18 @@ impl Scene<GlobalState> for Game {
 
 		let (tile2, mask2) = self.images.terrain_batches.beach_batches();
 		draw_mask_n_tiles(ctx, quad_ctx, mask_canvas, trans_canvas, mask2, tile2)?;
+
+		draw_and_clear(
+			ctx,
+			quad_ctx,
+			[].into_iter().chain(
+				self.images
+					.resource_batches
+					.grass
+					.iter_mut()
+					.map(DerefMut::deref_mut),
+			),
+		);
 
 		let (tile3, mask3) = self.images.terrain_batches.grass_batches();
 		draw_mask_n_tiles(ctx, quad_ctx, mask_canvas, trans_canvas, mask3, tile3)?;
