@@ -561,7 +561,7 @@ impl TradeOption<'_> {
 	}
 
 	/// Sell `amount` (in kg) of fish, returns the proceeds
-	pub fn sell_fish(&mut self, amount: u32) -> Option<u64> {
+	pub fn sell_fish(&mut self, amount: u32) -> Option<u32> {
 		// Do not trade if the player is too fast
 		if !self.has_player_valid_speed() {
 			return None;
@@ -598,7 +598,7 @@ impl TradeOption<'_> {
 		// Remember the session trade volume
 		self.traded_fish_amount += weight;
 
-		Some(proceeds)
+		Some(weight)
 	}
 }
 
