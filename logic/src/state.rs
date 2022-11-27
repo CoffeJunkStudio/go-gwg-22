@@ -376,9 +376,14 @@ impl WorldState {
 				let dist = VEHICLE_SIZE / 2. + RESOURCE_PACK_FISH_SIZE / 2.;
 
 				if r.loc.0.metric_distance(&p.vehicle.pos.0) < dist {
+					// Store the fish in the ship
 					p.vehicle.resource_weight += r.content.weight;
 					p.vehicle.resource_value += r.content.value;
 
+					// Emit fishy event
+					events.push(Event::Fishy);
+
+					// Let the fish be removed from the world
 					false
 				} else {
 					true
