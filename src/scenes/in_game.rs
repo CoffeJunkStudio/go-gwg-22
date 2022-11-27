@@ -285,14 +285,26 @@ impl Game {
 			"{:.3} [game] loading resources...",
 			gwg::timer::time_since_start(ctx).as_secs_f64()
 		);
+		let mut map_to_ass =
+			|names: Vec<&str>| {
+				Vec::from_iter(names.into_iter().map(|name| {
+					AssetBatch::from_config(ctx, quad_ctx, &render_config, name).unwrap()
+				}))
+			};
 		let resource_batches = ResourceBatches {
-			fishes: [
+			fishes: map_to_ass(vec![
 				"fish-00", "fish-01", "fish-02", "fish-03", "fish-04", "fish-05", "fish-06",
 				"fish-07",
-			]
-			.into_iter()
-			.map(|name| AssetBatch::from_config(ctx, quad_ctx, &render_config, name).unwrap())
-			.collect(),
+			]),
+			starfishes: map_to_ass(vec![
+				"starfish-00",
+				"starfish-01",
+				"starfish-02",
+				"starfish-03",
+				"starfish-04",
+			]),
+			shoe: map_to_ass(vec!["shoe"]),
+			grass: map_to_ass(vec!["grass-00", "grass-01"]),
 		};
 
 		println!(
@@ -817,7 +829,24 @@ impl Scene<GlobalState> for Game {
 					ResourcePackContent::Fish5 => &mut self.images.resource_batches.fishes[5],
 					ResourcePackContent::Fish6 => &mut self.images.resource_batches.fishes[6],
 					ResourcePackContent::Fish7 => &mut self.images.resource_batches.fishes[7],
-					_ => &mut self.images.resource_batches.fishes[7],
+					ResourcePackContent::Shoe => &mut self.images.resource_batches.shoe[0],
+					ResourcePackContent::Starfish0 => {
+						&mut self.images.resource_batches.starfishes[0]
+					},
+					ResourcePackContent::Starfish1 => {
+						&mut self.images.resource_batches.starfishes[1]
+					},
+					ResourcePackContent::Starfish2 => {
+						&mut self.images.resource_batches.starfishes[2]
+					},
+					ResourcePackContent::Starfish3 => {
+						&mut self.images.resource_batches.starfishes[3]
+					},
+					ResourcePackContent::Starfish4 => {
+						&mut self.images.resource_batches.starfishes[4]
+					},
+					ResourcePackContent::Grass0 => &mut self.images.resource_batches.grass[0],
+					ResourcePackContent::Grass1 => &mut self.images.resource_batches.grass[1],
 				};
 
 				let resource_scale = logic::glm::vec1(
@@ -1205,7 +1234,28 @@ impl Scene<GlobalState> for Game {
 				.chain(
 					self.images
 						.resource_batches
+						.grass
+						.iter_mut()
+						.map(DerefMut::deref_mut),
+				)
+				.chain(
+					self.images
+						.resource_batches
+						.starfishes
+						.iter_mut()
+						.map(DerefMut::deref_mut),
+				)
+				.chain(
+					self.images
+						.resource_batches
 						.fishes
+						.iter_mut()
+						.map(DerefMut::deref_mut),
+				)
+				.chain(
+					self.images
+						.resource_batches
+						.shoe
 						.iter_mut()
 						.map(DerefMut::deref_mut),
 				)

@@ -214,6 +214,9 @@ pub struct ShipBatches {
 /// Map resource asset bundle
 pub struct ResourceBatches {
 	pub fishes: Vec<AssetBatch>,
+	pub starfishes: Vec<AssetBatch>,
+	pub shoe: Vec<AssetBatch>,
+	pub grass: Vec<AssetBatch>,
 }
 
 /// Map building asset bundle

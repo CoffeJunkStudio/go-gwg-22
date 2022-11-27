@@ -97,8 +97,17 @@ pub enum ResourcePackContent {
 	Fish5,
 	Fish6,
 	Fish7,
+	Shoe,
+	Starfish0,
+	Starfish1,
+	Starfish2,
+	Starfish3,
+	Starfish4,
+	Grass0,
+	Grass1,
 }
 
+#[derive(Debug, Clone)]
 pub struct ResourcePackStats {
 	/// The resource weight in kg
 	weight: u32,
@@ -112,6 +121,10 @@ pub struct ResourcePackStats {
 	spawn_elevation: Range<Elevation>,
 	/// Specifies in which waters it resource may spawn
 	spawn_location: Range<Elevation>,
+	///
+	params_range: (Range<i8>, Range<i8>),
+	///
+	speed_factor: Range<u32>,
 }
 
 const NO_SCHOOLING: Range<usize> = 1..2;
@@ -125,6 +138,8 @@ enumeraties::props! {
 			spawn_density: 1.0,
 			spawn_elevation: Elevation(-18)..Elevation(-12),
 			spawn_location: Elevation(-18)..Elevation(-12),
+			params_range: (-9..0, 2..11),
+			speed_factor: 9..11,
 		}
 		Self::Fish1 => {
 			weight: 20,
@@ -133,14 +148,148 @@ enumeraties::props! {
 			spawn_density: 0.1,
 			spawn_elevation: Elevation(-5)..Elevation(0),
 			spawn_location: Elevation(-12)..Elevation(0),
+			params_range: (-9..0, 2..11),
+			speed_factor: 9..11,
 		}
-		_ => {
-			weight: 10,
-			value: 12,
+		Self::Fish2 => {
+			weight: 1,
+			value: 1,
 			schooling_size: 3..4,
-			spawn_density: 0.0,
-			spawn_elevation: Elevation(-18)..Elevation(-7),
-			spawn_location: Elevation(-18)..Elevation(-7),
+			spawn_density: 0.1,
+			spawn_elevation: Elevation(-18)..Elevation(0),
+			spawn_location: Elevation(-18)..Elevation(0),
+			params_range: (-9..0, 2..11),
+			speed_factor: 9..11,
+		}
+		Self::Fish3 => {
+			weight: 1,
+			value: 1,
+			schooling_size: 3..4,
+			spawn_density: 0.1,
+			spawn_elevation: Elevation(-18)..Elevation(0),
+			spawn_location: Elevation(-18)..Elevation(0),
+			params_range: (-9..0, 2..11),
+			speed_factor: 9..11,
+		}
+		Self::Fish4 => {
+			weight: 1,
+			value: 1,
+			schooling_size: 3..4,
+			spawn_density: 0.1,
+			spawn_elevation: Elevation(-18)..Elevation(0),
+			spawn_location: Elevation(-18)..Elevation(0),
+			params_range: (-9..0, 2..11),
+			speed_factor: 9..11,
+		}
+		Self::Fish5 => {
+			weight: 1,
+			value: 1,
+			schooling_size: 3..4,
+			spawn_density: 0.1,
+			spawn_elevation: Elevation(-18)..Elevation(0),
+			spawn_location: Elevation(-18)..Elevation(0),
+			params_range: (-9..0, 2..11),
+			speed_factor: 9..11,
+		}
+		Self::Fish6 => {
+			weight: 1,
+			value: 1,
+			schooling_size: 3..4,
+			spawn_density: 0.1,
+			spawn_elevation: Elevation(-18)..Elevation(0),
+			spawn_location: Elevation(-18)..Elevation(0),
+			params_range: (-9..0, 2..11),
+			speed_factor: 9..11,
+		}
+		Self::Fish7 => {
+			weight: 1,
+			value: 1,
+			schooling_size: 3..4,
+			spawn_density: 0.1,
+			spawn_elevation: Elevation(-18)..Elevation(0),
+			spawn_location: Elevation(-18)..Elevation(0),
+			params_range: (-9..0, 2..11),
+			speed_factor: 9..11,
+		}
+		Self::Starfish0 => {
+			weight: 1,
+			value: 1,
+			schooling_size: 3..4,
+			spawn_density: 0.1,
+			spawn_elevation: Elevation(-18)..Elevation(0),
+			spawn_location: Elevation(-18)..Elevation(0),
+			params_range: (0..1,0..1),
+			speed_factor: 2..3,
+		}
+		Self::Starfish1 => {
+			weight: 1,
+			value: 1,
+			schooling_size: 3..4,
+			spawn_density: 0.1,
+			spawn_elevation: Elevation(-18)..Elevation(0),
+			spawn_location: Elevation(-18)..Elevation(0),
+			params_range: (0..1,0..1),
+			speed_factor: 2..3,
+		}
+		Self::Starfish2 => {
+			weight: 1,
+			value: 1,
+			schooling_size: 3..4,
+			spawn_density: 0.1,
+			spawn_elevation: Elevation(-18)..Elevation(0),
+			spawn_location: Elevation(-18)..Elevation(0),
+			params_range: (0..1,0..1),
+			speed_factor: 2..3,
+		}
+		Self::Starfish3 => {
+			weight: 1,
+			value: 1,
+			schooling_size: 3..4,
+			spawn_density: 0.1,
+			spawn_elevation: Elevation(-18)..Elevation(0),
+			spawn_location: Elevation(-18)..Elevation(0),
+			params_range: (0..1,0..1),
+			speed_factor: 2..3,
+		}
+		Self::Starfish4 => {
+			weight: 1,
+			value: 1,
+			schooling_size: 3..4,
+			spawn_density: 0.1,
+			spawn_elevation: Elevation(-18)..Elevation(0),
+			spawn_location: Elevation(-18)..Elevation(0),
+			params_range: (0..1,0..1),
+			speed_factor: 2..3,
+		}
+		Self::Grass0 => {
+			weight: 1,
+			value: 1,
+			schooling_size: NO_SCHOOLING,
+			spawn_density: 1.0,
+			spawn_elevation: Elevation(-1)..Elevation(0),
+			spawn_location: Elevation(-4)..Elevation(0),
+			params_range: (0..1,0..1),
+			speed_factor: 1..2,
+		}
+		Self::Grass1 => {
+			weight: 1,
+			value: 1,
+			schooling_size: NO_SCHOOLING,
+			spawn_density: 1.0,
+			spawn_elevation: Elevation(-1)..Elevation(0),
+			spawn_location: Elevation(-4)..Elevation(0),
+			params_range: (0..1,0..1),
+			speed_factor: 1..2,
+		}
+		Self::Shoe => {
+			weight: 1,
+			value: 1,
+			schooling_size: NO_SCHOOLING,
+			spawn_density: 1.0,
+			spawn_elevation: Elevation(-5)..Elevation(-1),
+			spawn_location: Elevation(-18)..Elevation(0),
+			params_range: (0..1,0..1),
+			speed_factor: 1..2,
 		}
 	}
 }
@@ -178,9 +327,12 @@ impl ResourcePack {
 			elevation: rng.gen_range(kind.spawn_elevation.clone()),
 			ori: 0.,
 			origin: loc,
-			params: (rng.gen_range(-9..=-1), rng.gen_range(2..=10)), // (0,0) for starfish
+			params: (
+				rng.gen_range(kind.params_range.0.clone()),
+				rng.gen_range(kind.params_range.1.clone()),
+			), // (0,0) for starfish
 			phase: rng.gen_range(0.0..TAU),
-			speed_factor: 10, // 1 for starfish
+			speed_factor: rng.gen_range(kind.speed_factor.clone()),
 			backwards: rng.gen(),
 		}
 	}
@@ -199,14 +351,22 @@ impl ResourcePack {
 
 		// The position function
 		let base = vec2(progress.sin(), progress.cos());
-		let first = vec2(
-			(progress * self.params.0 as f32).sin(),
-			(progress * self.params.0 as f32).cos(),
-		);
-		let second = vec2(
-			(progress * self.params.1 as f32).sin(),
-			(progress * self.params.1 as f32).cos(),
-		);
+		let first = if self.params.0 == 0 {
+			vec2(0., 0.)
+		} else {
+			vec2(
+				(progress * self.params.0 as f32).sin(),
+				(progress * self.params.0 as f32).cos(),
+			)
+		};
+		let second = if self.params.0 == 0 {
+			vec2(0., 0.)
+		} else {
+			vec2(
+				(progress * self.params.1 as f32).sin(),
+				(progress * self.params.1 as f32).cos(),
+			)
+		};
 		self.loc = Location(self.origin.0 + base + first + second);
 
 		// Derivation of the position function (i.e. the orientation vector)
