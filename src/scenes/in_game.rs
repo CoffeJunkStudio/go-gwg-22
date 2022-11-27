@@ -587,6 +587,9 @@ impl Scene<GlobalState> for Game {
 
 		let mut rng = wyhash::WyRng::seed_from_u64((gwg::timer::time() * 1000.) as u64);
 
+		let mut did_trade_successful = false;
+		let mut did_trade_fail = false;
+
 		while gwg::timer::check_update_time(ctx, TICKS_PER_SECOND.into()) {
 			let mut rudder = 0.0;
 
@@ -627,27 +630,30 @@ impl Scene<GlobalState> for Game {
 					}
 				}
 			}
-		}
 
-		let mut did_trade_successful = false;
-		if let Some(mut trade) = self.world.state.get_trading() {
-			if is_key_pressed(ctx, KeyCode::S) {
-				let res = trade.sell_fish(1);
-				if let Some(proceeds) = res {
-					if proceeds > 0 {
-						did_trade_successful = true;
-					} else {
-						if self.audios.sound_enabled {
-							self.audios.fail_sound.play(ctx).unwrap();
+			if let Some(mut trade) = self.world.state.get_trading() {
+				if is_key_pressed(ctx, KeyCode::S) {
+					let res = trade.sell_fish(10);
+					if let Some(proceeds) = res {
+						if proceeds > 0 {
+							did_trade_successful = true;
+						} else {
+							did_trade_fail = true;
 						}
 					}
 				}
 			}
 		}
+
 		self.audios
 			.sell_sound
 			.set_volume(ctx, did_trade_successful as u8 as f32)
 			.unwrap();
+
+		if self.audios.sound_enabled && did_trade_fail && !did_trade_successful {
+			self.audios.fail_sound.play(ctx).unwrap();
+		}
+
 
 		// Water wave sound
 		let water_per_wind_speed = 1. / 2.;
