@@ -1,4 +1,5 @@
 use std::f32::consts::TAU;
+use std::ops::Range;
 
 use enum_map::Enum;
 use glm::vec2;
@@ -18,6 +19,7 @@ use state::Reefing;
 use state::WorldState;
 use terrain::Terrain;
 use units::BiPolarFraction;
+use units::Elevation;
 use units::Fish;
 use units::Location;
 use units::Tick;
@@ -46,9 +48,6 @@ const VEHICLE_DEADWEIGHT: f32 = 100.0;
 
 /// The physical size ("diameter") of a water resource pack.
 pub const RESOURCE_PACK_FISH_SIZE: f32 = 0.8;
-
-/// The amount of fuel in each fuel resource pack
-pub const RESOURCE_PACK_FISH_AMOUNT: Fish = Fish(20);
 
 /// Scalar factor influencing the strength of ground based friction.
 ///
@@ -90,8 +89,62 @@ pub const TICKS_PER_SECOND: u16 = 60;
 #[derive(strum::EnumIter)]
 #[derive(standard_dist::StandardDist)]
 pub enum ResourcePackContent {
-	Fish,
+	Fish0,
+	Fish1,
+	Fish2,
+	Fish3,
+	Fish4,
+	Fish5,
+	Fish6,
+	Fish7,
 }
+
+pub struct ResourcePackStats {
+	/// The resource weight in kg
+	weight: u32,
+	/// The value of the resource in money
+	value: u64,
+	/// The number of fishies to spawn together
+	schooling_size: Range<usize>,
+	/// The spawn frequency described as density in resources per tile
+	spawn_density: f32,
+	/// Specifies at which depths the resource appears
+	spawn_elevation: Range<Elevation>,
+	/// Specifies in which waters it resource may spawn
+	spawn_location: Range<Elevation>,
+}
+
+const NO_SCHOOLING: Range<usize> = 1..2;
+
+enumeraties::props! {
+	impl Deref for ResourcePackContent as const ResourcePackStats {
+		Self::Fish0 => {
+			weight: 10,
+			value: 12,
+			schooling_size: 4..10,
+			spawn_density: 1.0,
+			spawn_elevation: Elevation(-18)..Elevation(-12),
+			spawn_location: Elevation(-18)..Elevation(-12),
+		}
+		Self::Fish1 => {
+			weight: 20,
+			value: 25,
+			schooling_size: NO_SCHOOLING,
+			spawn_density: 0.1,
+			spawn_elevation: Elevation(-5)..Elevation(0),
+			spawn_location: Elevation(-12)..Elevation(0),
+		}
+		_ => {
+			weight: 10,
+			value: 12,
+			schooling_size: 3..4,
+			spawn_density: 0.0,
+			spawn_elevation: Elevation(-18)..Elevation(-7),
+			spawn_location: Elevation(-18)..Elevation(-7),
+		}
+	}
+}
+
 
 /// A collectable resource on the ground
 #[derive(Debug, Clone)]
@@ -99,12 +152,12 @@ pub enum ResourcePackContent {
 pub struct ResourcePack {
 	/// The type of the resource
 	pub content: ResourcePackContent,
-	/// Fish variant
-	pub variant: u8,
 	/// The location of the resource in meter
 	pub loc: Location,
 	/// The orientation of the resource, zero is world x axis
 	pub ori: f32,
+	/// The depth of the fish
+	pub elevation: Elevation,
 
 	/// The origin location of the resource in meter
 	pub origin: Location,
@@ -118,11 +171,11 @@ pub struct ResourcePack {
 	pub backwards: bool,
 }
 impl ResourcePack {
-	pub fn new<R: Rng>(loc: Location, mut rng: R) -> Self {
+	pub fn new<R: Rng>(loc: Location, kind: ResourcePackContent, mut rng: R) -> Self {
 		Self {
-			content: rng.gen(),
-			variant: rng.gen_range(0..FISH_TYPES),
+			content: kind,
 			loc: Default::default(),
+			elevation: rng.gen_range(kind.spawn_elevation.clone()),
 			ori: 0.,
 			origin: loc,
 			params: (rng.gen_range(-9..=-1), rng.gen_range(2..=10)), // (0,0) for starfish

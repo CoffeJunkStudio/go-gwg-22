@@ -9,6 +9,11 @@ use std::ops::SubAssign;
 
 use enum_map::Enum;
 use nalgebra_glm::Vec2;
+use rand::Rng;
+use rand_distr::uniform::SampleBorrow;
+use rand_distr::uniform::SampleUniform;
+use rand_distr::uniform::UniformInt;
+use rand_distr::uniform::UniformSampler;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -305,6 +310,7 @@ pub enum TileType {
 	Beach,
 	Grass,
 }
+
 impl TileType {
 	pub const fn lowest(self) -> Elevation {
 		match self {
@@ -381,4 +387,41 @@ impl Elevation {
 
 		f32::from(self.0.saturating_sub(ty.lowest().0)) / f32::from(ty.highest().0 - ty.lowest().0)
 	}
+}
+
+// Following allows elevation to be sampled form ranges
+
+/// A uniform sampler for [Elevation].
+#[derive(Clone, Copy, Debug)]
+pub struct UniformElevation(UniformInt<i16>);
+
+impl UniformSampler for UniformElevation {
+	type X = Elevation;
+
+	fn new<B1, B2>(low: B1, high: B2) -> Self
+	where
+		B1: SampleBorrow<Self::X> + Sized,
+		B2: SampleBorrow<Self::X> + Sized,
+	{
+		UniformElevation(UniformInt::<i16>::new(low.borrow().0, high.borrow().0))
+	}
+
+	fn new_inclusive<B1, B2>(low: B1, high: B2) -> Self
+	where
+		B1: SampleBorrow<Self::X> + Sized,
+		B2: SampleBorrow<Self::X> + Sized,
+	{
+		UniformElevation(UniformInt::<i16>::new_inclusive(
+			low.borrow().0,
+			high.borrow().0,
+		))
+	}
+
+	fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::X {
+		Elevation(self.0.sample(rng))
+	}
+}
+
+impl SampleUniform for Elevation {
+	type Sampler = UniformElevation;
 }

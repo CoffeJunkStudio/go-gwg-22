@@ -37,9 +37,11 @@ use logic::state::SailKind;
 use logic::terrain::TileCoord;
 use logic::units::BiPolarFraction;
 use logic::units::Distance;
+use logic::units::Elevation;
 use logic::units::Location;
 use logic::units::TileType;
 use logic::Input;
+use logic::ResourcePackContent;
 use logic::World;
 use logic::TICKS_PER_SECOND;
 use logic::TILE_SIZE;
@@ -806,14 +808,26 @@ impl Scene<GlobalState> for Game {
 					remapped.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE).xx() * 0.5;
 				let dest = self.location_to_screen_coords(ctx, Location(resource_pos));
 
-				let batch = &mut self.images.resource_batches.fishes[usize::from(resource.variant)];
+				let batch = match resource.content {
+					ResourcePackContent::Fish0 => &mut self.images.resource_batches.fishes[0],
+					ResourcePackContent::Fish1 => &mut self.images.resource_batches.fishes[1],
+					ResourcePackContent::Fish2 => &mut self.images.resource_batches.fishes[2],
+					ResourcePackContent::Fish3 => &mut self.images.resource_batches.fishes[3],
+					ResourcePackContent::Fish4 => &mut self.images.resource_batches.fishes[4],
+					ResourcePackContent::Fish5 => &mut self.images.resource_batches.fishes[5],
+					ResourcePackContent::Fish6 => &mut self.images.resource_batches.fishes[6],
+					ResourcePackContent::Fish7 => &mut self.images.resource_batches.fishes[7],
+					_ => &mut self.images.resource_batches.fishes[7],
+				};
 
 				let resource_scale = logic::glm::vec1(
 					logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter / batch.params().width as f32,
 				)
 				.xx();
 
-				let depth = ((resource.params.0 + 10) as f32 / 10.).clamp(0., 1.);
+				let max_depth = Elevation::DEEPEST.0;
+				let depth = (f32::from(resource.elevation.0 - max_depth) / f32::from(-max_depth))
+					.clamp(0., 1.);
 				let d_color = depth;
 				let d_alpha = (depth * 2. / 3.) + 0.2;
 
@@ -910,18 +924,17 @@ impl Scene<GlobalState> for Game {
 					self.images.terrain_batches.tile_sprite(eastern).add(param);
 
 					// TODO: how about randomizing the orientation?
-					self.images
-						.terrain_batches
-						.tile_mask_s4(eastern)
-						.add(param);
-
+					self.images.terrain_batches.tile_mask_s4(eastern).add(param);
 				} else {
 					if class < eastern && !ne_eq {
 						// Other class
 						let other_class = eastern;
 
 						// The base tile (to be made into a transition via mask)
-						self.images.terrain_batches.tile_sprite(other_class).add(param);
+						self.images
+							.terrain_batches
+							.tile_sprite(other_class)
+							.add(param);
 
 						// The rotation of the mask
 						let param_rot = param.clone();
@@ -955,12 +968,15 @@ impl Scene<GlobalState> for Game {
 						let other_class = southern;
 
 						// The base tile (to be made into a transition via mask)
-						self.images.terrain_batches.tile_sprite(other_class).add(param);
+						self.images
+							.terrain_batches
+							.tile_sprite(other_class)
+							.add(param);
 
 						// The rotation of the mask
 						let param_rot = param
-						.rotation(std::f32::consts::PI / 2.)
-						.dest(dest + logic::glm::vec2(screen_size, 0.));
+							.rotation(std::f32::consts::PI / 2.)
+							.dest(dest + logic::glm::vec2(screen_size, 0.));
 
 						// Determine the mask to be used
 						if !sw_eq {
@@ -991,12 +1007,15 @@ impl Scene<GlobalState> for Game {
 						let other_class = western;
 
 						// The base tile (to be made into a transition via mask)
-						self.images.terrain_batches.tile_sprite(other_class).add(param);
+						self.images
+							.terrain_batches
+							.tile_sprite(other_class)
+							.add(param);
 
 						// The rotation of the mask
 						let param_rot = param
-						.rotation(std::f32::consts::PI)
-						.dest(dest + logic::glm::vec2(screen_size, screen_size));
+							.rotation(std::f32::consts::PI)
+							.dest(dest + logic::glm::vec2(screen_size, screen_size));
 
 						// Determine the mask to be used
 						if !nw_eq {
@@ -1027,12 +1046,15 @@ impl Scene<GlobalState> for Game {
 						let other_class = northern;
 
 						// The base tile (to be made into a transition via mask)
-						self.images.terrain_batches.tile_sprite(other_class).add(param);
+						self.images
+							.terrain_batches
+							.tile_sprite(other_class)
+							.add(param);
 
 						// The rotation of the mask
 						let param_rot = param
-						.rotation(-std::f32::consts::PI / 2.)
-						.dest(dest + logic::glm::vec2(0., screen_size));
+							.rotation(-std::f32::consts::PI / 2.)
+							.dest(dest + logic::glm::vec2(0., screen_size));
 
 						// Determine the mask to be used
 						if !ne_eq {
@@ -1066,42 +1088,66 @@ impl Scene<GlobalState> for Game {
 					.get(terrain.north_of(terrain.east_of(tc)))
 					.classify();
 				if class < north_east && (north_east != northern && north_east != eastern) {
-					self.images.terrain_batches.tile_sprite(north_east).add(param);
+					self.images
+						.terrain_batches
+						.tile_sprite(north_east)
+						.add(param);
 					let param_rot = param.clone();
-					self.images.terrain_batches.tile_mask_c1(north_east).add(param_rot);
+					self.images
+						.terrain_batches
+						.tile_mask_c1(north_east)
+						.add(param_rot);
 				}
 				let south_east = terrain
 					.get(terrain.south_of(terrain.east_of(tc)))
 					.classify();
 				if class < south_east && (south_east != southern && south_east != eastern) {
-					self.images.terrain_batches.tile_sprite(south_east).add(param);
+					self.images
+						.terrain_batches
+						.tile_sprite(south_east)
+						.add(param);
 					let param_rot = param
 						.clone()
 						.rotation(std::f32::consts::PI / 2.)
 						.dest(dest + logic::glm::vec2(screen_size, 0.));
-					self.images.terrain_batches.tile_mask_c1(south_east).add(param_rot);
+					self.images
+						.terrain_batches
+						.tile_mask_c1(south_east)
+						.add(param_rot);
 				}
 				let south_west = terrain
 					.get(terrain.south_of(terrain.west_of(tc)))
 					.classify();
 				if class < south_west && (south_west != southern && south_west != western) {
-					self.images.terrain_batches.tile_sprite(south_west).add(param);
+					self.images
+						.terrain_batches
+						.tile_sprite(south_west)
+						.add(param);
 					let param_rot = param
 						.clone()
 						.rotation(std::f32::consts::PI)
 						.dest(dest + logic::glm::vec2(screen_size, screen_size));
-					self.images.terrain_batches.tile_mask_c1(south_west).add(param_rot);
+					self.images
+						.terrain_batches
+						.tile_mask_c1(south_west)
+						.add(param_rot);
 				}
 				let north_west = terrain
 					.get(terrain.north_of(terrain.west_of(tc)))
 					.classify();
 				if class < north_west && (north_west != northern && north_west != western) {
-					self.images.terrain_batches.tile_sprite(north_west).add(param);
+					self.images
+						.terrain_batches
+						.tile_sprite(north_west)
+						.add(param);
 					let param_rot = param
 						.clone()
 						.rotation(-std::f32::consts::PI / 2.)
 						.dest(dest + logic::glm::vec2(0., screen_size));
-					self.images.terrain_batches.tile_mask_c1(north_west).add(param_rot);
+					self.images
+						.terrain_batches
+						.tile_mask_c1(north_west)
+						.add(param_rot);
 				}
 			}
 		}
@@ -1263,9 +1309,10 @@ impl Scene<GlobalState> for Game {
 
 				// Current Ship states
 				let input_text = Text::new(format!(
-					"Ship: {:.1} m/s, fish {:.0} kg",
+					"Ship: {:.1} m/s, fish: {:} kg / {:} ℓ",
 					self.world.state.player.vehicle.ground_speed(),
-					self.world.state.player.vehicle.fish.0
+					self.world.state.player.vehicle.resource_weight,
+					self.world.state.player.vehicle.resource_value,
 				));
 				self.draw_text_with_halo(
 					ctx,
@@ -1309,7 +1356,7 @@ impl Scene<GlobalState> for Game {
 		// Show the current amount of fish in the ship
 		let fish = Text::new(format!(
 			"Fish: {:} kg",
-			self.world.state.player.vehicle.fish.0
+			self.world.state.player.vehicle.resource_weight
 		));
 		self.draw_text_with_halo(
 			ctx,

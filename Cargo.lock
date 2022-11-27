@@ -455,6 +455,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "enumeraties"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e18bc0091bf5864eeb33cd036ee06e2f501ecb894ff6e30fa0ff18f4be4c3004"
+dependencies = [
+ "lazy_static",
+]
+
+[[package]]
 name = "euclid"
 version = "0.22.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -888,6 +897,7 @@ name = "logic"
 version = "0.1.0-alpha"
 dependencies = [
  "enum-map",
+ "enumeraties",
  "lazy_static",
  "nalgebra",
  "nalgebra-glm",

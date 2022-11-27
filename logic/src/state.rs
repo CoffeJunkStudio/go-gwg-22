@@ -373,18 +373,11 @@ impl WorldState {
 			let p = player;
 
 			resources.retain(|r| {
-				let dist = VEHICLE_SIZE / 2.
-					+ match r.content {
-						ResourcePackContent::Fish => RESOURCE_PACK_FISH_SIZE / 2.,
-					};
+				let dist = VEHICLE_SIZE / 2. + RESOURCE_PACK_FISH_SIZE / 2.;
 
 				if r.loc.0.metric_distance(&p.vehicle.pos.0) < dist {
-					match r.content {
-						ResourcePackContent::Fish => {
-							p.vehicle.fish.0 += crate::RESOURCE_PACK_FISH_AMOUNT.0;
-							events.push(Event::Fishy);
-						},
-					}
+					p.vehicle.resource_weight += r.content.weight;
+					p.vehicle.resource_value += r.content.value;
 
 					false
 				} else {
@@ -559,7 +552,7 @@ impl TradeOption<'_> {
 
 	/// Returns the amount of fish the player has left
 	pub fn players_fish_amount(&self) -> u32 {
-		self.state.player.vehicle.fish.0
+		self.state.player.vehicle.resource_weight
 	}
 
 	/// Sell `amount` (in kg) of fish, returns the proceeds
@@ -570,28 +563,35 @@ impl TradeOption<'_> {
 		}
 
 		// Find the actual amount sellable
-		let amount = { amount.min(self.state.player.vehicle.fish.0) };
+		let (weight, value) = {
+			if amount >= self.state.player.vehicle.resource_weight {
+				(
+					self.state.player.vehicle.resource_weight,
+					self.state.player.vehicle.resource_value,
+				)
+			} else {
+				(
+					amount,
+					u64::from(amount) * self.state.player.vehicle.resource_value
+						/ u64::from(self.state.player.vehicle.resource_weight),
+				)
+			}
+		};
 
 		// Calculate the generated proceeds
-		let proceeds = u64::from(amount) * self.base_price;
+		let proceeds = value * self.base_price;
 
 		// Remove the fish from the player
 		// This must not underflow, because we checked above
-		self.state.player.vehicle.fish.0 = self
-			.state
-			.player
-			.vehicle
-			.fish
-			.0
-			.checked_sub(amount)
-			.expect("Trying to sell too much");
+		self.state.player.vehicle.resource_weight -= weight;
+		self.state.player.vehicle.resource_value -= value;
 
 		// Deposit proceeds into the player's account
 		// If the player manages to get 2^64 money, we just keep it that way
 		self.state.player.money = self.state.player.money.saturating_add(proceeds);
 
 		// Remember the session trade volume
-		self.traded_fish_amount += amount;
+		self.traded_fish_amount += weight;
 
 		Some(proceeds)
 	}
@@ -656,8 +656,10 @@ pub struct Vehicle {
 	pub ruder: BiPolarFraction,
 	/// State of the engine
 	pub sail: Sail,
-	//// Amount of fish on board
-	pub fish: Fish,
+	//// Amount of fish and stuff on board in kg
+	pub resource_weight: u32,
+	//// Amount of fish and stuff on board in money
+	pub resource_value: u64,
 }
 impl Vehicle {
 	/// Ground speed in m/s
@@ -715,7 +717,7 @@ impl Vehicle {
 
 	/// Returns the total mass of the vehicle (inclusive payloads) in kilogram
 	pub fn mass(&self) -> f32 {
-		VEHICLE_DEADWEIGHT + self.fish.0 as f32
+		VEHICLE_DEADWEIGHT + self.resource_weight as f32
 	}
 }
 
@@ -728,7 +730,8 @@ impl Default for Vehicle {
 			heading: Default::default(),
 			ruder: Default::default(),
 			velocity: Default::default(),
-			fish: Fish(0),
+			resource_weight: 0,
+			resource_value: 0,
 			angle_of_list: 0.0,
 		}
 	}
