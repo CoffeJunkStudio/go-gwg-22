@@ -61,6 +61,8 @@ fn normalize_angle_rel(angle: f32) -> f32 {
 pub enum Event {
 	// TODO add stuff
 	Fishy,
+	Starfish,
+	Shoe,
 }
 
 
@@ -380,8 +382,24 @@ impl WorldState {
 					p.vehicle.resource_weight += r.content.weight;
 					p.vehicle.resource_value += r.content.value;
 
-					// Emit fishy event
-					events.push(Event::Fishy);
+					// Emit event for sound effects
+					{
+						use ResourcePackContent::*;
+						match r.content {
+							Fish0 | Fish1 | Fish2 | Fish3 | Fish4 | Fish5 | Fish6 | Fish7 => {
+								events.push(Event::Fishy)
+							},
+							Starfish0 | Starfish1 | Starfish2 | Starfish3 | Starfish4 => {
+								events.push(Event::Starfish);
+							},
+							Shoe => {
+								events.push(Event::Shoe);
+							},
+							Grass0 | Grass1 => {
+								// No sound.
+							},
+						}
+					}
 
 					// Let the fish be removed from the world
 					false

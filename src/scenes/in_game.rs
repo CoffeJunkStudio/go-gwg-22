@@ -111,6 +111,7 @@ struct Audios {
 	sound_fishy_1: audio::Source,
 	sound_fishy_2: audio::Source,
 	sound_fishy_3: audio::Source,
+	sound_shoe: audio::Source,
 	music_0: audio::Source,
 	water_sound_0: audio::Source,
 	water_sound_1: audio::Source,
@@ -185,6 +186,7 @@ impl Game {
 		let sound_fishy_1 = audio::Source::new(ctx, "/sound/fischie.ogg")?;
 		let sound_fishy_2 = audio::Source::new(ctx, "/sound/fischie2.ogg")?;
 		let sound_fishy_3 = audio::Source::new(ctx, "/sound/fischie3.ogg")?;
+		let sound_shoe = audio::Source::new(ctx, "/sound/shoe.ogg")?;
 
 		let mut sell_sound = audio::Source::new(ctx, "/sound/sell-sound.ogg")?;
 		sell_sound.set_repeat(true);
@@ -383,6 +385,7 @@ impl Game {
 				sound_fishy_1,
 				sound_fishy_2,
 				sound_fishy_3,
+				sound_shoe,
 				music_0,
 				water_sound_0,
 				water_sound_1,
@@ -611,6 +614,15 @@ impl Scene<GlobalState> for Game {
 							let sound = fishies.choose(&mut rng).unwrap();
 
 							sound.play(ctx).unwrap();
+						},
+						Event::Shoe => {
+							let shoe = [&self.audios.sound_shoe];
+							let sound = shoe.choose(&mut rng).unwrap();
+
+							sound.play(ctx).unwrap();
+						},
+						Event::Starfish => {
+							// None yet
 						},
 					}
 				}
