@@ -63,6 +63,7 @@ pub enum Event {
 	Fishy,
 	Starfish,
 	Shoe,
+	Grass,
 }
 
 
@@ -396,7 +397,7 @@ impl WorldState {
 								events.push(Event::Shoe);
 							},
 							Grass0 | Grass1 => {
-								// No sound.
+								events.push(Event::Grass);
 							},
 						}
 					}
