@@ -175,6 +175,7 @@ impl Game {
 		let mut music_0 = audio::Source::new(ctx, "/music/sailing-chanty.ogg")?;
 		music_0.set_repeat(true);
 		if music_enabled {
+			music_0.set_volume(ctx, 0.7)?;
 			music_0.play(ctx)?;
 		}
 
@@ -205,6 +206,7 @@ impl Game {
 			water_sound_1.play(ctx)?;
 		}
 		if music_enabled {
+			
 			water_sound_0.play(ctx)?;
 		}
 
