@@ -323,7 +323,7 @@ impl Game {
 			gwg::timer::time_since_start(ctx).as_secs_f64()
 		);
 		// Generate world
-		let noise = PerlinNoise;
+		let noise = PerlinNoise; // logic::generator::WhiteNoise
 		let resource_density = {
 			cfg_if! {
 				if #[cfg(feature = "dev")] {
@@ -891,96 +891,217 @@ impl Scene<GlobalState> for Game {
 						.add(solid_mask_param);
 				}
 
-				// Edges
+				// Sides
 
-				let easter = terrain.get(terrain.east_of(tc)).classify();
-				if class < easter {
-					self.images.terrain_batches.tile_sprite(easter).add(param);
-					let param_rot = param.clone();
+				let eastern = terrain.get(terrain.east_of(tc)).classify();
+				let southern = terrain.get(terrain.south_of(tc)).classify();
+				let western = terrain.get(terrain.west_of(tc)).classify();
+				let northern = terrain.get(terrain.north_of(tc)).classify();
+
+				let ne_eq = northern == eastern;
+				let nw_eq = northern == western;
+				let se_eq = southern == eastern;
+				let sw_eq = southern == western;
+
+				if class < eastern && ne_eq && nw_eq && se_eq && sw_eq {
+					// Full four sides
+
+					// The base tile (to be made into a transition via mask)
+					self.images.terrain_batches.tile_sprite(eastern).add(param);
+
+					// TODO: how about randomizing the orientation?
 					self.images
 						.terrain_batches
-						.tile_mask_s1(easter)
-						.add(param_rot);
-				}
-				let southern = terrain.get(terrain.south_of(tc)).classify();
-				if class < southern {
-					self.images.terrain_batches.tile_sprite(southern).add(param);
-					let param_rot = param
-						.clone()
+						.tile_mask_s4(eastern)
+						.add(param);
+
+				} else {
+					if class < eastern && !ne_eq {
+						// Other class
+						let other_class = eastern;
+
+						// The base tile (to be made into a transition via mask)
+						self.images.terrain_batches.tile_sprite(other_class).add(param);
+
+						// The rotation of the mask
+						let param_rot = param.clone();
+
+						// Determine the mask to be used
+						if !se_eq {
+							// Single edge, just a straight edge
+							self.images
+								.terrain_batches
+								.tile_mask_s1(other_class)
+								.add(param_rot);
+						} else if !sw_eq {
+							// Double edge, aka an inner corner
+							self.images
+								.terrain_batches
+								.tile_mask_s2(other_class)
+								.add(param_rot);
+						} else {
+							// Since NE is not equal, NW must not as well
+							debug_assert!(!nw_eq);
+
+							// Triple edge, aka a bay
+							self.images
+								.terrain_batches
+								.tile_mask_s3(other_class)
+								.add(param_rot);
+						}
+					}
+					if class < southern && !se_eq {
+						// Other class
+						let other_class = southern;
+
+						// The base tile (to be made into a transition via mask)
+						self.images.terrain_batches.tile_sprite(other_class).add(param);
+
+						// The rotation of the mask
+						let param_rot = param
 						.rotation(std::f32::consts::PI / 2.)
 						.dest(dest + logic::glm::vec2(screen_size, 0.));
-					self.images
-						.terrain_batches
-						.tile_mask_s1(southern)
-						.add(param_rot);
-				}
-				let western = terrain.get(terrain.west_of(tc)).classify();
-				if class < western {
-					self.images.terrain_batches.tile_sprite(western).add(param);
-					let param_rot = param
-						.clone()
+
+						// Determine the mask to be used
+						if !sw_eq {
+							// Single edge, just a straight edge
+							self.images
+								.terrain_batches
+								.tile_mask_s1(other_class)
+								.add(param_rot);
+						} else if !nw_eq {
+							// Double edge, aka an inner corner
+							self.images
+								.terrain_batches
+								.tile_mask_s2(other_class)
+								.add(param_rot);
+						} else {
+							// Since NE is not equal, NW must not as well
+							debug_assert!(!ne_eq);
+
+							// Triple edge, aka a bay
+							self.images
+								.terrain_batches
+								.tile_mask_s3(other_class)
+								.add(param_rot);
+						}
+					}
+					if class < western && !sw_eq {
+						// Other class
+						let other_class = western;
+
+						// The base tile (to be made into a transition via mask)
+						self.images.terrain_batches.tile_sprite(other_class).add(param);
+
+						// The rotation of the mask
+						let param_rot = param
 						.rotation(std::f32::consts::PI)
 						.dest(dest + logic::glm::vec2(screen_size, screen_size));
-					self.images
-						.terrain_batches
-						.tile_mask_s1(western)
-						.add(param_rot);
-				}
-				let norther = terrain.get(terrain.north_of(tc)).classify();
-				if class < norther {
-					self.images.terrain_batches.tile_sprite(norther).add(param);
-					let param_rot = param
-						.clone()
+
+						// Determine the mask to be used
+						if !nw_eq {
+							// Single edge, just a straight edge
+							self.images
+								.terrain_batches
+								.tile_mask_s1(other_class)
+								.add(param_rot);
+						} else if !ne_eq {
+							// Double edge, aka an inner corner
+							self.images
+								.terrain_batches
+								.tile_mask_s2(other_class)
+								.add(param_rot);
+						} else {
+							// Since NE is not equal, NW must not as well
+							debug_assert!(!se_eq);
+
+							// Triple edge, aka a bay
+							self.images
+								.terrain_batches
+								.tile_mask_s3(other_class)
+								.add(param_rot);
+						}
+					}
+					if class < northern && !nw_eq {
+						// Other class
+						let other_class = northern;
+
+						// The base tile (to be made into a transition via mask)
+						self.images.terrain_batches.tile_sprite(other_class).add(param);
+
+						// The rotation of the mask
+						let param_rot = param
 						.rotation(-std::f32::consts::PI / 2.)
 						.dest(dest + logic::glm::vec2(0., screen_size));
-					self.images
-						.terrain_batches
-						.tile_mask_s1(norther)
-						.add(param_rot);
+
+						// Determine the mask to be used
+						if !ne_eq {
+							// Single edge, just a straight edge
+							self.images
+								.terrain_batches
+								.tile_mask_s1(other_class)
+								.add(param_rot);
+						} else if !se_eq {
+							// Double edge, aka an inner corner
+							self.images
+								.terrain_batches
+								.tile_mask_s2(other_class)
+								.add(param_rot);
+						} else {
+							// Since NE is not equal, NW must not as well
+							debug_assert!(!sw_eq);
+
+							// Triple edge, aka a bay
+							self.images
+								.terrain_batches
+								.tile_mask_s3(other_class)
+								.add(param_rot);
+						}
+					}
 				}
 
 				// Corners
 
-				let ne = terrain
+				let north_east = terrain
 					.get(terrain.north_of(terrain.east_of(tc)))
 					.classify();
-				if class < ne && (ne != norther && ne != easter) {
-					self.images.terrain_batches.tile_sprite(ne).add(param);
+				if class < north_east && (north_east != northern && north_east != eastern) {
+					self.images.terrain_batches.tile_sprite(north_east).add(param);
 					let param_rot = param.clone();
-					self.images.terrain_batches.tile_mask_c1(ne).add(param_rot);
+					self.images.terrain_batches.tile_mask_c1(north_east).add(param_rot);
 				}
-				let se = terrain
+				let south_east = terrain
 					.get(terrain.south_of(terrain.east_of(tc)))
 					.classify();
-				if class < se && (se != southern && se != easter) {
-					self.images.terrain_batches.tile_sprite(se).add(param);
+				if class < south_east && (south_east != southern && south_east != eastern) {
+					self.images.terrain_batches.tile_sprite(south_east).add(param);
 					let param_rot = param
 						.clone()
 						.rotation(std::f32::consts::PI / 2.)
 						.dest(dest + logic::glm::vec2(screen_size, 0.));
-					self.images.terrain_batches.tile_mask_c1(se).add(param_rot);
+					self.images.terrain_batches.tile_mask_c1(south_east).add(param_rot);
 				}
-				let sw = terrain
+				let south_west = terrain
 					.get(terrain.south_of(terrain.west_of(tc)))
 					.classify();
-				if class < sw && (sw != southern && sw != western) {
-					self.images.terrain_batches.tile_sprite(sw).add(param);
+				if class < south_west && (south_west != southern && south_west != western) {
+					self.images.terrain_batches.tile_sprite(south_west).add(param);
 					let param_rot = param
 						.clone()
 						.rotation(std::f32::consts::PI)
 						.dest(dest + logic::glm::vec2(screen_size, screen_size));
-					self.images.terrain_batches.tile_mask_c1(sw).add(param_rot);
+					self.images.terrain_batches.tile_mask_c1(south_west).add(param_rot);
 				}
-				let nw = terrain
+				let north_west = terrain
 					.get(terrain.north_of(terrain.west_of(tc)))
 					.classify();
-				if class < nw && (nw != norther && nw != western) {
-					self.images.terrain_batches.tile_sprite(nw).add(param);
+				if class < north_west && (north_west != northern && north_west != western) {
+					self.images.terrain_batches.tile_sprite(north_west).add(param);
 					let param_rot = param
 						.clone()
 						.rotation(-std::f32::consts::PI / 2.)
 						.dest(dest + logic::glm::vec2(0., screen_size));
-					self.images.terrain_batches.tile_mask_c1(nw).add(param_rot);
+					self.images.terrain_batches.tile_mask_c1(north_west).add(param_rot);
 				}
 			}
 		}

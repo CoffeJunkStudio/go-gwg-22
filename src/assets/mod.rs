@@ -124,6 +124,36 @@ impl TerrainBatches {
 		}
 	}
 
+	/// Gives the single side mask for the tile of the given type
+	pub fn tile_mask_s2(&mut self, tt: TileType) -> &mut SpriteBatch {
+		match tt {
+			TileType::DeepWater => unimplemented!("There are not masks for Deep Water"),
+			TileType::ShallowWater => &mut self.shallow_s2,
+			TileType::Beach => &mut self.beach_s2,
+			TileType::Grass => &mut self.grass_s2,
+		}
+	}
+
+	/// Gives the single side mask for the tile of the given type
+	pub fn tile_mask_s3(&mut self, tt: TileType) -> &mut SpriteBatch {
+		match tt {
+			TileType::DeepWater => unimplemented!("There are not masks for Deep Water"),
+			TileType::ShallowWater => &mut self.shallow_s3,
+			TileType::Beach => &mut self.beach_s3,
+			TileType::Grass => &mut self.grass_s3,
+		}
+	}
+
+	/// Gives the single side mask for the tile of the given type
+	pub fn tile_mask_s4(&mut self, tt: TileType) -> &mut SpriteBatch {
+		match tt {
+			TileType::DeepWater => unimplemented!("There are not masks for Deep Water"),
+			TileType::ShallowWater => &mut self.shallow_s4,
+			TileType::Beach => &mut self.beach_s4,
+			TileType::Grass => &mut self.grass_s4,
+		}
+	}
+
 	/// Returns all sprite batches for shallow water
 	pub fn shallow_batches(&mut self) -> (&mut SpriteBatch, Vec<&mut SpriteBatch>) {
 		(

@@ -42,6 +42,7 @@ impl Generator for WhiteNoise {
 
 		for tt in terrain.iter_mut() {
 			*tt.1 = Elevation(rng.gen_range(Elevation::DEEPEST.0..Elevation::HIGHEST.0));
+			//*tt.1 = Elevation(rng.gen_range((-6)..(-4)));
 		}
 
 		// One resource per tile (on average)
@@ -50,6 +51,19 @@ impl Generator for WhiteNoise {
 
 		let resources = (0..(resource_amount as u32))
 			.map(|_| ResourcePack::new(terrain.random_location(&mut rng), &mut rng))
+			.collect();
+
+		// One harbour per 128 tiles (on average)
+		let harbor_amount =
+			(setting.edge_length as f32 * setting.edge_length as f32 / 256.).max(1.0);
+
+		let harbors = (0..(harbor_amount as u32))
+			.map(|_| {
+				Harbor {
+					loc: terrain.random_passable_location(&mut rng),
+					orientation: rng.gen::<f32>() * TAU,
+				}
+			})
 			.collect();
 
 		let seed: u64 = rng.gen();
@@ -62,6 +76,7 @@ impl Generator for WhiteNoise {
 			},
 			state: WorldState {
 				resources,
+				harbors,
 				..Default::default()
 			},
 		}
