@@ -26,14 +26,22 @@ The core game play is about manoeuvering a sailing ship to catch fish from the s
 
 ### Controls
 
-Use the left and right arrow key to turn the ship.
-
-Use the up and down arrow key to set sail and take in the sail, respectively.
-
-You can use the plus and minus sign on the key pad to zoom in and out.
-
-When you are at a harbour, you can sell fish with `S`, upgrade your sail with `U`,
-and buy a new hull with `H`.
+| Key       | Function |
+|-----------|----------|
+| Up \| `W` | Hoist the sails |
+|Down\| `S` | Take in the sails |
+|Left\| `A` | Turn left |
+|Right\| `D`| Turn right |
+| `E`       | Sell fish (at a harbor) |
+| `R`       | Upgrade Sail (at a harbor) |
+| `F`       | Upgrade Hull (at a harbor) |
+| `1`       | Toggle sounds |
+| `2`       | Toggle music |
+| PgUp      | Zoom in |
+| PgDown    | Zoom out |
+| Backspace | Reset zoom |
+| `ESC`     | Quit |
+| `F11`     | Enter full screen |
 
 
 Prerequisites

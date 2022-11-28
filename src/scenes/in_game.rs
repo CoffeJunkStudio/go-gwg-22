@@ -380,7 +380,7 @@ impl Game {
 		let ui = UiImages {
 			wind_direction_indicator: Image::new(ctx, quad_ctx, Path::new("img/wind-arrow.png"))
 				.unwrap(),
-			wind_speed_colors: vec![Color::BLUE, Color::WHITE, Color::GREEN,],
+			wind_speed_colors: vec![Color::BLUE, Color::WHITE, Color::GREEN],
 		};
 
 		println!(
@@ -636,10 +636,10 @@ impl Scene<GlobalState> for Game {
 			let mut rudder = 0.0;
 
 			// Rudder input
-			if is_key_pressed(ctx, KeyCode::Left) {
+			if is_key_pressed(ctx, KeyCode::Left) || is_key_pressed(ctx, KeyCode::A) {
 				rudder -= 1.0;
 			}
-			if is_key_pressed(ctx, KeyCode::Right) {
+			if is_key_pressed(ctx, KeyCode::Right) || is_key_pressed(ctx, KeyCode::D) {
 				rudder += 1.0;
 			}
 
@@ -682,8 +682,9 @@ impl Scene<GlobalState> for Game {
 				}
 			}
 
+			// Selling (fixed with logic ticks, so it is independent from the frame rate)
 			if let Some(mut trade) = self.world.state.get_trading() {
-				if is_key_pressed(ctx, KeyCode::S) {
+				if is_key_pressed(ctx, KeyCode::E) {
 					let res = trade.sell_fish(10);
 					if let Some(proceeds) = res {
 						if proceeds > 0 {
@@ -1555,33 +1556,28 @@ impl Scene<GlobalState> for Game {
 		quad_ctx: &mut gwg::miniquad::Context,
 		keycode: gwg::miniquad::KeyCode,
 	) {
+		// Quick Quit
 		if keycode == KeyCode::Escape {
 			gwg::event::quit(ctx);
 		}
 
-		if keycode == KeyCode::Enter || keycode == KeyCode::KpEnter {
-			self.audios.sound.play(ctx).unwrap()
-		}
-
-		if keycode == KeyCode::A {
-			self.audios.sound.play(ctx).unwrap();
-			self.audios.music_0.stop(ctx).unwrap();
-			self.audios.music_0.play(ctx).unwrap();
-		}
-
-		if keycode == KeyCode::KpAdd {
+		// Zoom management
+		if keycode == KeyCode::KpAdd || keycode == KeyCode::PageUp {
 			self.zoom_factor_exp = self.zoom_factor_exp.saturating_add(1);
 		}
-		if keycode == KeyCode::KpSubtract {
+		if keycode == KeyCode::KpSubtract || keycode == KeyCode::PageDown {
 			self.zoom_factor_exp = self.zoom_factor_exp.saturating_sub(1);
 		}
-		if keycode == KeyCode::Kp0 {
+		if keycode == KeyCode::Kp0 || keycode == KeyCode::Key0 || keycode == KeyCode::Backspace {
 			self.zoom_factor_exp = DEFAULT_ZOOM_LEVEL;
 		}
-		if keycode == KeyCode::U {
-			// Check whether the player is at a harbor
-			if let Some(mut t) = self.world.state.get_trading() {
-				if t.has_player_valid_speed() {
+
+		// Trading interactions.
+		// Check whether the player is at a harbor
+		if let Some(mut t) = self.world.state.get_trading() {
+			if t.has_player_valid_speed() {
+				// Check for sail upgrade key
+				if keycode == KeyCode::R {
 					let n = t.upgrade_sail();
 					match n {
 						Ok(()) => {
@@ -1599,12 +1595,9 @@ impl Scene<GlobalState> for Game {
 						},
 					}
 				}
-			}
-		}
-		if keycode == KeyCode::H {
-			// Check whether the player is at a harbor
-			if let Some(mut t) = self.world.state.get_trading() {
-				if t.has_player_valid_speed() {
+
+				// Check for hull upgrade key
+				if keycode == KeyCode::F {
 					let n = t.upgrade_hull();
 					match n {
 						Ok(()) => {
@@ -1626,7 +1619,7 @@ impl Scene<GlobalState> for Game {
 		}
 
 		// Reefing input
-		if keycode == KeyCode::Up {
+		if keycode == KeyCode::Up || keycode == KeyCode::W {
 			self.input.reefing = self.input.reefing.increase();
 
 			// Limit reefing
@@ -1634,9 +1627,12 @@ impl Scene<GlobalState> for Game {
 			if self.input.reefing > max_reefing {
 				self.input.reefing = max_reefing;
 			}
-		} else if keycode == KeyCode::Down {
+		}
+		if keycode == KeyCode::Down || keycode == KeyCode::S {
 			self.input.reefing = self.input.reefing.decrease();
 		}
+
+		// Sound & Music management
 		if keycode == KeyCode::Key1 {
 			self.audios
 				.enable_sound(ctx, !self.audios.sound_enabled)
@@ -1648,6 +1644,7 @@ impl Scene<GlobalState> for Game {
 				.unwrap();
 		}
 
+		// Full screen key
 		if keycode == KeyCode::F11 {
 			self.full_screen = !self.full_screen;
 			println!("{}", self.full_screen);
