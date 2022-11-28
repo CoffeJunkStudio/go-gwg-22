@@ -25,6 +25,7 @@ pub struct UiImages {
 	/// Image to indicate the direction of the wind
 	pub wind_direction_indicator: Image,
 	pub wind_speed_colors: Vec<Color>,
+	pub harbor_indicator: Image,
 }
 
 /// Terrain assets bundle

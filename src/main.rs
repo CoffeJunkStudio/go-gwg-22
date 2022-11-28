@@ -13,11 +13,9 @@ use lazy_static::lazy_static;
 use logic::DebuggingConf;
 use structopt::StructOpt;
 
-
 mod assets;
+mod math;
 mod scenes;
-
-
 
 #[derive(Debug, Clone)]
 #[derive(structopt::StructOpt)]
@@ -87,8 +85,6 @@ lazy_static! {
 	static ref OPTIONS: Opts = Opts::from_args();
 }
 
-
-
 fn main() -> gwg::GameResult {
 	println!("--- [main] entered");
 
@@ -106,7 +102,6 @@ fn main() -> gwg::GameResult {
 		|context, _quad_ctx| Box::new(scenes::create_stack(context)),
 	)
 }
-
 
 /// Draw the built version information
 fn draw_version(

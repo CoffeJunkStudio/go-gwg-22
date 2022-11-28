@@ -61,6 +61,7 @@ use crate::assets::ShipSprites;
 use crate::assets::TerrainBatches;
 use crate::assets::UiImages;
 use crate::draw_version;
+use crate::math::Line;
 
 /// Zoom factor exponentiation base.
 ///
@@ -76,6 +77,10 @@ const METERS_PER_SCREEN_DIAGONAL: f32 = 30.;
 ///
 /// Also see: [Game::zoom_factor_exp]
 const DEFAULT_ZOOM_LEVEL: i32 = -2;
+
+/// The maximum harbor distance for which to display a harbor indicator. Harbors whose distance is smaller than this will be indicated.
+/// Unit: meters
+const MAX_HARBOR_DISTANCE: f32 = logic::VEHICLE_SIZE * 60.0;
 
 trait Mix {
 	fn mix(&self, other: &Self, mix_factor: f32) -> Self;
@@ -401,6 +406,7 @@ impl Game {
 			wind_direction_indicator: Image::new(ctx, quad_ctx, Path::new("img/wind-arrow.png"))
 				.unwrap(),
 			wind_speed_colors: vec![Color::BLUE, Color::WHITE, Color::GREEN],
+			harbor_indicator: Image::new(ctx, quad_ctx, Path::new("img/moneybag_col.png")).unwrap(),
 		};
 
 		println!(
@@ -480,11 +486,7 @@ impl Game {
 	/// Conversion factor between world meter and screen pixel.
 	fn pixel_per_meter(&self, ctx: &gwg::Context) -> f32 {
 		// Get the current screen size
-		let Rect {
-			w,
-			h,
-			..
-		} = gwg::graphics::screen_coordinates(ctx);
+		let Rect { w, h, .. } = gwg::graphics::screen_coordinates(ctx);
 		// px/diag
 		let diag_size = (w * w + h * h).sqrt();
 
@@ -764,7 +766,6 @@ impl Scene<GlobalState> for Game {
 		if self.audios.sound_enabled && did_trade_fail && !did_trade_successful {
 			self.audios.fail_sound.play(ctx).unwrap();
 		}
-
 
 		// Water wave sound
 		let water_per_wind_speed = 1. / 2.;
@@ -1748,6 +1749,13 @@ impl Game {
 		quad_ctx: &mut gwg::miniquad::Context,
 	) -> gwg::GameResult<()> {
 		let screen_coords = gwg::graphics::screen_coordinates(ctx);
+		let player_loc = self
+			.world
+			.init
+			.terrain
+			.map_loc_on_torus(self.world.state.player.vehicle.pos);
+
+		// -- Wind indicator --
 
 		let normed_wind_speed = self.world.state.wind.magnitude() / logic::MAX_WIND_SPEED;
 		let n_colors = self.images.ui.wind_speed_colors.len();
@@ -1788,17 +1796,118 @@ impl Game {
 			}
 		};
 
-		let p = DrawParam::new()
-			.dest(Point2::new(
-				screen_coords.w - 128.0,
-				screen_coords.h - 128.0 - text_height,
-			))
-			.offset(Point2::new(0.5, 0.5))
-			.color(color)
-			.scale(logic::glm::vec1(normed_wind_speed).xx())
-			.rotation(self.world.state.wind.angle() + std::f32::consts::FRAC_PI_2);
-		gwg::graphics::draw(ctx, quad_ctx, &self.images.ui.wind_direction_indicator, p)?;
+		// -- Harbor indicators --
+		for harbor_loc in self
+			.world
+			.state
+			.harbors
+			.iter()
+			.flat_map(|harbor| self.torus_locations(harbor.loc))
+		{
+			let player_loc_sc = nalgebra::Point2::new(screen_coords.w, screen_coords.h) * 0.5;
+			let harbor_loc_sc = nalgebra::Point2::from(
+				(harbor_loc.0 - player_loc.0) * self.pixel_per_meter(ctx) + player_loc_sc.coords,
+			);
+
+			if !screen_coords.contains(harbor_loc_sc) {
+				let towards_harbor = (harbor_loc_sc - player_loc_sc).normalize();
+				let harbor_line = Line(player_loc_sc, harbor_loc_sc);
+
+				let screen_corners = [
+					nalgebra::Point2::new(screen_coords.x, screen_coords.y + screen_coords.h),
+					nalgebra::Point2::new(
+						screen_coords.x + screen_coords.w,
+						screen_coords.y + screen_coords.h,
+					),
+					nalgebra::Point2::new(screen_coords.x + screen_coords.w, screen_coords.y),
+					nalgebra::Point2::new(screen_coords.x, screen_coords.y),
+				];
+
+				let display_point = (0..screen_corners.len())
+					.map(|idx1: usize| {
+						let idx2 = (idx1 + 1) % screen_corners.len();
+						Line(screen_corners[idx1], screen_corners[idx2])
+					})
+					.filter_map(|line| harbor_line.intersect(&line))
+					.filter(|intersection_point| {
+						screen_coords.contains(intersection_point - towards_harbor * 0.01)
+					})
+					.min_by(|a, b| {
+						let dst_a = logic::glm::distance2(&harbor_loc_sc.coords, &a.coords);
+						let dst_b = logic::glm::distance2(&harbor_loc_sc.coords, &b.coords);
+						dst_a.partial_cmp(&dst_b).unwrap()
+					});
+
+				if let Some(point) = display_point {
+					let inset = self.images.ui.harbor_indicator.width() as f32;
+					let draw_point = nalgebra::Point2::new(
+						point.x.clamp(
+							screen_coords.x + inset,
+							screen_coords.x + screen_coords.w - inset,
+						),
+						point.y.clamp(
+							screen_coords.y + inset,
+							screen_coords.y + screen_coords.h - inset,
+						),
+					);
+					let max_dist = MAX_HARBOR_DISTANCE * self.pixel_per_meter(ctx);
+					let harbor_dst =
+						logic::glm::distance(&draw_point.coords, &harbor_loc_sc.coords);
+					let harbor_closeness = (max_dist - harbor_dst).max(0.0) / max_dist;
+
+					let mut p = DrawParam::new()
+						.dest(draw_point)
+						.offset(Point2::new(0.5, 0.5));
+					p.color.a = harbor_closeness.powf(2.0);
+					gwg::graphics::draw(ctx, quad_ctx, &self.images.ui.harbor_indicator, p)?;
+				}
+			}
+		}
 
 		Ok(())
+	}
+
+	fn map_length(&self) -> f32 {
+		(u32::from(self.world.init.terrain.edge_length) * logic::TILE_SIZE) as f32
+	}
+
+	fn torus_locations(&self, loc: Location) -> [Location; 9] {
+		let l = self.map_length();
+
+		let normed_loc = self.world.init.terrain.map_loc_on_torus(loc);
+		let x0 = normed_loc.0.x;
+		let y0 = normed_loc.0.y;
+		let x1 = x0 + l;
+		let y1 = y0 + l;
+		let x2 = x1.rem_euclid(l);
+		let y2 = y1.rem_euclid(l);
+
+		[
+			Location::new(x0, y0),
+			Location::new(x0, y1),
+			Location::new(x0, y2),
+			Location::new(x1, y0),
+			Location::new(x1, y1),
+			Location::new(x1, y2),
+			Location::new(x2, y0),
+			Location::new(x2, y1),
+			Location::new(x2, y2),
+		]
+	}
+
+	/// Computes the squared distance for `source` to `target` taking the torus-ness of the map into account
+	///
+	/// Returns the squared distance between `source` and `target` and the (potentially wrapped) closest location of `target`
+	fn distance_squared(&self, source: &Location, target: Location) -> (f32, Location) {
+		self.torus_locations(target)
+			.into_iter()
+			.map(|loc| (logic::glm::distance2(&source.0, &loc.0), loc))
+			.min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
+			.unwrap()
+	}
+
+	fn distance(&self, source: &Location, target: Location) -> (f32, Location) {
+		let (dst_squared, log) = self.distance_squared(source, target);
+		(dst_squared.sqrt(), log)
 	}
 }
