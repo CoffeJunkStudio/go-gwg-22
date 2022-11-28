@@ -486,7 +486,11 @@ impl Game {
 	/// Conversion factor between world meter and screen pixel.
 	fn pixel_per_meter(&self, ctx: &gwg::Context) -> f32 {
 		// Get the current screen size
-		let Rect { w, h, .. } = gwg::graphics::screen_coordinates(ctx);
+		let Rect {
+			w,
+			h,
+			..
+		} = gwg::graphics::screen_coordinates(ctx);
 		// px/diag
 		let diag_size = (w * w + h * h).sqrt();
 
@@ -1863,6 +1867,17 @@ impl Game {
 				}
 			}
 		}
+
+		let p = DrawParam::new()
+			.dest(Point2::new(
+				screen_coords.w - 128.0,
+				screen_coords.h - 128.0 - text_height,
+			))
+			.offset(Point2::new(0.5, 0.5))
+			.color(color)
+			.scale(logic::glm::vec1(normed_wind_speed).xx())
+			.rotation(self.world.state.wind.angle() + std::f32::consts::FRAC_PI_2);
+		gwg::graphics::draw(ctx, quad_ctx, &self.images.ui.wind_direction_indicator, p)?;
 
 		Ok(())
 	}
