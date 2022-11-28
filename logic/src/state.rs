@@ -59,11 +59,12 @@ fn normalize_angle_rel(angle: f32) -> f32 {
 /// Events that can happen between ticks
 #[derive(Debug, Clone)]
 pub enum Event {
-	// TODO add stuff
 	Fishy,
 	Starfish,
 	Shoe,
 	Grass,
+	TileCollision(f32),
+	HarborCollision(f32),
 }
 
 
@@ -253,6 +254,7 @@ impl WorldState {
 			// Save the old tile and position
 			let old_tile: TileCoord = p.vehicle.pos.try_into().expect("Player is out of bounds");
 			let old_pos = p.vehicle.pos.0;
+			let old_velo = p.vehicle.velocity;
 
 			// Move according to acceleration & velocity
 			p.vehicle.velocity += acc * duration;
@@ -285,6 +287,9 @@ impl WorldState {
 							// restore y component sign
 							p.vehicle.velocity.y *= -1.;
 						}
+
+						// Add event about collision
+						events.push(Event::TileCollision(old_velo.norm()));
 					}
 				}
 			} else {
@@ -314,7 +319,10 @@ impl WorldState {
 						//let tang = turn * head;
 
 						let head_speed = p.vehicle.velocity.dot(&head);
-						p.vehicle.velocity -= head * head_speed * 2.;
+						p.vehicle.velocity -= head * head_speed * 1.5;
+
+						// Add event about collision
+						events.push(Event::HarborCollision(old_velo.norm()));
 					}
 				}
 			}

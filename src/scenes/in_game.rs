@@ -114,9 +114,15 @@ struct Audios {
 	sound_shoe: audio::Source,
 	sound_blub: audio::Source,
 	sound_grass: audio::Source,
+	collision_harbor: audio::Source,
+	collision_beach: audio::Source,
 	music_0: audio::Source,
 	water_sound_0: audio::Source,
 	water_sound_1: audio::Source,
+	/// Indicates whether there was a harbor collision in the last frame
+	collision_harbor_in_this_frame: bool,
+	/// Indicates whether there was a beach collision in the last frame
+	collision_beach_in_this_frame: bool,
 }
 impl Audios {
 	/// Enables or disables background music
@@ -238,6 +244,8 @@ impl Game {
 		let sound_shoe = audio::Source::new(ctx, "/sound/shoe.ogg")?;
 		let sound_blub = audio::Source::new(ctx, "/sound/blub.ogg")?;
 		let sound_grass = audio::Source::new(ctx, "/sound/grass.ogg")?;
+		let collision_harbor = audio::Source::new(ctx, "/sound/harbor_collision.ogg")?;
+		let collision_beach = audio::Source::new(ctx, "/sound/sand_collision.ogg")?;
 
 		let mut sell_sound = audio::Source::new(ctx, "/sound/sell-sound.ogg")?;
 		sell_sound.set_repeat(true);
@@ -261,9 +269,13 @@ impl Game {
 			sound_shoe,
 			sound_blub,
 			sound_grass,
+			collision_harbor,
+			collision_beach,
 			music_0,
 			water_sound_0,
 			water_sound_1,
+			collision_harbor_in_this_frame: false,
+			collision_beach_in_this_frame: false,
 		};
 		audios.enable_sound(ctx, sound_enabled)?;
 		audios.enable_music(ctx, music_enabled)?;
@@ -640,6 +652,12 @@ impl Scene<GlobalState> for Game {
 		let mut did_trade_successful = false;
 		let mut did_trade_fail = false;
 
+		let mut collision_harbor_in_this_frame = false;
+		let mut collision_beach_in_this_frame = false;
+
+		let mut collision_harbor_in_this_frame_st = 0.0_f32;
+		let mut collision_beach_in_this_frame_st = 0.0_f32;
+
 		while gwg::timer::check_update_time(ctx, TICKS_PER_SECOND.into()) {
 			let mut rudder = 0.0;
 
@@ -686,6 +704,16 @@ impl Scene<GlobalState> for Game {
 
 							sound.play(ctx).unwrap();
 						},
+						Event::HarborCollision(s) => {
+							collision_harbor_in_this_frame = true;
+							collision_harbor_in_this_frame_st =
+								collision_harbor_in_this_frame_st.max(s);
+						},
+						Event::TileCollision(s) => {
+							collision_beach_in_this_frame = true;
+							collision_beach_in_this_frame_st =
+								collision_beach_in_this_frame_st.max(s);
+						},
 					}
 				}
 			}
@@ -703,6 +731,29 @@ impl Scene<GlobalState> for Game {
 					}
 				}
 			}
+		}
+		// Play collision event sounds
+		if self.audios.sound_enabled {
+			if collision_harbor_in_this_frame && !self.audios.collision_harbor_in_this_frame {
+				let mut harbor = [&mut self.audios.collision_harbor];
+				let sound = harbor.choose_mut(&mut rng).unwrap();
+
+				sound
+					.set_volume(ctx, collision_harbor_in_this_frame_st.clamp(0.0, 2.0))
+					.unwrap();
+				sound.play(ctx).unwrap();
+			}
+			self.audios.collision_harbor_in_this_frame = collision_harbor_in_this_frame;
+			if collision_beach_in_this_frame && !self.audios.collision_beach_in_this_frame {
+				let mut beach = [&mut self.audios.collision_beach];
+				let sound = beach.choose_mut(&mut rng).unwrap();
+
+				sound
+					.set_volume(ctx, collision_beach_in_this_frame_st.clamp(0.0, 2.0))
+					.unwrap();
+				sound.play(ctx).unwrap();
+			}
+			self.audios.collision_beach_in_this_frame = collision_beach_in_this_frame;
 		}
 
 		self.audios
