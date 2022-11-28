@@ -893,14 +893,14 @@ impl Scene<GlobalState> for Game {
 		}
 
 		let ship_pos = self.world.state.player.vehicle.pos.0
-			- logic::glm::vec1(2.5 * logic::VEHICLE_SIZE).xx() * 0.5;
+			- logic::glm::vec1(1.22 * 2.5 * logic::VEHICLE_SIZE).xx() * 0.5;
 		let ship_screen_loc = self.location_to_screen_coords(ctx, Location(ship_pos));
 
 		let body = &mut self.images.ship_batches.basic.body[self.world.state.player.vehicle.hull];
 
 		// Draw the player ship
 		let ship_scale = logic::glm::vec1(
-			2.5 * logic::VEHICLE_SIZE * pixel_per_meter / body.params().width as f32,
+			1.22 * 2.5 * logic::VEHICLE_SIZE * pixel_per_meter / body.params().width as f32,
 		)
 		.xx();
 		let param = DrawParam::new().dest(ship_screen_loc).scale(ship_scale);
@@ -923,7 +923,7 @@ impl Scene<GlobalState> for Game {
 
 		let sail_ass = &mut sail[effective_reefing];
 		let sail_scale = logic::glm::vec1(
-			2.5 * logic::VEHICLE_SIZE * pixel_per_meter / sail_ass.params().width as f32,
+			1.22 * 2.5 * logic::VEHICLE_SIZE * pixel_per_meter / sail_ass.params().width as f32,
 		)
 		.xx();
 		let sail_param = DrawParam::new().dest(ship_screen_loc).scale(sail_scale);
@@ -951,7 +951,7 @@ impl Scene<GlobalState> for Game {
 				let remapped = terrain.torus_remap(left_top, resource.loc);
 
 				let resource_pos =
-					remapped.0 - logic::glm::vec1(logic::RESOURCE_PACK_FISH_SIZE).xx() * 0.5;
+					remapped.0 - logic::glm::vec1(1.22 * logic::RESOURCE_PACK_FISH_SIZE).xx() * 0.5;
 				let dest = self.location_to_screen_coords(ctx, Location(resource_pos));
 
 				let batch = match resource.content {
@@ -985,7 +985,7 @@ impl Scene<GlobalState> for Game {
 				};
 
 				let resource_scale = logic::glm::vec1(
-					logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter / batch.params().width as f32,
+					1.22 * logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter / batch.params().width as f32,
 				)
 				.xx();
 
@@ -1010,11 +1010,11 @@ impl Scene<GlobalState> for Game {
 				let remapped = terrain.torus_remap(left_top, harbor.loc);
 
 				let harbor_scale = logic::glm::vec1(
-					2. * logic::HARBOR_SIZE * pixel_per_meter
+					1.22 * 2. * logic::HARBOR_SIZE * pixel_per_meter
 						/ self.images.building_batches.harbor.params().width as f32,
 				)
 				.xx();
-				let harbor_pos = remapped.0 - logic::glm::vec1(2. * logic::HARBOR_SIZE).xx() * 0.5;
+				let harbor_pos = remapped.0 - logic::glm::vec1(1.22 * 2. * logic::HARBOR_SIZE).xx() * 0.5;
 				let param = DrawParam::new()
 					.dest(self.location_to_screen_coords(ctx, Location(harbor_pos)))
 					.scale(harbor_scale);
