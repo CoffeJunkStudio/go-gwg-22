@@ -907,7 +907,8 @@ impl Scene<GlobalState> for Game {
 					ResourcePackContent::Fish5 => &mut self.images.resource_batches.fishes[5],
 					ResourcePackContent::Fish6 => &mut self.images.resource_batches.fishes[6],
 					ResourcePackContent::Fish7 => &mut self.images.resource_batches.fishes[7],
-					ResourcePackContent::Shoe => &mut self.images.resource_batches.shoe[0],
+					ResourcePackContent::Shoe0 => &mut self.images.resource_batches.shoe[0],
+					ResourcePackContent::Shoe1 => &mut self.images.resource_batches.shoe[1],
 					ResourcePackContent::Starfish0 => {
 						&mut self.images.resource_batches.starfishes[0]
 					},

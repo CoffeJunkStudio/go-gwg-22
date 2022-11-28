@@ -97,7 +97,8 @@ pub enum ResourcePackContent {
 	Fish5,
 	Fish6,
 	Fish7,
-	Shoe,
+	Shoe0,
+	Shoe1,
 	Starfish0,
 	Starfish1,
 	Starfish2,
@@ -281,13 +282,23 @@ enumeraties::props! {
 			params_range: (0..1,0..1),
 			speed_factor: 5..15,
 		}
-		Self::Shoe => {
+		Self::Shoe0 => {
 			weight: 5,
 			value: 1,
 			schooling_size: NO_SCHOOLING,
-			spawn_density: 0.05,
-			spawn_elevation: Elevation(-5)..Elevation(-1),
-			spawn_location: Elevation(-18)..Elevation(0),
+			spawn_density: 0.03,
+			spawn_elevation: Elevation(-1)..Elevation(0),
+			spawn_location: Elevation(-12)..Elevation(0),
+			params_range: (0..1,0..1),
+			speed_factor: 1..15,
+		}
+		Self::Shoe1 => {
+			weight: 5,
+			value: 1,
+			schooling_size: NO_SCHOOLING,
+			spawn_density: 0.03,
+			spawn_elevation: Elevation(-1)..Elevation(0),
+			spawn_location: Elevation(-18)..Elevation(-5),
 			params_range: (0..1,0..1),
 			speed_factor: 1..20,
 		}

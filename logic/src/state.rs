@@ -393,7 +393,7 @@ impl WorldState {
 							Starfish0 | Starfish1 | Starfish2 | Starfish3 | Starfish4 => {
 								events.push(Event::Starfish);
 							},
-							Shoe => {
+							Shoe0 | Shoe1 => {
 								events.push(Event::Shoe);
 							},
 							Grass0 | Grass1 => {
