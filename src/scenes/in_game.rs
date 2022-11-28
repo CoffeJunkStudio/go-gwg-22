@@ -1506,21 +1506,21 @@ impl Scene<GlobalState> for Game {
 
 				let selling = {
 					if t.players_fish_amount() > 0 {
-						format!("S: sell fish at {} ℓ/kg", t.get_price_for_fish())
+						format!("E - sell fish at {} ℓ/kg", t.get_price_for_fish())
 					} else {
 						"You need more fish!".to_string()
 					}
 				};
 				let up_sail = {
 					if let Some(price) = t.get_price_for_sail_upgrade() {
-						format!("U: upgrade sail for {} ℓ", price)
+						format!("R - upgrade sail for {} ℓ", price)
 					} else {
 						"You have the best sail already".to_string()
 					}
 				};
 				let up_hull = {
 					if let Some(price) = t.get_price_of_hull_upgrade() {
-						format!("H: buy a new ship hull for {} ℓ", price)
+						format!("F - buy a new ship hull for {} ℓ", price)
 					} else {
 						"You have the best ship already".to_string()
 					}
