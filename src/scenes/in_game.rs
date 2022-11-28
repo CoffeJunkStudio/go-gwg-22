@@ -369,7 +369,7 @@ impl Game {
 				"starfish-03",
 				"starfish-04",
 			]),
-			shoe: map_to_ass(vec!["shoe"]),
+			shoe: map_to_ass(vec!["shoe-01", "shoe-00"]),
 			grass: map_to_ass(vec!["grass-00", "grass-01"]),
 		};
 
