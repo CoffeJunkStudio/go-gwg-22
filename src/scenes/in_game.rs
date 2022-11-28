@@ -153,6 +153,14 @@ impl Audios {
 				self.water_sound_0.stop(ctx)?;
 				self.water_sound_1.stop(ctx)?;
 				self.sell_sound.stop(ctx)?;
+
+				// Also disable event sound
+				self.sound_fishy_1.stop(ctx)?;
+				self.sound_fishy_2.stop(ctx)?;
+				self.sound_fishy_3.stop(ctx)?;
+				self.sound_shoe.stop(ctx)?;
+				self.sound_blub.stop(ctx)?;
+				self.sound_grass.stop(ctx)?;
 			}
 		}
 
