@@ -380,7 +380,7 @@ impl Game {
 		let ui = UiImages {
 			wind_direction_indicator: Image::new(ctx, quad_ctx, Path::new("img/wind-arrow.png"))
 				.unwrap(),
-			wind_speed_colors: vec![Color::GREEN, Color::YELLOW, Color::RED],
+			wind_speed_colors: vec![Color::BLUE, Color::WHITE, Color::GREEN,],
 		};
 
 		println!(
