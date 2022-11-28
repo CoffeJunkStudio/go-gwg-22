@@ -19,19 +19,17 @@ Or get the "stable" version from our [itch.io page][itchio].
 Game Play
 ---------
 
-_We are currently still implementing the core game._
-
-The core game play is about manoeuvering a sailing ship to catch fish from the sea.
+Sail your ship in the winds of the sea and catch fish to sell them.
 
 
 ### Controls
 
 | Key       | Function |
 |-----------|----------|
-| Up \| `W` | Hoist the sails |
-|Down\| `S` | Take in the sails |
-|Left\| `A` | Turn left |
-|Right\| `D`| Turn right |
+| `W` \| Up | Hoist the sails |
+| `S` \| Down| Take in the sails |
+| `A` \| Left| Turn left |
+| `D` \| Right| Turn right |
 | `E`       | Sell fish (at a harbor) |
 | `R`       | Upgrade Sail (at a harbor) |
 | `F`       | Upgrade Hull (at a harbor) |
@@ -40,7 +38,7 @@ The core game play is about manoeuvering a sailing ship to catch fish from the s
 | PgUp      | Zoom in |
 | PgDown    | Zoom out |
 | Backspace | Reset zoom |
-| `ESC`     | Quit |
+| `Esc`     | Quit |
 | `F11`     | Enter full screen |
 
 
