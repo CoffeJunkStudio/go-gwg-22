@@ -118,6 +118,47 @@ struct Audios {
 	water_sound_0: audio::Source,
 	water_sound_1: audio::Source,
 }
+impl Audios {
+	/// Enables or disables background music
+	fn enable_music(&mut self, ctx: &mut gwg::Context, enabled: bool) -> gwg::GameResult {
+		if self.music_enabled == enabled {
+			// Done
+		} else {
+			self.music_enabled = enabled;
+			if enabled {
+				// Actually enable sounds
+				self.music_0.play(ctx)?;
+			} else {
+				// Disable sounds
+				self.music_0.stop(ctx)?;
+			}
+		}
+
+		Ok(())
+	}
+
+	/// Enables or disables sound effects
+	fn enable_sound(&mut self, ctx: &mut gwg::Context, enabled: bool) -> gwg::GameResult {
+		if self.sound_enabled == enabled {
+			// Done
+		} else {
+			self.sound_enabled = enabled;
+			if enabled {
+				// Actually enable sounds
+				self.water_sound_0.play(ctx)?;
+				self.water_sound_1.play(ctx)?;
+				self.sell_sound.play(ctx)?;
+			} else {
+				// Disable sounds
+				self.water_sound_0.stop(ctx)?;
+				self.water_sound_1.stop(ctx)?;
+				self.sell_sound.stop(ctx)?;
+			}
+		}
+
+		Ok(())
+	}
+}
 
 // #[derive(Debug)] `audio::Source` dose not implement Debug!
 pub struct Game {
@@ -174,10 +215,7 @@ impl Game {
 		);
 		let mut music_0 = audio::Source::new(ctx, "/music/sailing-chanty.ogg")?;
 		music_0.set_repeat(true);
-		if music_enabled {
-			music_0.set_volume(ctx, 0.7)?;
-			music_0.play(ctx)?;
-		}
+		music_0.set_volume(ctx, 0.7)?;
 
 		println!(
 			"{:.3} [game] loading sounds...",
@@ -195,20 +233,32 @@ impl Game {
 
 		let mut sell_sound = audio::Source::new(ctx, "/sound/sell-sound.ogg")?;
 		sell_sound.set_repeat(true);
+		sell_sound.set_volume(ctx, 0.)?;
 		let mut water_sound_0 = audio::Source::new(ctx, "/sound/waterssoftloop.ogg")?;
 		water_sound_0.set_repeat(true);
 		let mut water_sound_1 = audio::Source::new(ctx, "/sound/waterstrongloop.ogg")?;
 		water_sound_1.set_repeat(true);
-		if sound_enabled {
-			sell_sound.set_volume(ctx, 0.)?;
-			sell_sound.play(ctx)?;
-			water_sound_1.set_volume(ctx, 0.)?;
-			water_sound_1.play(ctx)?;
-		}
-		if music_enabled {
-			
-			water_sound_0.play(ctx)?;
-		}
+		water_sound_1.set_volume(ctx, 0.)?;
+
+		let mut audios = Audios {
+			sound_enabled: false,
+			music_enabled: false,
+			sound,
+			fail_sound,
+			sell_sound,
+			upgrade_sound,
+			sound_fishy_1,
+			sound_fishy_2,
+			sound_fishy_3,
+			sound_shoe,
+			sound_blub,
+			sound_grass,
+			music_0,
+			water_sound_0,
+			water_sound_1,
+		};
+		audios.enable_sound(ctx, sound_enabled)?;
+		audios.enable_music(ctx, music_enabled)?;
 
 		println!(
 			"{:.3} [game] loading config...",
@@ -381,23 +431,7 @@ impl Game {
 				building_batches,
 				ui,
 			},
-			audios: Audios {
-				sound_enabled,
-				music_enabled,
-				sound,
-				fail_sound,
-				sell_sound,
-				upgrade_sound,
-				sound_fishy_1,
-				sound_fishy_2,
-				sound_fishy_3,
-				sound_shoe,
-				sound_blub,
-				sound_grass,
-				music_0,
-				water_sound_0,
-				water_sound_1,
-			},
+			audios,
 			terrain_transition_canvas,
 			terrain_transition_mask_canvas,
 			full_screen: false,
@@ -1602,6 +1636,16 @@ impl Scene<GlobalState> for Game {
 			}
 		} else if keycode == KeyCode::Down {
 			self.input.reefing = self.input.reefing.decrease();
+		}
+		if keycode == KeyCode::Key1 {
+			self.audios
+				.enable_sound(ctx, !self.audios.sound_enabled)
+				.unwrap();
+		}
+		if keycode == KeyCode::Key2 {
+			self.audios
+				.enable_music(ctx, !self.audios.music_enabled)
+				.unwrap();
 		}
 
 		if keycode == KeyCode::F11 {
