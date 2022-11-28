@@ -7,12 +7,10 @@ use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
 
-
 pub mod generator;
 pub mod state;
 pub mod terrain;
 pub mod units;
-
 
 pub use nalgebra_glm as glm;
 use state::Reefing;
@@ -25,8 +23,6 @@ use units::Location;
 use units::Tick;
 
 pub type StdRng = rand_pcg::Pcg64;
-
-
 
 /// The size (edge length) of a terrain tile, in meter
 pub const TILE_SIZE: u32 = 4;
@@ -41,7 +37,7 @@ pub const HARBOR_EFFECT_SIZE: f32 = 6.;
 pub const HARBOR_MAX_SPEED: f32 = 1.;
 
 /// The "diameter" of the player's car.
-pub const VEHICLE_SIZE: f32 = 1.3;
+pub const VEHICLE_SIZE: f32 = 2.6;
 
 /// The mass of a empty vehicle, in kilogram
 const VEHICLE_DEADWEIGHT: f32 = 100.0;
@@ -80,7 +76,6 @@ pub const FISH_ANIM_BASE_DURATION: u32 = 3;
 
 /// Target logical ticks per second
 pub const TICKS_PER_SECOND: u16 = 60;
-
 
 /// Gives the resource type that can be in a resource pack
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -266,7 +261,7 @@ enumeraties::props! {
 			weight: 9,
 			value: 1,
 			schooling_size: NO_SCHOOLING,
-			spawn_density: 1.0,
+			spawn_density: 0.5,
 			spawn_elevation: Elevation(-1)..Elevation(0),
 			spawn_location: Elevation(-4)..Elevation(0),
 			params_range: (0..1,0..1),
@@ -276,7 +271,7 @@ enumeraties::props! {
 			weight: 10,
 			value: 1,
 			schooling_size: NO_SCHOOLING,
-			spawn_density: 1.0,
+			spawn_density: 0.5,
 			spawn_elevation: Elevation(-1)..Elevation(0),
 			spawn_location: Elevation(-6)..Elevation(-3),
 			params_range: (0..1,0..1),
@@ -304,7 +299,6 @@ enumeraties::props! {
 		}
 	}
 }
-
 
 /// A collectable resource on the ground
 #[derive(Debug, Clone)]
@@ -396,7 +390,6 @@ impl ResourcePack {
 	}
 }
 
-
 #[derive(Debug, Clone, Copy, Default)]
 #[derive(Serialize, Deserialize)]
 pub struct DebuggingConf {
@@ -410,7 +403,6 @@ pub struct DebuggingConf {
 	/// Fix the wind direction in a specific direction, in radians
 	pub fixed_wind_direction: Option<f32>,
 }
-
 
 /// The entire game world
 #[derive(Debug, Clone)]
@@ -433,8 +425,6 @@ pub struct WorldInit {
 	/// Debugging configuration
 	pub dbg: DebuggingConf,
 }
-
-
 
 /// Represents the input state of a player
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
