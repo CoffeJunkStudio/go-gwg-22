@@ -1,13 +1,12 @@
-
 use cfg_if::cfg_if;
 use good_web_game as gwg;
 use good_web_game::event::GraphicsContext;
 use good_web_game::goodies::scene::Scene;
 use good_web_game::goodies::scene::SceneSwitch;
+use good_web_game::graphics;
 use good_web_game::graphics::Font;
 use good_web_game::graphics::Image;
 use good_web_game::graphics::Text;
-use good_web_game::graphics;
 use good_web_game::Context;
 use good_web_game::GameResult;
 use gwg::graphics::DrawParam;
@@ -28,11 +27,14 @@ pub struct MainMenu {
 
 	/// Indicates that the game shall begin
 	lets_continue: bool,
-
 }
 
 impl MainMenu {
-	pub(super) fn new(glob: &mut GlobalState,ctx: &mut Context, quad_ctx: &mut miniquad::GraphicsContext) -> GameResult<Self> {
+	pub(super) fn new(
+		glob: &mut GlobalState,
+		ctx: &mut Context,
+		quad_ctx: &mut miniquad::GraphicsContext,
+	) -> GameResult<Self> {
 		let bg = graphics::Image::new(ctx, quad_ctx, "/img/bg-16-9-idx.png")?;
 
 		if let Some(a) = glob.audios.as_mut() {
@@ -136,7 +138,7 @@ impl Scene<GlobalState> for MainMenu {
 	) {
 		if key == KeyCode::Escape {
 			if cfg!(not(target_family = "wasm")) {
-			good_web_game::event::quit(ctx);
+				good_web_game::event::quit(ctx);
 			}
 		} else {
 			self.lets_continue = true;

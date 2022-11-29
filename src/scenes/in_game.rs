@@ -1482,12 +1482,7 @@ impl Scene<GlobalState> for Game {
 					match (hull_upgrade, sail_upgrade, t.players_fish_amount()) {
 						(Some(hup), _, _) if budget >= hup => "Time to upgrade!".to_owned(),
 						(_, Some(sup), _) if budget >= sup => "Time to upgrade!".to_owned(),
-						(_, _, fam) if fam > 0 => {
-							format!(
-								"Give us all your fish for {}$!",
-								t.get_price_for_fish() * u64::from(fam)
-							)
-						},
+						(_, _, fam) if fam > 0 => "Sell your fish here!".to_owned(),
 						_ => "Go get some fish!".to_owned(),
 					}
 				};

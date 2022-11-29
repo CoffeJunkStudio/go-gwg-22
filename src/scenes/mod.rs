@@ -3,8 +3,8 @@ mod loading;
 mod main_menu;
 
 
-use good_web_game::event::EventHandler;
 use good_web_game::event;
+use good_web_game::event::EventHandler;
 use good_web_game::goodies::scene::SceneStack;
 use good_web_game::Context;
 use good_web_game::GameError;
