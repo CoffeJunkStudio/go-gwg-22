@@ -11,8 +11,10 @@ use good_web_game::graphics::Text;
 use good_web_game::graphics::{self,};
 use good_web_game::Context;
 use good_web_game::GameResult;
+use gwg::graphics::DrawParam;
 use miniquad::KeyCode;
 use nalgebra::Point2;
+use nalgebra::Vector2;
 
 use super::Game;
 use super::GlobalState;
@@ -67,8 +69,15 @@ impl Scene<GlobalState> for MainMenu {
 	) -> GameResult<()> {
 		let size = graphics::drawable_size(quad_ctx);
 
-
 		graphics::clear(ctx, quad_ctx, [0.0, 0.0, 0.0, 1.0].into());
+
+
+		let scale = (size.0 / 64.).max(size.1 / 36.);
+		let params = DrawParam::default().dest(Point2::new(size.0/2.,size.1/2.)).scale(
+			Vector2::new(scale,scale)
+		).offset(Point2::new(0.5,0.5));
+
+		graphics::draw(ctx, quad_ctx, &self.bg, params)?;
 
 		let mut heading = Text::new("Plenty of Fish in the Sea");
 		heading.set_font(Font::default(), (3. * Font::DEFAULT_FONT_SCALE).into());
