@@ -1458,74 +1458,148 @@ impl Scene<GlobalState> for Game {
 			}
 		}
 
+		let player_loc = self.world.state.player.vehicle.pos;
+		let ppm = self.pixel_per_meter(ctx);
+
+		let budget = self.world.state.player.money;
+
 		// The trading "interface"
-		if let Some(t) = self.world.state.get_trading() {
+		if let Some(mut t) = self.world.state.get_trading() {
+			let text_color = Color::new(1.0, 1.0, 1.0, 0.85);
+			let inactive_color = Color::new(1.0, 1.0, 1.0, 0.4);
+
+			let harbor_loc = t.get_harbor().loc;
+			let player_loc_sc = nalgebra::Point2::new(screen_coords.w, screen_coords.h) * 0.5;
+			let harbor_loc_sc =
+				nalgebra::Point2::from((harbor_loc.0 - player_loc.0) * ppm + player_loc_sc.coords);
 			if t.has_player_valid_speed() {
 				// Trading is possible
 
-				let mut text = Text::new("Welcome to the harbor");
+				let message = {
+					let hull_upgrade = t.get_price_of_hull_upgrade();
+					let sail_upgrade = t.get_price_for_sail_upgrade();
+
+					match (hull_upgrade, sail_upgrade, t.players_fish_amount()) {
+						(Some(hup), _, _) if budget >= hup => "Time to upgrade!".to_owned(),
+						(_, Some(sup), _) if budget >= sup => "Time to upgrade!".to_owned(),
+						(_, _, fam) if fam > 0 => {
+							format!(
+								"Give us all your fish for {}$!",
+								t.get_price_for_fish() * u64::from(fam)
+							)
+						},
+						_ => "Go get some fish!".to_owned(),
+					}
+				};
+
+				let mut text = Text::new(format!("\"{message}\""));
 				text.set_font(Default::default(), PxScale::from(32.));
-				let h = text.dimensions(ctx).h;
+				let mut offset = 0.0;
 				graphics::draw(
 					ctx,
 					quad_ctx,
 					&text,
 					(
-						Point2::new(0.0, screen_coords.h / 2. - h - 5.),
-						Color::BLACK,
+						Point2::new(
+							harbor_loc_sc.x - text.width(ctx) * 0.5,
+							harbor_loc_sc.y - text.height(ctx),
+						),
+						text_color,
 					),
 				)?;
+				offset += text.height(ctx);
 
-				let mut text = Text::new("Your opportunities:");
-				text.set_font(Default::default(), PxScale::from(28.));
+				let sell_color = if t.players_fish_amount() > 0 {
+					text_color
+				} else {
+					inactive_color
+				};
+				let mut option_text =
+					Text::new(format!("E: sell fish ({}$/kg)", t.get_price_for_fish()));
+				let x_offset = option_text.width(ctx) * 0.5;
+				option_text.set_font(Default::default(), PxScale::from(20.));
 				graphics::draw(
 					ctx,
 					quad_ctx,
-					&text,
-					(Point2::new(0.0, screen_coords.h / 2.), Color::BLACK),
+					&option_text,
+					(
+						Point2::new(
+							harbor_loc_sc.x - x_offset,
+							harbor_loc_sc.y - option_text.height(ctx) + offset,
+						),
+						sell_color,
+					),
 				)?;
-				let h = text.dimensions(ctx).h;
+				offset += option_text.height(ctx) * 1.3;
 
-				let selling = {
-					if t.players_fish_amount() > 0 {
-						format!("E - sell fish at {} ℓ/kg", t.get_price_for_fish())
+				let (sail_color, sail_text) = if let Some(price) = t.get_price_for_sail_upgrade() {
+					let c = if budget >= price {
+						text_color
 					} else {
-						"You need more fish!".to_string()
-					}
-				};
-				let up_sail = {
-					if let Some(price) = t.get_price_for_sail_upgrade() {
-						format!("R - upgrade sail for {} ℓ", price)
-					} else {
-						"You have the best sail already".to_string()
-					}
-				};
-				let up_hull = {
-					if let Some(price) = t.get_price_of_hull_upgrade() {
-						format!("F - buy a new ship hull for {} ℓ", price)
-					} else {
-						"You have the best ship already".to_string()
-					}
-				};
+						inactive_color
+					};
 
-				let mut text = Text::new(format!("{selling}\n{up_sail}\n{up_hull}",));
-				text.set_font(Default::default(), PxScale::from(20.));
+					(c, format!("R: Upgrade sail ({price}$)"))
+				} else {
+					(inactive_color, "Your sail is awesome!".to_owned())
+				};
+				let mut option_text = Text::new(sail_text);
+				option_text.set_font(Default::default(), PxScale::from(20.));
 				graphics::draw(
 					ctx,
 					quad_ctx,
-					&text,
-					(Point2::new(0.0, screen_coords.h / 2. + h), Color::BLACK),
+					&option_text,
+					(
+						Point2::new(
+							harbor_loc_sc.x - x_offset,
+							harbor_loc_sc.y - option_text.height(ctx) + offset,
+						),
+						sail_color,
+					),
+				)?;
+				offset += option_text.height(ctx) * 1.3;
+
+				let (hull_color, hull_text) = if let Some(price) = t.get_price_of_hull_upgrade() {
+					let c = if budget >= price {
+						text_color
+					} else {
+						inactive_color
+					};
+
+					(c, format!("F: Upgrade hull ({price}$)"))
+				} else {
+					(inactive_color, "Your hull is awesome!".to_owned())
+				};
+				let mut option_text = Text::new(hull_text);
+				option_text.set_font(Default::default(), PxScale::from(20.));
+				graphics::draw(
+					ctx,
+					quad_ctx,
+					&option_text,
+					(
+						Point2::new(
+							harbor_loc_sc.x - x_offset,
+							harbor_loc_sc.y - option_text.height(ctx) + offset,
+						),
+						hull_color,
+					),
 				)?;
 			} else {
 				// Player is too fast for trading
 
-				let mut text = Text::new("You are too fast to interact with the harbor");
+				let mut text = Text::new("\"Slow down, sailor!\"");
 				text.set_font(Default::default(), PxScale::from(32.));
 				graphics::draw(
 					ctx,
 					quad_ctx,
 					&text,
-					(Point2::new(0.0, screen_coords.h / 2.), Color::BLACK),
+					(
+						Point2::new(
+							harbor_loc_sc.x - text.width(ctx) * 0.5,
+							harbor_loc_sc.y - text.height(ctx),
+						),
+						text_color,
+					),
 				)?;
 			}
 		}
