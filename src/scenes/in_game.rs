@@ -4,7 +4,6 @@ use std::path::Path;
 use cfg_if::cfg_if;
 use enum_map::enum_map;
 use good_web_game as gwg;
-use gwg::audio;
 use gwg::cgmath::Point2;
 use gwg::goodies::scene::Scene;
 use gwg::goodies::scene::SceneSwitch;
@@ -109,79 +108,6 @@ pub struct Images {
 	ui: UiImages,
 }
 
-// #[derive(Debug)] `audio::Source` dose not implement Debug!
-struct Audios {
-	sound_enabled: bool,
-	music_enabled: bool,
-	sound: audio::Source,
-	fail_sound: audio::Source,
-	sell_sound: audio::Source,
-	upgrade_sound: audio::Source,
-	sound_fishy_1: audio::Source,
-	sound_fishy_2: audio::Source,
-	sound_fishy_3: audio::Source,
-	sound_shoe: audio::Source,
-	sound_blub: audio::Source,
-	sound_grass: audio::Source,
-	collision_harbor: audio::Source,
-	collision_beach: audio::Source,
-	music_0: audio::Source,
-	water_sound_0: audio::Source,
-	water_sound_1: audio::Source,
-	/// Indicates whether there was a harbor collision in the last frame
-	collision_harbor_in_this_frame: bool,
-	/// Indicates whether there was a beach collision in the last frame
-	collision_beach_in_this_frame: bool,
-}
-impl Audios {
-	/// Enables or disables background music
-	fn enable_music(&mut self, ctx: &mut gwg::Context, enabled: bool) -> gwg::GameResult {
-		if self.music_enabled == enabled {
-			// Done
-		} else {
-			self.music_enabled = enabled;
-			if enabled {
-				// Actually enable sounds
-				self.music_0.play(ctx)?;
-			} else {
-				// Disable sounds
-				self.music_0.stop(ctx)?;
-			}
-		}
-
-		Ok(())
-	}
-
-	/// Enables or disables sound effects
-	fn enable_sound(&mut self, ctx: &mut gwg::Context, enabled: bool) -> gwg::GameResult {
-		if self.sound_enabled == enabled {
-			// Done
-		} else {
-			self.sound_enabled = enabled;
-			if enabled {
-				// Actually enable sounds
-				self.water_sound_0.play(ctx)?;
-				self.water_sound_1.play(ctx)?;
-				self.sell_sound.play(ctx)?;
-			} else {
-				// Disable sounds
-				self.water_sound_0.stop(ctx)?;
-				self.water_sound_1.stop(ctx)?;
-				self.sell_sound.stop(ctx)?;
-
-				// Also disable event sound
-				self.sound_fishy_1.stop(ctx)?;
-				self.sound_fishy_2.stop(ctx)?;
-				self.sound_fishy_3.stop(ctx)?;
-				self.sound_shoe.stop(ctx)?;
-				self.sound_blub.stop(ctx)?;
-				self.sound_grass.stop(ctx)?;
-			}
-		}
-
-		Ok(())
-	}
-}
 
 const COMPLIMENTS: &[&str] = &[
 	"You're the best!",
@@ -194,8 +120,6 @@ const COMPLIMENTS: &[&str] = &[
 pub struct Game {
 	/// The drawables
 	images: Images,
-	/// The audio files
-	audios: Audios,
 
 	terrain_transition_canvas: Canvas,
 	terrain_transition_mask_canvas: Canvas,
@@ -222,7 +146,8 @@ pub struct Game {
 }
 
 impl Game {
-	pub fn new(
+	pub(super) fn new(
+		glob: &mut GlobalState,
 		ctx: &mut gwg::Context,
 		quad_ctx: &mut gwg::miniquad::GraphicsContext,
 	) -> gwg::GameResult<Self> {
@@ -235,72 +160,20 @@ impl Game {
 			.unwrap_or(gwg::timer::time().floor() as u64);
 
 		let sound_enabled = !opts.muted;
-		cfg_if! {
-			if #[cfg(target_family = "wasm")] {
-				// TODO: without a main menu, we need first user-input before
-				// we can enable music, thus we disable it so it is enablable.
-				let music_enabled = false;
-			} else {
-				let music_enabled = !opts.muted;
-			}
-		}
-
-		println!(
-			"{:.3} [game] loading music...",
-			gwg::timer::time_since_start(ctx).as_secs_f64()
-		);
-		let mut music_0 = audio::Source::new(ctx, "/music/sailing-chanty.ogg")?;
-		music_0.set_repeat(true);
-		music_0.set_volume(ctx, 0.7)?;
+		let music_enabled = !opts.muted;
 
 		println!(
 			"{:.3} [game] loading sounds...",
 			gwg::timer::time_since_start(ctx).as_secs_f64()
 		);
-		let sound = audio::Source::new(ctx, "/sound/pew.ogg")?;
-		let fail_sound = audio::Source::new(ctx, "/sound/invalid.ogg")?;
-		let upgrade_sound = audio::Source::new(ctx, "/sound/upgrade.ogg")?;
-		let sound_fishy_1 = audio::Source::new(ctx, "/sound/fischie.ogg")?;
-		let sound_fishy_2 = audio::Source::new(ctx, "/sound/fischie2.ogg")?;
-		let sound_fishy_3 = audio::Source::new(ctx, "/sound/fischie3.ogg")?;
-		let sound_shoe = audio::Source::new(ctx, "/sound/shoe.ogg")?;
-		let sound_blub = audio::Source::new(ctx, "/sound/blub.ogg")?;
-		let sound_grass = audio::Source::new(ctx, "/sound/grass.ogg")?;
-		let collision_harbor = audio::Source::new(ctx, "/sound/harbor_collision.ogg")?;
-		let collision_beach = audio::Source::new(ctx, "/sound/sand_collision.ogg")?;
-
-		let mut sell_sound = audio::Source::new(ctx, "/sound/sell-sound.ogg")?;
-		sell_sound.set_repeat(true);
-		sell_sound.set_volume(ctx, 0.)?;
-		let mut water_sound_0 = audio::Source::new(ctx, "/sound/waterssoftloop.ogg")?;
-		water_sound_0.set_repeat(true);
-		let mut water_sound_1 = audio::Source::new(ctx, "/sound/waterstrongloop.ogg")?;
-		water_sound_1.set_repeat(true);
-		water_sound_1.set_volume(ctx, 0.)?;
-
-		let mut audios = Audios {
-			sound_enabled: false,
-			music_enabled: false,
-			sound,
-			fail_sound,
-			sell_sound,
-			upgrade_sound,
-			sound_fishy_1,
-			sound_fishy_2,
-			sound_fishy_3,
-			sound_shoe,
-			sound_blub,
-			sound_grass,
-			collision_harbor,
-			collision_beach,
-			music_0,
-			water_sound_0,
-			water_sound_1,
-			collision_harbor_in_this_frame: false,
-			collision_beach_in_this_frame: false,
-		};
-		audios.enable_sound(ctx, sound_enabled)?;
-		audios.enable_music(ctx, music_enabled)?;
+		glob.audios
+			.as_mut()
+			.unwrap()
+			.enable_sound(ctx, sound_enabled)?;
+		glob.audios
+			.as_mut()
+			.unwrap()
+			.enable_music(ctx, music_enabled)?;
 
 		println!(
 			"{:.3} [game] loading config...",
@@ -504,7 +377,6 @@ impl Game {
 				building_batches,
 				ui,
 			},
-			audios,
 			terrain_transition_canvas,
 			terrain_transition_mask_canvas,
 			full_screen: !opts.windowed,
@@ -697,11 +569,13 @@ impl Scene<GlobalState> for Game {
 
 	fn update(
 		&mut self,
-		_glob: &mut GlobalState,
+		glob: &mut GlobalState,
 		ctx: &mut gwg::Context,
 		_quad_ctx: &mut gwg::miniquad::Context,
 	) -> SceneSwitch<GlobalState> {
 		use gwg::input::keyboard::is_key_pressed;
+
+		let audios = glob.audios.as_mut().unwrap();
 
 		let mut rng = wyhash::WyRng::seed_from_u64((gwg::timer::time() * 1000.) as u64);
 
@@ -739,14 +613,14 @@ impl Scene<GlobalState> for Game {
 			let events = self.world.state.update(&self.world.init, &self.input);
 
 			// Play event sounds
-			if self.audios.sound_enabled {
+			if audios.sound_enabled {
 				for ev in events {
 					match ev {
 						Event::Fishy => {
 							let fishies = [
-								&self.audios.sound_fishy_1,
-								&self.audios.sound_fishy_2,
-								&self.audios.sound_fishy_3,
+								&audios.sound_fishy_1,
+								&audios.sound_fishy_2,
+								&audios.sound_fishy_3,
 							];
 							let sound = fishies.choose(&mut rng).unwrap();
 
@@ -763,19 +637,19 @@ impl Scene<GlobalState> for Game {
 							sound.play(ctx).unwrap();
 						},
 						Event::Shoe => {
-							let shoe = [&self.audios.sound_shoe];
+							let shoe = [&audios.sound_shoe];
 							let sound = shoe.choose(&mut rng).unwrap();
 
 							sound.play(ctx).unwrap();
 						},
 						Event::Starfish => {
-							let star = [&self.audios.sound_blub];
+							let star = [&audios.sound_blub];
 							let sound = star.choose(&mut rng).unwrap();
 
 							sound.play(ctx).unwrap();
 						},
 						Event::Grass => {
-							let grass = [&self.audios.sound_grass];
+							let grass = [&audios.sound_grass];
 							let sound = grass.choose(&mut rng).unwrap();
 
 							sound.play(ctx).unwrap();
@@ -809,9 +683,9 @@ impl Scene<GlobalState> for Game {
 			}
 		}
 		// Play collision event sounds
-		if self.audios.sound_enabled {
-			if collision_harbor_in_this_frame && !self.audios.collision_harbor_in_this_frame {
-				let mut harbor = [&mut self.audios.collision_harbor];
+		if audios.sound_enabled {
+			if collision_harbor_in_this_frame && !audios.collision_harbor_in_this_frame {
+				let mut harbor = [&mut audios.collision_harbor];
 				let sound = harbor.choose_mut(&mut rng).unwrap();
 
 				sound
@@ -819,9 +693,9 @@ impl Scene<GlobalState> for Game {
 					.unwrap();
 				sound.play(ctx).unwrap();
 			}
-			self.audios.collision_harbor_in_this_frame = collision_harbor_in_this_frame;
-			if collision_beach_in_this_frame && !self.audios.collision_beach_in_this_frame {
-				let mut beach = [&mut self.audios.collision_beach];
+			audios.collision_harbor_in_this_frame = collision_harbor_in_this_frame;
+			if collision_beach_in_this_frame && !audios.collision_beach_in_this_frame {
+				let mut beach = [&mut audios.collision_beach];
 				let sound = beach.choose_mut(&mut rng).unwrap();
 
 				sound
@@ -829,16 +703,16 @@ impl Scene<GlobalState> for Game {
 					.unwrap();
 				sound.play(ctx).unwrap();
 			}
-			self.audios.collision_beach_in_this_frame = collision_beach_in_this_frame;
+			audios.collision_beach_in_this_frame = collision_beach_in_this_frame;
 		}
 
-		self.audios
+		audios
 			.sell_sound
 			.set_volume(ctx, did_trade_successful as u8 as f32)
 			.unwrap();
 
-		if self.audios.sound_enabled && did_trade_fail && !did_trade_successful {
-			self.audios.fail_sound.play(ctx).unwrap();
+		if audios.sound_enabled && did_trade_fail && !did_trade_successful {
+			audios.fail_sound.play(ctx).unwrap();
 		}
 
 		// Water wave sound
@@ -853,7 +727,7 @@ impl Scene<GlobalState> for Game {
 				.clamp(0., 1.)
 				.powi(2)
 		};
-		self.audios
+		audios
 			.water_sound_1
 			.set_volume(ctx, normalized_rel_water_speed * 2.)
 			.unwrap();
@@ -1667,15 +1541,12 @@ impl Scene<GlobalState> for Game {
 
 	fn key_down_event(
 		&mut self,
-		_glob: &mut GlobalState,
+		glob: &mut GlobalState,
 		ctx: &mut gwg::Context,
 		quad_ctx: &mut gwg::miniquad::Context,
 		keycode: gwg::miniquad::KeyCode,
 	) {
-		// Quick Quit
-		if keycode == KeyCode::Escape {
-			gwg::event::quit(ctx);
-		}
+		let audios = glob.audios.as_mut().unwrap();
 
 		// Zoom management
 		if keycode == KeyCode::KpAdd || keycode == KeyCode::PageUp {
@@ -1698,15 +1569,15 @@ impl Scene<GlobalState> for Game {
 					match n {
 						Ok(()) => {
 							// success
-							if self.audios.sound_enabled {
-								self.audios.upgrade_sound.play(ctx).unwrap();
+							if audios.sound_enabled {
+								audios.upgrade_sound.play(ctx).unwrap();
 							}
 						},
 						Err(e) => {
 							// Failed
 							println!("Failed to upgrade sail: {e}");
-							if self.audios.sound_enabled {
-								self.audios.fail_sound.play(ctx).unwrap();
+							if audios.sound_enabled {
+								audios.fail_sound.play(ctx).unwrap();
 							}
 						},
 					}
@@ -1718,15 +1589,15 @@ impl Scene<GlobalState> for Game {
 					match n {
 						Ok(()) => {
 							// success
-							if self.audios.sound_enabled {
-								self.audios.upgrade_sound.play(ctx).unwrap();
+							if audios.sound_enabled {
+								audios.upgrade_sound.play(ctx).unwrap();
 							}
 						},
 						Err(e) => {
 							// Failed
 							println!("Failed to upgrade sail: {e}");
-							if self.audios.sound_enabled {
-								self.audios.fail_sound.play(ctx).unwrap();
+							if audios.sound_enabled {
+								audios.fail_sound.play(ctx).unwrap();
 							}
 						},
 					}
@@ -1750,14 +1621,10 @@ impl Scene<GlobalState> for Game {
 
 		// Sound & Music management
 		if keycode == KeyCode::Key1 {
-			self.audios
-				.enable_sound(ctx, !self.audios.sound_enabled)
-				.unwrap();
+			audios.enable_sound(ctx, !audios.sound_enabled).unwrap();
 		}
 		if keycode == KeyCode::Key2 {
-			self.audios
-				.enable_music(ctx, !self.audios.music_enabled)
-				.unwrap();
+			audios.enable_music(ctx, !audios.music_enabled).unwrap();
 		}
 
 		// Full screen key

@@ -12,7 +12,10 @@ use nalgebra::Point2;
 
 use self::asset_batch::AssetBatch;
 
+
 pub mod asset_batch;
+pub mod audio;
+
 
 /// The location of the asset configuration file
 const ASSET_CONFIG_STR: &str = include_str!(concat!(

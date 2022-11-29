@@ -12,6 +12,7 @@ use good_web_game::GameResult;
 use nalgebra::Point2;
 
 use super::GlobalState;
+use crate::assets::audio::Audios;
 
 
 const DEFAULT_DELAY: u16 = 3;
@@ -101,6 +102,12 @@ impl<S: Loadable> Scene<GlobalState> for Loading<S> {
 		if self.delay == 0 {
 			SceneSwitch::Replace(Box::new(self.loadable.load(glob, ctx, quad_ctx)))
 		} else {
+			if self.delay == 1 {
+				if glob.audios.is_none() {
+					glob.audios = Some(Audios::load(ctx).unwrap());
+				}
+			}
+
 			self.delay -= 1;
 			SceneSwitch::None
 		}
@@ -146,7 +153,6 @@ impl<S: Loadable> Scene<GlobalState> for Loading<S> {
 		graphics::present(ctx, quad_ctx)?;
 
 		Ok(())
-
 	}
 
 	fn name(&self) -> &str {
@@ -157,7 +163,7 @@ impl<S: Loadable> Scene<GlobalState> for Loading<S> {
 		&mut self,
 		_glob: &mut GlobalState,
 		ctx: &mut gwg::Context,
-		quad_ctx: &mut gwg::miniquad::GraphicsContext,
+		_quad_ctx: &mut gwg::miniquad::GraphicsContext,
 		w: f32,
 		h: f32,
 	) {
