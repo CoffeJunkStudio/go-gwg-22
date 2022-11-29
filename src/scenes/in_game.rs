@@ -31,6 +31,7 @@ use logic::generator::Generator;
 use logic::generator::PerlinNoise;
 use logic::generator::Setting;
 use logic::glm::vec1;
+use logic::glm::vec2;
 use logic::glm::Vec2;
 use logic::state::Event;
 use logic::state::SailKind;
@@ -202,6 +203,9 @@ pub struct Game {
 	water_wave_offset: Vec2,
 	/// Offset of the secondary water waves within a tile
 	water_wave_2_offset: Vec2,
+
+	/// True in the very first frame
+	init: bool,
 }
 
 impl Game {
@@ -438,8 +442,37 @@ impl Game {
 
 		let mut rng = logic::StdRng::new(0xcafef00dd15ea5e5, seed.into());
 		let mut world = noise.generate(&settings, &mut rng);
-		world.state.player.vehicle.heading = 1.0;
-		world.state.player.vehicle.pos = world.init.terrain.random_passable_location(&mut rng);
+		// Find a starting position for the player
+		let start_point = world.state.harbors[0].loc;
+		let mut dist = 1_i32;
+		'find_pos: loop {
+			let forward = ((-dist)..=dist).map(|n| (n, 1));
+			let backward = ((1 - dist)..=(dist - 1)).map(|n| (n, -1));
+			let mut offsets = Vec::from_iter(forward.chain(backward));
+			offsets.shuffle(&mut rng);
+			for (x, s) in offsets {
+				let y = (dist - x.abs()) * s;
+
+				let diff = vec2(x as f32, y as f32) * logic::HARBOR_SIZE;
+				let candidate = start_point + Distance(diff);
+				let candidate = world.init.terrain.map_loc_on_torus(candidate);
+
+				if world
+					.init
+					.terrain
+					.get(candidate.try_into().unwrap())
+					.is_passable()
+				{
+					world.state.player.vehicle.pos = candidate;
+					// Orient orthogonal to the distance to the harbor
+					world.state.player.vehicle.heading = f32::atan2(x as f32, y as f32);
+					println!("Spawn: {x} / {y} at {dist}");
+					break 'find_pos;
+				}
+			}
+
+			dist += 1;
+		}
 		cfg_if! {
 			if #[cfg(feature = "dev")] {
 				if let Some(money) = opts.money_cheat {
@@ -466,6 +499,7 @@ impl Game {
 			zoom_factor_exp: DEFAULT_ZOOM_LEVEL,
 			water_wave_offset: Default::default(),
 			water_wave_2_offset: Default::default(),
+			init: true,
 		};
 
 		println!(
@@ -664,10 +698,20 @@ impl Scene<GlobalState> for Game {
 		let mut collision_harbor_in_this_frame_st = 0.0_f32;
 		let mut collision_beach_in_this_frame_st = 0.0_f32;
 
+		let mut tickies = 0;
 		while gwg::timer::check_update_time(ctx, TICKS_PER_SECOND.into()) {
-			let mut rudder = 0.0;
+			tickies += 1;
+			if self.init && tickies > 1 {
+				// Just ignore additional frames
+				continue;
+			}
+			if tickies > 10 {
+				// Just ignore additional frames
+				continue;
+			}
 
 			// Rudder input
+			let mut rudder = 0.0;
 			if is_key_pressed(ctx, KeyCode::Left) || is_key_pressed(ctx, KeyCode::A) {
 				rudder -= 1.0;
 			}
@@ -787,6 +831,8 @@ impl Scene<GlobalState> for Game {
 			.water_sound_1
 			.set_volume(ctx, normalized_rel_water_speed * 2.)
 			.unwrap();
+
+		self.init = false;
 
 		if is_key_pressed(ctx, KeyCode::Escape) {
 			SceneSwitch::Pop
@@ -985,7 +1031,8 @@ impl Scene<GlobalState> for Game {
 				};
 
 				let resource_scale = logic::glm::vec1(
-					1.22 * logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter / batch.params().width as f32,
+					1.22 * logic::RESOURCE_PACK_FISH_SIZE * pixel_per_meter
+						/ batch.params().width as f32,
 				)
 				.xx();
 
@@ -1014,7 +1061,8 @@ impl Scene<GlobalState> for Game {
 						/ self.images.building_batches.harbor.params().width as f32,
 				)
 				.xx();
-				let harbor_pos = remapped.0 - logic::glm::vec1(1.22 * 2. * logic::HARBOR_SIZE).xx() * 0.5;
+				let harbor_pos =
+					remapped.0 - logic::glm::vec1(1.22 * 2. * logic::HARBOR_SIZE).xx() * 0.5;
 				let param = DrawParam::new()
 					.dest(self.location_to_screen_coords(ctx, Location(harbor_pos)))
 					.scale(harbor_scale);

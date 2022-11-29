@@ -337,6 +337,7 @@ impl TileType {
 pub struct Elevation(pub i16);
 impl Elevation {
 	const BEACH: Elevation = Elevation(0);
+	pub const COAST: Elevation = Self::BEACH;
 	pub const DEEPEST: Elevation = Elevation(-18);
 	const GRASS: Elevation = Elevation(1);
 	pub const HIGHEST: Elevation = Elevation(2);

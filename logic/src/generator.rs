@@ -11,6 +11,7 @@ use strum::IntoEnumIterator;
 use crate::state::Harbor;
 use crate::state::WorldState;
 use crate::units::Elevation;
+use crate::units::TileType;
 use crate::ResourcePack;
 use crate::ResourcePackContent;
 use crate::Terrain;
@@ -118,7 +119,7 @@ impl Generator for PerlinNoise {
 			let mut current_set = Vec::new();
 
 			while current_set.len() < resource_amount as usize {
-				let loc = terrain.random_location(&mut rng);
+				let loc = terrain.random_passable_location(&mut rng);
 				let loc_elev = terrain.get(loc.try_into().unwrap());
 
 				if !cnt.spawn_location.contains(loc_elev) {
@@ -142,18 +143,29 @@ impl Generator for PerlinNoise {
 			resources.extend(current_set);
 		}
 
-		// One harbour per 128 tiles (on average)
+		// One harbour per 256 tiles (on average)
 		let harbor_amount =
-			(setting.edge_length as f32 * setting.edge_length as f32 / 256.).max(1.0);
+			(setting.edge_length as f32 * setting.edge_length as f32 / 256.).max(1.0) as usize;
 
-		let harbors = (0..(harbor_amount as u32))
-			.map(|_| {
-				Harbor {
-					loc: terrain.random_passable_location(&mut rng),
-					orientation: rng.gen::<f32>() * TAU,
-				}
-			})
-			.collect();
+		let mut harbors = Vec::new();
+		// Add all the harbors
+		while harbors.len() < harbor_amount {
+			let loc = terrain.random_passable_location(&mut rng);
+			let elev = *terrain.get(loc.try_into().unwrap());
+
+			// Ensure a harbor only spawn within shallow water
+			if !(TileType::ShallowWater.lowest() <= elev
+				&& elev <= TileType::ShallowWater.highest())
+			{
+				continue;
+			}
+
+			let harbor = Harbor {
+				loc,
+				orientation: rng.gen::<f32>() * TAU,
+			};
+			harbors.push(harbor);
+		}
 
 		let seed: u64 = rng.gen();
 
