@@ -3,6 +3,7 @@ use std::f32::consts::TAU;
 use std::fmt;
 
 use enum_map::Enum;
+use nalgebra_glm::vec2;
 use nalgebra_glm::Vec2;
 use rand::distributions::Distribution;
 use rand::Rng;
@@ -23,6 +24,7 @@ use crate::StdRng;
 use crate::WorldInit;
 use crate::FRICTION_CROSS_SPEED_FACTOR;
 use crate::FRICTION_GROUND_SPEED_FACTOR;
+use crate::HARBOR_DOCKING_SPEED;
 use crate::HARBOR_EFFECT_SIZE;
 use crate::HARBOR_MAX_SPEED;
 use crate::HARBOR_SIZE;
@@ -305,10 +307,11 @@ impl WorldState {
 			// Harbor collision
 			for harbor in &self.harbors {
 				let coll_dist = (HARBOR_SIZE + VEHICLE_SIZE) * 0.5;
+				let distance = p.vehicle.pos.0.metric_distance(&harbor.loc.0);
 				// Only check if the player isn't inside yet
 				if old_pos.metric_distance(&harbor.loc.0) >= coll_dist {
 					// Check if the player went inside
-					if p.vehicle.pos.0.metric_distance(&harbor.loc.0) < coll_dist {
+					if distance < coll_dist {
 						// Reset player pos
 						p.vehicle.pos.0 = old_pos;
 
@@ -323,6 +326,14 @@ impl WorldState {
 						// Add event about collision
 						events.push(Event::HarborCollision(old_velo.norm()));
 					}
+				}
+				// Make a ship docked, if within harbor range, without a sail, slow enough
+				if distance < HARBOR_EFFECT_SIZE
+					&& p.vehicle.sail.reefing == Reefing(0)
+					&& p.vehicle.velocity.norm() <= HARBOR_DOCKING_SPEED
+				{
+					// Dock the ship
+					p.vehicle.velocity = vec2(0., 0.);
 				}
 			}
 

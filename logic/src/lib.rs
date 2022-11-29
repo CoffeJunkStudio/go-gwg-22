@@ -39,6 +39,9 @@ pub const HARBOR_EFFECT_SIZE: f32 = 6.;
 /// The maximum speed of the player while trading.
 pub const HARBOR_MAX_SPEED: f32 = 1.;
 
+/// The maximum speed of the player at which a ship is docked.
+pub const HARBOR_DOCKING_SPEED: f32 = 0.8;
+
 /// The "diameter" of the player's car.
 pub const VEHICLE_SIZE: f32 = 1.3;
 
