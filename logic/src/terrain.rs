@@ -3,6 +3,7 @@ use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::units::Distance;
 use crate::units::Elevation;
 use crate::units::Location;
 use crate::TILE_SIZE;
@@ -344,6 +345,26 @@ impl Terrain {
 		}
 
 		loc
+	}
+
+	/// Returns the shortest distance from one location to another on a torus.
+	pub fn torus_distance(&self, from: Location, to: Location) -> Distance {
+		let from = self.map_loc_on_torus(from);
+		let to = self.map_loc_on_torus(to);
+
+		let mut distance = to - from;
+
+		let half_size = self.map_size() / 2.;
+		if distance.0.x.abs() > half_size {
+			let s = distance.0.x.signum();
+			distance.0.x = (self.map_size() - distance.0.x.abs()) * s * -1.;
+		}
+		if distance.0.y.abs() > half_size {
+			let s = distance.0.y.signum();
+			distance.0.y = (self.map_size() - distance.0.y.abs()) * s * -1.;
+		}
+
+		distance
 	}
 
 	/// Returns wether `x` lies between `min` and `max` on a Torus world.

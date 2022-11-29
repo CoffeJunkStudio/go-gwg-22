@@ -4,7 +4,6 @@ use std::path::Path;
 use cfg_if::cfg_if;
 use enum_map::enum_map;
 use good_web_game as gwg;
-use gwg::cgmath::Point2;
 use gwg::goodies::scene::Scene;
 use gwg::goodies::scene::SceneSwitch;
 use gwg::graphics;
@@ -45,6 +44,7 @@ use logic::ResourcePackContent;
 use logic::World;
 use logic::TICKS_PER_SECOND;
 use logic::TILE_SIZE;
+use nalgebra::Point2;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use rand::SeedableRng;
@@ -556,6 +556,26 @@ impl Game {
 				)?
 				.build(ctx, quad_ctx)?;
 			draw(ctx, quad_ctx, &mesh, (Point2::new(0., 0.),))?;
+
+			// Line to the home harbor
+			let p_pos = self.world.state.player.vehicle.pos;
+			let dist = self
+				.world
+				.init
+				.terrain
+				.torus_distance(p_pos, self.world.state.harbors[0].loc);
+			let dist = Distance(dist.0 * 0.5);
+			let mesh = MeshBuilder::new()
+				.line(
+					&[
+						self.location_to_screen_coords(ctx, p_pos),
+						self.location_to_screen_coords(ctx, p_pos + dist),
+					],
+					1.,
+					Color::RED,
+				)?
+				.build(ctx, quad_ctx)?;
+			draw(ctx, quad_ctx, &mesh, (Point2::new(0., 0.),))?;
 		}
 
 		Ok(())
@@ -669,7 +689,7 @@ impl Scene<GlobalState> for Game {
 			}
 
 			// Selling (fixed with logic ticks, so it is independent from the frame rate)
-			if let Some(mut trade) = self.world.state.get_trading() {
+			if let Some(mut trade) = self.world.state.get_trading(&self.world.init) {
 				if is_key_pressed(ctx, KeyCode::E) {
 					let res = trade.sell_fish(10);
 					if let Some(proceeds) = res {
@@ -1464,14 +1484,14 @@ impl Scene<GlobalState> for Game {
 		let budget = self.world.state.player.money;
 
 		// The trading "interface"
-		if let Some(mut t) = self.world.state.get_trading() {
+		if let Some(mut t) = self.world.state.get_trading(&self.world.init) {
 			let text_color = Color::new(1.0, 1.0, 1.0, 0.85);
 			let inactive_color = Color::new(1.0, 1.0, 1.0, 0.4);
 
-			let harbor_loc = t.get_harbor().loc;
+			let harbor_dist = self.world.init.terrain.torus_distance(player_loc, t.get_harbor().loc);
 			let player_loc_sc = nalgebra::Point2::new(screen_coords.w, screen_coords.h) * 0.5;
 			let harbor_loc_sc =
-				nalgebra::Point2::from((harbor_loc.0 - player_loc.0) * ppm + player_loc_sc.coords);
+				nalgebra::Point2::from(harbor_dist.0 * ppm + player_loc_sc.coords);
 			if t.has_player_valid_speed() {
 				// Trading is possible
 
@@ -1509,8 +1529,7 @@ impl Scene<GlobalState> for Game {
 				} else {
 					inactive_color
 				};
-				let mut option_text =
-					Text::new(format!("E: sell fish"));
+				let mut option_text = Text::new(format!("E: sell fish"));
 				let x_offset = option_text.width(ctx) * 0.5;
 				option_text.set_font(Default::default(), PxScale::from(20.));
 				graphics::draw(
@@ -1630,7 +1649,7 @@ impl Scene<GlobalState> for Game {
 
 		// Trading interactions.
 		// Check whether the player is at a harbor
-		if let Some(mut t) = self.world.state.get_trading() {
+		if let Some(mut t) = self.world.state.get_trading(&self.world.init) {
 			if t.has_player_valid_speed() {
 				// Check for sail upgrade key
 				if keycode == KeyCode::R {
