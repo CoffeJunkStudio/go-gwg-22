@@ -1510,7 +1510,7 @@ impl Scene<GlobalState> for Game {
 					inactive_color
 				};
 				let mut option_text =
-					Text::new(format!("E: sell fish ({}$/kg)", t.get_price_for_fish()));
+					Text::new(format!("E: sell fish"));
 				let x_offset = option_text.width(ctx) * 0.5;
 				option_text.set_font(Default::default(), PxScale::from(20.));
 				graphics::draw(
@@ -1534,7 +1534,7 @@ impl Scene<GlobalState> for Game {
 						inactive_color
 					};
 
-					(c, format!("R: Upgrade sail ({price}$)"))
+					(c, format!("R: Upgrade sail ({price} €)"))
 				} else {
 					(inactive_color, "Your sail is awesome!".to_owned())
 				};
@@ -1561,7 +1561,7 @@ impl Scene<GlobalState> for Game {
 						inactive_color
 					};
 
-					(c, format!("F: Upgrade hull ({price}$)"))
+					(c, format!("F: Upgrade hull ({price} €)"))
 				} else {
 					(inactive_color, "Your hull is awesome!".to_owned())
 				};
@@ -1880,7 +1880,7 @@ impl Game {
 		gwg::graphics::draw(ctx, quad_ctx, &self.images.ui.fishy_icon, p)?;
 
 		let mut fishy_text = Text::new(format!(
-			"{}kg",
+			"{} kg",
 			self.world.state.player.vehicle.resource_weight
 		));
 		fishy_text.set_font(Default::default(), PxScale::from(32.0));
@@ -1904,7 +1904,7 @@ impl Game {
 			.scale(logic::glm::vec2(0.5, 0.5));
 		gwg::graphics::draw(ctx, quad_ctx, &self.images.ui.money_icon, p)?;
 
-		let mut money_text = Text::new(format!("{}$", self.world.state.player.money));
+		let mut money_text = Text::new(format!("{} €", self.world.state.player.money));
 		money_text.set_font(Default::default(), PxScale::from(32.0));
 		let p = DrawParam::new()
 			.dest(Point2::new(
