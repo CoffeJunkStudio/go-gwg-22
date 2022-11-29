@@ -47,6 +47,7 @@ use logic::World;
 use logic::TICKS_PER_SECOND;
 use logic::TILE_SIZE;
 use rand::seq::SliceRandom;
+use rand::Rng;
 use rand::SeedableRng;
 use wyhash::wyhash;
 
@@ -82,6 +83,8 @@ const DEFAULT_ZOOM_LEVEL: i32 = -1;
 /// The maximum harbor distance for which to display a harbor indicator. Harbors whose distance is smaller than this will be indicated.
 /// Unit: meters
 const MAX_HARBOR_DISTANCE: f32 = logic::VEHICLE_SIZE * 60.0;
+
+const COMPLIMENT_PROBABILITY: f64 = 0.01;
 
 trait Mix {
 	fn mix(&self, other: &Self, mix_factor: f32) -> Self;
@@ -180,6 +183,13 @@ impl Audios {
 	}
 }
 
+const COMPLIMENTS: &[&str] = &[
+	"You're the best!",
+	"You're so talented!",
+	"You're one of a kind!",
+	"You're a living legend!",
+];
+
 // #[derive(Debug)] `audio::Source` dose not implement Debug!
 pub struct Game {
 	/// The drawables
@@ -206,6 +216,9 @@ pub struct Game {
 
 	/// True in the very first frame
 	init: bool,
+
+	available_compliments: Vec<&'static str>,
+	fished_compliments: Vec<&'static str>,
 }
 
 impl Game {
@@ -501,6 +514,8 @@ impl Game {
 			water_wave_offset: Default::default(),
 			water_wave_2_offset: Default::default(),
 			init: true,
+			available_compliments: COMPLIMENTS.to_owned(),
+			fished_compliments: Vec::new(),
 		};
 
 		println!(
@@ -734,6 +749,16 @@ impl Scene<GlobalState> for Game {
 								&self.audios.sound_fishy_3,
 							];
 							let sound = fishies.choose(&mut rng).unwrap();
+
+							if !self.available_compliments.is_empty()
+								&& rng.gen_bool(COMPLIMENT_PROBABILITY)
+							{
+								let compliment_index =
+									rng.gen_range(0..self.available_compliments.len());
+								let compliment =
+									self.available_compliments.swap_remove(compliment_index);
+								self.fished_compliments.push(compliment);
+							}
 
 							sound.play(ctx).unwrap();
 						},
@@ -1955,6 +1980,31 @@ impl Game {
 			.color(Color::WHITE)
 			.offset(Point2::new(-0.5, -0.5));
 		self.draw_text_with_halo(ctx, quad_ctx, &money_text, p, Color::BLACK)?;
+
+		let mut total_height = 0.0;
+		for (i, compliment) in self.fished_compliments.iter().enumerate().rev() {
+			let mut compliment_text = Text::new(format!("{}. {compliment}", i + 1));
+			compliment_text.set_font(Default::default(), PxScale::from(22.0));
+			total_height += compliment_text.height(ctx) * 1.3;
+			let p = DrawParam::new()
+				.dest(Point2::new(40.0, screen_coords.h - total_height - 40.0))
+				.color(Color::WHITE)
+				.offset(Point2::new(-0.5, -0.5));
+			self.draw_text_with_halo(ctx, quad_ctx, &compliment_text, p, Color::BLACK)?;
+		}
+
+		let mut compliments_title = Text::new(format!(
+			"Fish for compliments! ({}/{})",
+			self.fished_compliments.len(),
+			COMPLIMENTS.len()
+		));
+		compliments_title.set_font(Default::default(), PxScale::from(26.0));
+		total_height += compliments_title.height(ctx) * 2.0;
+		let p = DrawParam::new()
+			.dest(Point2::new(40.0, screen_coords.h - total_height - 40.0))
+			.color(Color::WHITE)
+			.offset(Point2::new(-0.5, -0.5));
+		self.draw_text_with_halo(ctx, quad_ctx, &compliments_title, p, Color::BLACK)?;
 
 		Ok(())
 	}
