@@ -5,6 +5,7 @@ mod loading;
 use good_web_game::event::EventHandler;
 use good_web_game::event::{self,};
 use good_web_game::goodies::scene::SceneStack;
+use good_web_game::graphics;
 use good_web_game::Context;
 use good_web_game::GameError;
 pub use in_game::Game;
@@ -24,6 +25,12 @@ pub fn create_stack(ctx: &mut Context) -> impl EventHandler<GameError> {
 	let mut stack = SceneStack::new(ctx, GlobalState {});
 
 	fn ng(_: &mut GlobalState, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> Game {
+		// Set Full screen mode again, if requested, to correctly apply it.
+		// Appears buggy if not done here again.
+		if !crate::OPTIONS.windowed {
+			graphics::set_fullscreen(quad_ctx, true);
+		}
+
 		Game::new(ctx, quad_ctx).unwrap()
 	}
 
