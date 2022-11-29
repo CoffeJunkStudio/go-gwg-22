@@ -411,6 +411,8 @@ impl Game {
 				.unwrap(),
 			wind_speed_colors: vec![Color::BLUE, Color::WHITE, Color::GREEN],
 			harbor_indicator: Image::new(ctx, quad_ctx, Path::new("img/moneybag_col.png")).unwrap(),
+			money_icon: Image::new(ctx, quad_ctx, Path::new("img/money_icon.png")).unwrap(),
+			fishy_icon: Image::new(ctx, quad_ctx, Path::new("img/fish-icon.png")).unwrap(),
 		};
 
 		println!(
@@ -1557,29 +1559,6 @@ impl Scene<GlobalState> for Game {
 			}
 		}
 
-		// Show players money
-		let money = Text::new(format!("Money: {:} ℓ", self.world.state.player.money));
-		self.draw_text_with_halo(
-			ctx,
-			quad_ctx,
-			&money,
-			(Point2::new(0.0, 0.0), Color::WHITE),
-			Color::BLACK,
-		)?;
-
-		// Show the current amount of fish in the ship
-		let fish = Text::new(format!(
-			"Fish: {:} kg",
-			self.world.state.player.vehicle.resource_weight
-		));
-		self.draw_text_with_halo(
-			ctx,
-			quad_ctx,
-			&fish,
-			(Point2::new(0.0, 20.0), Color::WHITE),
-			Color::BLACK,
-		)?;
-
 		// The trading "interface"
 		if let Some(t) = self.world.state.get_trading() {
 			if t.has_player_valid_speed() {
@@ -1931,6 +1910,51 @@ impl Game {
 				}
 			}
 		}
+
+		// Fishy indicator
+		let p = DrawParam::new()
+			.dest(Point2::new(0.0, 0.0))
+			.offset(Point2::new(-0.25, -0.25))
+			.scale(logic::glm::vec2(0.5, 0.5));
+		gwg::graphics::draw(ctx, quad_ctx, &self.images.ui.fishy_icon, p)?;
+
+		let mut fishy_text = Text::new(format!(
+			"{}kg",
+			self.world.state.player.vehicle.resource_weight
+		));
+		fishy_text.set_font(Default::default(), PxScale::from(32.0));
+		let p = DrawParam::new()
+			.dest(Point2::new(
+				self.images.ui.fishy_icon.width() as f32 * 0.75,
+				self.images.ui.fishy_icon.height() as f32 * 0.75 * 0.5
+					- fishy_text.height(ctx) as f32 * 0.5,
+			))
+			.color(Color::WHITE)
+			.offset(Point2::new(-0.5, -0.5));
+		self.draw_text_with_halo(ctx, quad_ctx, &fishy_text, p, Color::BLACK)?;
+
+		// Money indicator
+		let p = DrawParam::new()
+			.dest(Point2::new(
+				0.0,
+				self.images.ui.fishy_icon.height() as f32 * 0.5,
+			))
+			.offset(Point2::new(-0.25, -0.25))
+			.scale(logic::glm::vec2(0.5, 0.5));
+		gwg::graphics::draw(ctx, quad_ctx, &self.images.ui.money_icon, p)?;
+
+		let mut money_text = Text::new(format!("{}$", self.world.state.player.money));
+		money_text.set_font(Default::default(), PxScale::from(32.0));
+		let p = DrawParam::new()
+			.dest(Point2::new(
+				self.images.ui.money_icon.width() as f32 * 0.75,
+				self.images.ui.fishy_icon.height() as f32 * 0.5
+					+ self.images.ui.money_icon.height() as f32 * 0.75 * 0.5
+					- fishy_text.height(ctx) as f32 * 0.5,
+			))
+			.color(Color::WHITE)
+			.offset(Point2::new(-0.5, -0.5));
+		self.draw_text_with_halo(ctx, quad_ctx, &money_text, p, Color::BLACK)?;
 
 		Ok(())
 	}

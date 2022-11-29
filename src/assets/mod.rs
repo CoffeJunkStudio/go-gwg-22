@@ -26,6 +26,8 @@ pub struct UiImages {
 	pub wind_direction_indicator: Image,
 	pub wind_speed_colors: Vec<Color>,
 	pub harbor_indicator: Image,
+	pub money_icon: Image,
+	pub fishy_icon: Image,
 }
 
 /// Terrain assets bundle
