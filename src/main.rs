@@ -63,6 +63,10 @@ struct Opts {
 	#[structopt(short, long)]
 	windowed: bool,
 
+	/// Start the game directly, skipping the main menu
+	#[structopt(long)]
+	start: bool,
+
 	/// Use a fixed game world seed
 	#[structopt(long)]
 	seed: Option<String>,
@@ -103,7 +107,7 @@ fn main() -> gwg::GameResult {
 				env!("OUT_DIR"),
 				"/assets.tar"
 			)))),
-		|context, _quad_ctx| Box::new(scenes::create_stack(context)),
+		|context, quad_ctx| Box::new(scenes::create_stack(context, quad_ctx)),
 	)
 }
 

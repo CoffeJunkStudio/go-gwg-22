@@ -1,107 +1,60 @@
 use std::marker::PhantomData;
 
 use good_web_game as gwg;
+use good_web_game::event;
 use good_web_game::event::GraphicsContext;
 use good_web_game::goodies::scene::Scene;
 use good_web_game::goodies::scene::SceneSwitch;
 use good_web_game::graphics::Font;
+use good_web_game::graphics::Image;
 use good_web_game::graphics::Text;
 use good_web_game::graphics::{self,};
 use good_web_game::Context;
 use good_web_game::GameResult;
+use miniquad::KeyCode;
 use nalgebra::Point2;
 
+use super::Game;
 use super::GlobalState;
+use super::loading::LoadableFn;
+use super::loading::Loading;
 
 
-const DEFAULT_DELAY: u16 = 3;
 
+/// The main menu or title screen
+pub struct MainMenu {
+	// todo
+	bg: Image,
 
-/// A scene loader
-pub(super) trait Loadable {
-	type Target: Scene<GlobalState> + 'static;
+	first: bool,
 
-	fn load(
-		&self,
-		glob: &mut GlobalState,
-		ctx: &mut Context,
-		quad_ctx: &mut GraphicsContext,
-	) -> Self::Target;
+	/// Indicates that the game shall begin
+	lets_continue : bool,
 }
 
-/// An `Fn` wrapper as scene loader
-pub struct LoadableFn<T, F> {
-	_t: PhantomData<T>,
-	f: F,
-}
-impl<T, F> LoadableFn<T, F> {
-	pub fn new(f: F) -> Self {
-		Self {
-			_t: PhantomData,
-			f,
-		}
+impl MainMenu {
+	pub fn new(ctx: &mut Context,
+		quad_ctx: &mut miniquad::GraphicsContext,) -> GameResult< Self> {
+		let bg = graphics::Image::new(ctx, quad_ctx, "/img/bg-16-9-idx.png")?;
+
+		Ok(Self {
+			bg,
+			first: true,
+			lets_continue: crate::OPTIONS.start,
+		})
 	}
 }
 
-impl<
-		T: Scene<GlobalState> + 'static,
-		F: Fn(&mut GlobalState, &mut Context, &mut GraphicsContext) -> T,
-	> From<F> for LoadableFn<T, F>
-{
-	fn from(f: F) -> Self {
-		Self::new(f)
-	}
-}
-
-impl<
-		T: Scene<GlobalState> + 'static,
-		F: Fn(&mut GlobalState, &mut Context, &mut GraphicsContext) -> T,
-	> Loadable for LoadableFn<T, F>
-{
-	type Target = T;
-
-	fn load(
-		&self,
-		glob: &mut GlobalState,
-		ctx: &mut Context,
-		quad_ctx: &mut GraphicsContext,
-	) -> Self::Target {
-		(self.f)(glob, ctx, quad_ctx)
-	}
-}
-
-/// Loads the given scene after a short delay.
-pub struct Loading<S> {
-	loadable: S,
-	delay: u16,
-}
-
-impl<S> Loading<S> {
-	pub fn new(loadable: S, delay: u16) -> Self {
-		Self {
-			loadable,
-			delay,
-		}
-	}
-}
-
-impl<S: Loadable> From<S> for Loading<S> {
-	fn from(loadable: S) -> Self {
-		Self::new(loadable, DEFAULT_DELAY)
-	}
-}
-
-impl<S: Loadable> Scene<GlobalState> for Loading<S> {
+impl Scene<GlobalState> for MainMenu {
 	fn update(
 		&mut self,
-		glob: &mut GlobalState,
-		ctx: &mut Context,
-		quad_ctx: &mut GraphicsContext,
+		_glob: &mut GlobalState,
+		_ctx: &mut Context,
+		_quad_ctx: &mut GraphicsContext,
 	) -> SceneSwitch<GlobalState> {
-		if self.delay == 0 {
-			SceneSwitch::Replace(Box::new(self.loadable.load(glob, ctx, quad_ctx)))
+		if self.lets_continue {
+			SceneSwitch::Push(Box::new(Loading::from(LoadableFn::new(super::start_game))))
 		} else {
-			self.delay -= 1;
 			SceneSwitch::None
 		}
 	}
@@ -114,9 +67,8 @@ impl<S: Loadable> Scene<GlobalState> for Loading<S> {
 	) -> GameResult<()> {
 		let size = graphics::drawable_size(quad_ctx);
 
-		graphics::clear(ctx, quad_ctx, [0.0, 0.0, 0.0, 1.0].into());
 
-		//graphics::draw(ctx, quad_ctx, &Text::new("Loading ..."), (Point2::new(1.,1.),))?;
+		graphics::clear(ctx, quad_ctx, [0.0, 0.0, 0.0, 1.0].into());
 
 		let mut heading = Text::new("Plenty of Fish in the Sea");
 		heading.set_font(Font::default(), (3. * Font::DEFAULT_FONT_SCALE).into());
@@ -132,7 +84,7 @@ impl<S: Loadable> Scene<GlobalState> for Loading<S> {
 			),),
 		)?;
 
-		let mut loading = Text::new("Loading ...");
+		let mut loading = Text::new("Press key to start ...");
 		loading.set_font(Font::default(), (2. * Font::DEFAULT_FONT_SCALE).into());
 		loading.set_bounds(Point2::new(size.0, size.1), graphics::Align::Center);
 		graphics::draw(
@@ -146,11 +98,25 @@ impl<S: Loadable> Scene<GlobalState> for Loading<S> {
 		graphics::present(ctx, quad_ctx)?;
 
 		Ok(())
+	}
 
+	fn key_down_event(
+			&mut self,
+			_gameworld: &mut GlobalState,
+			ctx: &mut good_web_game::Context,
+			_quad_ctx: &mut miniquad::graphics::GraphicsContext,
+			key: good_web_game::event::KeyCode,
+		) {
+
+		if key == KeyCode::Escape {
+			good_web_game::event::quit(ctx);
+		}
+
+		self.lets_continue = true;
 	}
 
 	fn name(&self) -> &str {
-		"Loading"
+		"Main Menu"
 	}
 
 	fn resize_event(
