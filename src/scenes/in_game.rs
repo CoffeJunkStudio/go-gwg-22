@@ -492,7 +492,7 @@ impl Game {
 			audios,
 			terrain_transition_canvas,
 			terrain_transition_mask_canvas,
-			full_screen: false,
+			full_screen: !opts.windowed,
 			world,
 			input: Input::default(),
 			zoom_factor_exp: DEFAULT_ZOOM_LEVEL,

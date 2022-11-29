@@ -59,6 +59,10 @@ struct Opts {
 	#[structopt(short = "s", long, default_value = "32")]
 	map_size: u16,
 
+	/// Start the game in window modus
+	#[structopt(short, long)]
+	windowed: bool,
+
 	/// Use a fixed game world seed
 	#[structopt(long)]
 	seed: Option<String>,
@@ -88,13 +92,13 @@ lazy_static! {
 fn main() -> gwg::GameResult {
 	println!("--- [main] entered");
 
-	let _opts = &*OPTIONS;
+	let opts = &*OPTIONS;
 
 	gwg::start(
 		gwg::conf::Conf::default()
 			.window_title("Plenty of fish in the sea".into())
 			.window_resizable(true)
-			//.fullscreen(true)
+			.fullscreen(!opts.windowed)
 			.cache(Some(include_bytes!(concat!(
 				env!("OUT_DIR"),
 				"/assets.tar"
