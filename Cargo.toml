@@ -60,7 +60,7 @@ strip = true
 lto = true
 panic = 'abort'
 codegen-units = 1
-opt-level = 'z'
+opt-level = 3
 
 
 
