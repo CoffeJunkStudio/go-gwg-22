@@ -54,10 +54,7 @@ impl AssetBatch {
 		params: AssetParams,
 	) -> gwg::GameResult<Self> {
 		let batch = image_batch(ctx, quad_ctx, path)?;
-		Ok(Self {
-			batch,
-			params,
-		})
+		Ok(Self::new(batch, params))
 	}
 
 	pub fn from_config(

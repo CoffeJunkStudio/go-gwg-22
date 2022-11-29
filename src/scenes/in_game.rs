@@ -466,7 +466,6 @@ impl Game {
 					world.state.player.vehicle.pos = candidate;
 					// Orient orthogonal to the distance to the harbor
 					world.state.player.vehicle.heading = f32::atan2(x as f32, y as f32);
-					println!("Spawn: {x} / {y} at {dist}");
 					break 'find_pos;
 				}
 			}
@@ -1807,6 +1806,7 @@ impl Game {
 			.terrain
 			.map_loc_on_torus(self.world.state.player.vehicle.pos);
 
+
 		// -- Wind indicator --
 
 		let normed_wind_speed = self.world.state.wind.magnitude() / logic::MAX_WIND_SPEED;
@@ -1820,7 +1820,9 @@ impl Game {
 		let color2 = &self.images.ui.wind_speed_colors[color_idx2];
 
 		let color = color1.mix(color2, mix_factor);
+		let padding = 128.;
 
+		// Draw additional info text
 		let text_height = {
 			cfg_if! {
 				if #[cfg(feature = "dev")] {
@@ -1835,7 +1837,7 @@ impl Game {
 
 					let p = DrawParam::new()
 						.dest(Point2::new(
-							screen_coords.w - 128.0 - wind_text.width(ctx) * 0.5,
+							screen_coords.w - padding - wind_text.width(ctx) * 0.5,
 							screen_coords.h - wind_text.height(ctx) - 5.,
 						))
 						.color(color);
@@ -1847,6 +1849,20 @@ impl Game {
 				}
 			}
 		};
+
+		// Draw wind indicator arrow
+		let p = DrawParam::new()
+			.dest(Point2::new(
+				screen_coords.w - padding,
+				screen_coords.h - padding - text_height,
+			))
+			.offset(Point2::new(0.5, 0.5))
+			.color(color)
+			.scale(logic::glm::vec1(normed_wind_speed).xx())
+			.rotation(self.world.state.wind.angle() + std::f32::consts::FRAC_PI_2);
+		gwg::graphics::draw(ctx, quad_ctx, &self.images.ui.wind_direction_indicator, p)?;
+
+
 
 		// -- Harbor indicators --
 		for harbor_loc in self
@@ -1915,17 +1931,6 @@ impl Game {
 				}
 			}
 		}
-
-		let p = DrawParam::new()
-			.dest(Point2::new(
-				screen_coords.w - 128.0,
-				screen_coords.h - 128.0 - text_height,
-			))
-			.offset(Point2::new(0.5, 0.5))
-			.color(color)
-			.scale(logic::glm::vec1(normed_wind_speed).xx())
-			.rotation(self.world.state.wind.angle() + std::f32::consts::FRAC_PI_2);
-		gwg::graphics::draw(ctx, quad_ctx, &self.images.ui.wind_direction_indicator, p)?;
 
 		Ok(())
 	}

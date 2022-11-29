@@ -12,7 +12,6 @@ use serde::Serialize;
 
 use crate::terrain::TileCoord;
 use crate::units::BiPolarFraction;
-use crate::units::Fish;
 use crate::units::Fraction;
 use crate::units::Location;
 use crate::units::Tick;

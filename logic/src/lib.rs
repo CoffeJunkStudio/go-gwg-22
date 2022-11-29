@@ -20,7 +20,6 @@ use state::WorldState;
 use terrain::Terrain;
 use units::BiPolarFraction;
 use units::Elevation;
-use units::Fish;
 use units::Location;
 use units::Tick;
 
