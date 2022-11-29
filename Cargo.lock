@@ -622,8 +622,7 @@ dependencies = [
 [[package]]
 name = "good-web-game"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "795e2f12a6381edd500b2829a55e621040024ff38f45e8833d453c7b3e940915"
+source = "git+https://github.com/CoffeJunkStudio/good-web-game.git?branch=plenty-of-fish#f70f6c0178b4a85ff9916ada2b9fb636f5f0e974"
 dependencies = [
  "approx 0.5.1",
  "bitflags",

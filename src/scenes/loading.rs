@@ -118,17 +118,26 @@ impl<S: Loadable> Scene<GlobalState> for Loading<S> {
 		let mut heading = Text::new("Plenty of Fish in the Sea");
 		heading.set_font(Font::default(), (3. * Font::DEFAULT_FONT_SCALE).into());
 		heading.set_bounds(Point2::new(size.0, size.1), graphics::Align::Center);
+		let height = heading.dimensions(ctx).h;
 		graphics::draw(
 			ctx,
 			quad_ctx,
 			&heading,
-			(Point2::new(0., size.1 / 2. - 3. * Font::DEFAULT_FONT_SCALE),),
+			(Point2::new(
+				0.,
+				size.1 / 2. - Font::DEFAULT_FONT_SCALE - height,
+			),),
 		)?;
 
 		let mut loading = Text::new("Loading ...");
 		loading.set_font(Font::default(), (2. * Font::DEFAULT_FONT_SCALE).into());
 		loading.set_bounds(Point2::new(size.0, size.1), graphics::Align::Center);
-		graphics::draw(ctx, quad_ctx, &loading, (Point2::new(0., size.1 / 2.),))
+		graphics::draw(
+			ctx,
+			quad_ctx,
+			&loading,
+			(Point2::new(0., size.1 / 2. + Font::DEFAULT_FONT_SCALE),),
+		)
 	}
 
 	fn name(&self) -> &str {

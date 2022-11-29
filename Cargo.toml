@@ -66,3 +66,5 @@ opt-level = 'z'
 
 [patch.crates-io]
 miniquad = { git = "https://github.com/CoffeJunkStudio/miniquad", branch = "hack-fixed-filter-setting-and-mipmap" }
+good-web-game = { git = "https://github.com/CoffeJunkStudio/good-web-game.git", branch = "plenty-of-fish" }
+
