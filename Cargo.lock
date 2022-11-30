@@ -74,7 +74,7 @@ checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
 
 [[package]]
 name = "asset-config"
-version = "0.2.0"
+version = "0.3.0-alpha"
 dependencies = [
  "serde",
 ]
@@ -893,7 +893,7 @@ dependencies = [
 
 [[package]]
 name = "logic"
-version = "0.2.0"
+version = "0.3.0-alpha"
 dependencies = [
  "enum-map",
  "enumeraties",
@@ -1268,7 +1268,7 @@ checksum = "6ac9a59f73473f1b8d852421e59e64809f025994837ef743615c6d0c5b305160"
 
 [[package]]
 name = "plenty-of-fish-in-the-sea"
-version = "0.2.0"
+version = "0.3.0-alpha"
 dependencies = [
  "asset-config",
  "built",
