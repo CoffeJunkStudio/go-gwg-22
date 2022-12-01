@@ -82,6 +82,11 @@ const DEFAULT_ZOOM_LEVEL: i32 = -1;
 /// Probability of catching a compliment when catching a fish, in percent
 const COMPLIMENT_PROBABILITY: f64 = 0.1;
 
+const ACHIEVEMENT_COLOR: Color = Color::new(0.1, 1.0, 0.1, 1.0);
+const ACHIEVEMENT_SPEEDER_SPPED: f32 = 8.0;
+const ACHIEVEMENT_BUSINESSMAN_MONEY: u64 = 10000;
+const ACHIEVEMENT_CHARMER_N_COMPLIMENTS: u32 = 100;
+
 trait Mix {
 	fn mix(&self, other: &Self, mix_factor: f32) -> Self;
 }
@@ -191,6 +196,7 @@ pub struct Game {
 
 	fished_compliments: u32,
 	max_speed: f32,
+	max_money: u64,
 	achievements: Achievements,
 }
 
@@ -438,6 +444,7 @@ impl Game {
 			toasts: Vec::new(),
 			fished_compliments: 0,
 			max_speed: 0.0,
+			max_money: 0,
 			achievements: Default::default(),
 		};
 
@@ -821,37 +828,34 @@ impl Scene<GlobalState> for Game {
 
 		// Process achievements
 
-		let is_sail_maxed = self
-			.world
-			.state
-			.player
-			.vehicle
-			.sail
-			.kind
-			.upgrade()
-			.is_none();
-		let is_hull_maxed = self.world.state.player.vehicle.hull.upgrade().is_none();
-		if !self.achievements.admiral && is_sail_maxed && is_hull_maxed {
+		if !self.achievements.admiral && self.is_sail_maxed() && self.is_hull_maxed() {
 			self.achievements.admiral = true;
-			// TODO: play sound, show some effect
+			self.toast_at_player("Admiral", ACHIEVEMENT_COLOR);
+			// TODO: play sound
 		}
 
 		self.max_speed = self
 			.max_speed
 			.max(self.world.state.player.vehicle.ground_speed());
-		if !self.achievements.speeder && self.max_speed >= 6.0 {
+		if !self.achievements.speeder && self.max_speed >= ACHIEVEMENT_SPEEDER_SPPED {
 			self.achievements.speeder = true;
-			// TODO: play sound, show some effect
+			self.toast_at_player("Speeder", ACHIEVEMENT_COLOR);
+			// TODO: play sound
 		}
 
-		if !self.achievements.businessman && self.world.state.player.money >= 10000 {
+		self.max_money = self.max_money.max(self.world.state.player.money);
+		if !self.achievements.businessman && self.max_money >= ACHIEVEMENT_BUSINESSMAN_MONEY {
 			self.achievements.businessman = true;
-			// TODO: play sound, show some effect
+			self.toast_at_player("Businessman", ACHIEVEMENT_COLOR);
+			// TODO: play sound
 		}
 
-		if !self.achievements.charmer && self.fished_compliments >= 100 {
+		if !self.achievements.charmer
+			&& self.fished_compliments >= ACHIEVEMENT_CHARMER_N_COMPLIMENTS
+		{
 			self.achievements.charmer = true;
-			// TODO: play sound, show some effect
+			self.toast_at_player("Fishing for compliments", ACHIEVEMENT_COLOR);
+			// TODO: play sound
 		}
 
 		self.init = false;
@@ -2070,18 +2074,42 @@ impl Game {
 			.offset(Point2::new(-0.5, -0.5));
 		self.draw_text_with_halo(ctx, quad_ctx, &money_text, p, Color::BLACK)?;
 
+		let sail_progress = if self.is_sail_maxed() { 1 } else { 0 };
+		let hull_progress = if self.is_hull_maxed() { 1 } else { 0 };
+
 		let mut y_offset = 0.0;
 		for (name, is_achieved) in [
-			("Admiral", self.achievements.admiral),
-			("Speeder", self.achievements.speeder),
-			("Businessman", self.achievements.businessman),
-			("Charmer", self.achievements.charmer),
+			(
+				format!("Admiral ({}/2)", sail_progress + hull_progress),
+				self.achievements.admiral,
+			),
+			(
+				format!(
+					"Speeder ({:.1}/{:.1})",
+					self.max_speed, ACHIEVEMENT_SPEEDER_SPPED
+				),
+				self.achievements.speeder,
+			),
+			(
+				format!(
+					"Businessman ({}/{})",
+					self.max_money, ACHIEVEMENT_BUSINESSMAN_MONEY
+				),
+				self.achievements.businessman,
+			),
+			(
+				format!(
+					"Fishing for compliments ({}/{})",
+					self.fished_compliments, ACHIEVEMENT_CHARMER_N_COMPLIMENTS
+				),
+				self.achievements.charmer,
+			),
 		]
 		.into_iter()
 		.rev()
 		{
 			let color = if is_achieved {
-				Color::new(0.1, 1.0, 0.1, 1.)
+				ACHIEVEMENT_COLOR
 			} else {
 				Color::new(1.0, 1.0, 1.0, 0.4)
 			};
@@ -2107,5 +2135,28 @@ impl Game {
 
 	fn map_length(&self) -> f32 {
 		(u32::from(self.world.init.terrain.edge_length) * logic::TILE_SIZE) as f32
+	}
+
+	fn is_sail_maxed(&self) -> bool {
+		self.world
+			.state
+			.player
+			.vehicle
+			.sail
+			.kind
+			.upgrade()
+			.is_none()
+	}
+
+	fn is_hull_maxed(&self) -> bool {
+		self.world.state.player.vehicle.hull.upgrade().is_none()
+	}
+
+	fn toast_at_player(&mut self, message: impl ToString, color: Color) {
+		self.toasts.push(Toast::new(
+			message.to_string(),
+			self.world.state.player.vehicle.pos,
+			color,
+		));
 	}
 }
