@@ -142,12 +142,17 @@ impl Scene<GlobalState> for MainMenu {
 		graphics::draw(ctx, quad_ctx, &self.bg, params)?;
 
 		// Draw the how-to
-		self.draw_a_button_at_the_center(ctx, quad_ctx, "W", (0, -1))?;
-		self.draw_a_button_at_the_center(ctx, quad_ctx, "A", (-1, 0))?;
-		self.draw_a_button_at_the_center(ctx, quad_ctx, "S", (0, 0))?;
-		self.draw_a_button_at_the_center(ctx, quad_ctx, "D", (1, 0))?;
+		self.draw_a_button_at_the_center(ctx, quad_ctx, "W", (-3, -1))?;
+		self.draw_a_button_at_the_center(ctx, quad_ctx, " ", (-4, 0))?;
+		self.draw_a_button_at_the_center(ctx, quad_ctx, "S", (-3, 0))?;
+		self.draw_a_button_at_the_center(ctx, quad_ctx, " ", (-2, 0))?;
 
-		let mut controls = Text::new("Controls");
+		self.draw_a_button_at_the_center(ctx, quad_ctx, " ", (3, -1))?;
+		self.draw_a_button_at_the_center(ctx, quad_ctx, "A", (2, 0))?;
+		self.draw_a_button_at_the_center(ctx, quad_ctx, " ", (3, 0))?;
+		self.draw_a_button_at_the_center(ctx, quad_ctx, "D", (4, 0))?;
+
+		let mut controls = Text::new("Set Sail            Turning ");
 		controls.set_font(Font::default(), (1. * Font::DEFAULT_FONT_SCALE).into());
 		controls.set_bounds(Point2::new(size.0, size.1), graphics::Align::Center);
 		let _height = controls.dimensions(ctx).h;
