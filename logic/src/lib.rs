@@ -26,7 +26,7 @@ pub const TILE_SIZE: u32 = 4;
 pub const HARBOR_SIZE: f32 = 3.;
 
 /// The effect "diameter" within which a player an interact with a harbor, in meter
-pub const HARBOR_EFFECT_SIZE: f32 = 6.;
+pub const HARBOR_EFFECT_SIZE: f32 = 7.;
 
 /// The maximum speed of the player while trading.
 pub const HARBOR_MAX_SPEED: f32 = 1.;
