@@ -4,7 +4,7 @@ exclude = ["asset-repo"]
 
 [package]
 name = "plenty-of-fish-in-the-sea"
-version = "1.0.0-alpha"
+version = "1.0.0"
 edition = "2021"
 description = "Our Game-Off 2022 game jam participation"
 
