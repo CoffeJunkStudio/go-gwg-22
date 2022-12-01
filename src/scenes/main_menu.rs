@@ -11,6 +11,7 @@ use good_web_game::Context;
 use good_web_game::GameResult;
 use gwg::graphics::Color;
 use gwg::graphics::DrawParam;
+use gwg::timer::time;
 use miniquad::KeyCode;
 use nalgebra::Point2;
 use nalgebra::Vector2;
@@ -206,7 +207,7 @@ impl Scene<GlobalState> for MainMenu {
 					ctx,
 					quad_ctx,
 					&quitting,
-					(Point2::new(0., size.1 - height), TEXT_COLOR),
+					(Point2::new(0., size.1 - height + (time().sin() as f32) * 4.), TEXT_COLOR),
 				)?;
 			}
 		}
@@ -220,7 +221,10 @@ impl Scene<GlobalState> for MainMenu {
 			ctx,
 			quad_ctx,
 			&starting,
-			(Point2::new(0., size.1 - height), TEXT_COLOR),
+			(
+				Point2::new(0., size.1 - height + (time().cos() as f32) * 4.),
+				TEXT_COLOR,
+			),
 		)?;
 
 		// Finally, issue the draw call and what not, finishing this frame for good
