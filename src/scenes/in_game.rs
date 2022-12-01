@@ -332,7 +332,7 @@ impl Game {
 		let mut world = noise.generate(&settings, &mut rng);
 		// Find a starting position for the player
 		let start_point = world.state.harbors[0].loc;
-		let mut dist = 1_i32;
+		let mut dist = 2_i32;
 		'find_pos: loop {
 			let forward = ((-dist)..=dist).map(|n| (n, 1));
 			let backward = ((1 - dist)..=(dist - 1)).map(|n| (n, -1));
@@ -353,7 +353,7 @@ impl Game {
 				{
 					world.state.player.vehicle.pos = candidate;
 					// Orient orthogonal to the distance to the harbor
-					world.state.player.vehicle.heading = f32::atan2(x as f32, y as f32);
+					world.state.player.vehicle.heading = f32::atan2(x as f32, -y as f32);
 					break 'find_pos;
 				}
 			}
