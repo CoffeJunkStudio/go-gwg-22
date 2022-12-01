@@ -24,8 +24,8 @@ use gwg::graphics::Text;
 use gwg::graphics::Transform;
 use gwg::miniquad::KeyCode;
 use gwg::timer;
-use gwg::GameResult;
 use gwg::timer::time;
+use gwg::GameResult;
 use logic::generator::Generator;
 use logic::generator::PerlinNoise;
 use logic::generator::Setting;
@@ -114,7 +114,7 @@ const COMPLIMENTS: &[&str] = &[
 ];
 
 
-const COMPLIMENT_COLOR: Color = Color::BLUE;
+const COMPLIMENT_COLOR: Color = Color::new(0.5, 1.0, 1.0, 0.0);
 const TOAST_ON_DURATION: f64 = 1.0;
 const TOAST_FADE_DURATION: f64 = 3.0;
 
@@ -128,13 +128,8 @@ struct Toast {
 }
 
 impl Toast {
-	fn new(
-	text: String,
-	loc: Location,
-	color: Color,)
-	 -> Self {
+	fn new(text: String, loc: Location, color: Color) -> Self {
 		Self {
-
 			text,
 			loc,
 			color,
@@ -142,14 +137,13 @@ impl Toast {
 			fade_duration: TOAST_FADE_DURATION,
 			spawn_time: time(),
 		}
-	 }
+	}
 
-	 fn active(&self) -> bool {
+	fn active(&self) -> bool {
 		time() < self.spawn_time + self.on_duration + self.fade_duration
+	}
 
-	 }
-
-	 fn color(&self) -> Color {
+	fn color(&self) -> Color {
 		let elapsed = time() - self.spawn_time;
 		let fade_time = elapsed - self.on_duration;
 		let norm_fade = (fade_time / self.fade_duration).clamp(0.0, 1.0) as f32;
@@ -157,9 +151,16 @@ impl Toast {
 		let mut color = self.color.to_owned();
 		color.a = 1.0 - norm_fade;
 		color
-	 }
+	}
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Hash, Default)]
+pub struct Achievements {
+	admiral: bool,
+	speeder: bool,
+	businessman: bool,
+	charmer: bool,
+}
 
 // #[derive(Debug)] `audio::Source` dose not implement Debug!
 pub struct Game {
@@ -187,6 +188,10 @@ pub struct Game {
 	init: bool,
 
 	toasts: Vec<Toast>,
+
+	fished_compliments: u32,
+	max_speed: f32,
+	achievements: Achievements,
 }
 
 impl Game {
@@ -431,6 +436,9 @@ impl Game {
 			water_wave_2_offset: Default::default(),
 			init: true,
 			toasts: Vec::new(),
+			fished_compliments: 0,
+			max_speed: 0.0,
+			achievements: Default::default(),
 		};
 
 		println!(
@@ -682,14 +690,18 @@ impl Scene<GlobalState> for Game {
 						if rng.gen_bool(COMPLIMENT_PROBABILITY) {
 							let compliment = COMPLIMENTS.choose(&mut rng).unwrap();
 
-							self.toasts.push(
-								Toast::new(compliment.to_string(), self.world.state.player.vehicle.pos, COMPLIMENT_COLOR)
-							);
+							self.toasts.push(Toast::new(
+								compliment.to_string(),
+								self.world.state.player.vehicle.pos,
+								COMPLIMENT_COLOR,
+							));
+
+							self.fished_compliments += 1;
 						}
 					},
 					_ => {
 						// Nothing of interest
-					}
+					},
 				}
 			}
 
@@ -805,9 +817,42 @@ impl Scene<GlobalState> for Game {
 
 
 		// Clean up toasts
-		self.toasts.retain(|toast| {
-			toast.active()
-		});
+		self.toasts.retain(|toast| toast.active());
+
+		// Process achievements
+
+		let is_sail_maxed = self
+			.world
+			.state
+			.player
+			.vehicle
+			.sail
+			.kind
+			.upgrade()
+			.is_none();
+		let is_hull_maxed = self.world.state.player.vehicle.hull.upgrade().is_none();
+		if !self.achievements.admiral && is_sail_maxed && is_hull_maxed {
+			self.achievements.admiral = true;
+			// TODO: play sound, show some effect
+		}
+
+		self.max_speed = self
+			.max_speed
+			.max(self.world.state.player.vehicle.ground_speed());
+		if !self.achievements.speeder && self.max_speed >= 6.0 {
+			self.achievements.speeder = true;
+			// TODO: play sound, show some effect
+		}
+
+		if !self.achievements.businessman && self.world.state.player.money >= 10000 {
+			self.achievements.businessman = true;
+			// TODO: play sound, show some effect
+		}
+
+		if !self.achievements.charmer && self.fished_compliments >= 100 {
+			self.achievements.charmer = true;
+			// TODO: play sound, show some effect
+		}
 
 		self.init = false;
 
@@ -1439,8 +1484,9 @@ impl Scene<GlobalState> for Game {
 		// Draw Toasts
 		for toast in &self.toasts {
 			let text = Text::new(toast.text.as_str());
-			let params = DrawParam::new().color(toast.color())
-				.dest(self.location_to_screen_coords(ctx, toast.loc) - vec2(text.width(ctx) * 0.5, 0.0));
+			let params = DrawParam::new().color(toast.color()).dest(
+				self.location_to_screen_coords(ctx, toast.loc) - vec2(text.width(ctx) * 0.5, 0.0),
+			);
 			graphics::draw(ctx, quad_ctx, &text, params)?;
 		}
 
@@ -2023,6 +2069,38 @@ impl Game {
 			.color(Color::WHITE)
 			.offset(Point2::new(-0.5, -0.5));
 		self.draw_text_with_halo(ctx, quad_ctx, &money_text, p, Color::BLACK)?;
+
+		let mut y_offset = 0.0;
+		for (name, is_achieved) in [
+			("Admiral", self.achievements.admiral),
+			("Speeder", self.achievements.speeder),
+			("Businessman", self.achievements.businessman),
+			("Charmer", self.achievements.charmer),
+		]
+		.into_iter()
+		.rev()
+		{
+			let color = if is_achieved {
+				Color::new(0.1, 1.0, 0.1, 1.)
+			} else {
+				Color::new(1.0, 1.0, 1.0, 0.4)
+			};
+
+			let mut text = Text::new(name.to_owned());
+			text.set_font(Default::default(), PxScale::from(28.0));
+
+			y_offset += text.height(ctx);
+
+			graphics::draw(
+				ctx,
+				quad_ctx,
+				&text,
+				(
+					Point2::new(35.0, screen_coords.h - y_offset * 1.3 - 35.0),
+					color,
+				),
+			)?;
+		}
 
 		Ok(())
 	}
