@@ -117,6 +117,7 @@ fn main() -> gwg::GameResult {
 fn draw_version(
 	ctx: &mut gwg::Context,
 	quad_ctx: &mut gwg::miniquad::Context,
+	color: Color,
 ) -> gwg::GameResult<f32> {
 	// The list of crate features active at compilation
 	let features = {
@@ -186,19 +187,7 @@ fn draw_version(
 			ctx,
 			quad_ctx,
 			&text,
-			(
-				Point2::new(0., screen_height - height - text_height),
-				Color::BLACK,
-			),
-		)?;
-		graphics::draw(
-			ctx,
-			quad_ctx,
-			&text,
-			(
-				Point2::new(0. + 1., screen_height - height - text_height + 1.),
-				Color::WHITE,
-			),
+			(Point2::new(0., screen_height - height - text_height), color),
 		)?;
 
 		Ok(text_height)
@@ -208,9 +197,9 @@ fn draw_version(
 	let mut h = 0.0;
 	h += centered_text(h, &details, 12)?;
 	if let Some(f) = features {
-		h += centered_text(h, &f, 16)?;
+		h += centered_text(h, &f, 12)?;
 	}
-	h += centered_text(h, &time, 16)?;
+	h += centered_text(h, &time, 12)?;
 	h += centered_text(h, &version, 16)?;
 
 	Ok(h)

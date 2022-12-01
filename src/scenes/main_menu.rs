@@ -22,6 +22,11 @@ use crate::draw_version;
 
 
 
+const TEXT_COLOR: Color = Color::new(0.769, 0.769, 0.769, 1.0); // #c4c4c4
+const BUTTON_COLOR: Color = Color::new(0.282, 0.424, 0.557, 1.0); // #486c8e
+const VERSION_COLOR: Color = Color::new(0.192, 0.122, 0.373, 1.0); // #311f5f
+
+
 /// The main menu or title screen
 pub struct MainMenu {
 	bg: Image,
@@ -63,7 +68,7 @@ impl MainMenu {
 		const FONT_SIZE_SCALE: f32 = 2.0;
 		const KEY_PADDING_FACTOR: f32 = 1.5;
 		const KEY_MARGIN_FACTOR: f32 = 0.1;
-		const LABEL_COLOR: Color = Color::new(0.282, 0.424, 0.557, 1.0); // #486c8e
+		const LABEL_COLOR: Color = BUTTON_COLOR;
 
 		// Screen size
 		let size = graphics::drawable_size(quad_ctx);
@@ -160,7 +165,10 @@ impl Scene<GlobalState> for MainMenu {
 			ctx,
 			quad_ctx,
 			&controls,
-			(Point2::new(0., size.1 / 2. + Font::DEFAULT_FONT_SCALE),),
+			(
+				Point2::new(0., size.1 / 2. + Font::DEFAULT_FONT_SCALE),
+				TEXT_COLOR,
+			),
 		)?;
 
 		// Draw head line
@@ -172,11 +180,11 @@ impl Scene<GlobalState> for MainMenu {
 			ctx,
 			quad_ctx,
 			&heading,
-			(Point2::new(0., 3. * Font::DEFAULT_FONT_SCALE),),
+			(Point2::new(0., 3. * Font::DEFAULT_FONT_SCALE), TEXT_COLOR),
 		)?;
 
 		// Print version info
-		let mut height = draw_version(ctx, quad_ctx)?;
+		let mut height = draw_version(ctx, quad_ctx, VERSION_COLOR)?;
 		let full_option_text_height = (2. + 1. + 2.) * Font::DEFAULT_FONT_SCALE;
 		if height + full_option_text_height + 2. * Font::DEFAULT_FONT_SCALE < size.1 / 3. {
 			height = size.1 / 3. - full_option_text_height;
@@ -198,7 +206,7 @@ impl Scene<GlobalState> for MainMenu {
 					ctx,
 					quad_ctx,
 					&quitting,
-					(Point2::new(0., size.1 - height),),
+					(Point2::new(0., size.1 - height), TEXT_COLOR),
 				)?;
 			}
 		}
@@ -212,7 +220,7 @@ impl Scene<GlobalState> for MainMenu {
 			ctx,
 			quad_ctx,
 			&starting,
-			(Point2::new(0., size.1 - height),),
+			(Point2::new(0., size.1 - height), TEXT_COLOR),
 		)?;
 
 		// Finally, issue the draw call and what not, finishing this frame for good
