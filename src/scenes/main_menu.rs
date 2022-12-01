@@ -17,6 +17,7 @@ use nalgebra::Vector2;
 use super::loading::LoadableFn;
 use super::loading::Loading;
 use super::GlobalState;
+use crate::draw_version;
 
 
 
@@ -122,6 +123,9 @@ impl Scene<GlobalState> for MainMenu {
 				)?;
 			}
 		}
+
+		// Print version info
+		draw_version(ctx, quad_ctx)?;
 
 		// Finally, issue the draw call and what not, finishing this frame for good
 		graphics::present(ctx, quad_ctx)?;

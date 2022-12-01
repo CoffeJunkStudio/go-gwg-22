@@ -61,7 +61,6 @@ use crate::assets::ShipBatches;
 use crate::assets::ShipSprites;
 use crate::assets::TerrainBatches;
 use crate::assets::UiImages;
-use crate::draw_version;
 use crate::math::Line;
 
 /// Zoom factor exponentiation base.
@@ -1620,9 +1619,6 @@ impl Scene<GlobalState> for Game {
 				)?;
 			}
 		}
-
-		// Print version info
-		draw_version(ctx, quad_ctx)?;
 
 		// Finally, issue the draw call and what not, finishing this frame for good
 		gwg::graphics::present(ctx, quad_ctx)?;
