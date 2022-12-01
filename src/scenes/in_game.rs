@@ -1526,7 +1526,7 @@ impl Scene<GlobalState> for Game {
 				} else {
 					inactive_color
 				};
-				let mut sell_text = Text::new(format!("E: sell fish for {value} €"));
+				let mut sell_text = Text::new(format!("E: Sell fish for {value} €"));
 				sell_text.set_font(Default::default(), PxScale::from(20.));
 
 				let (sail_color, sail_message) = if let Some(price) = t.get_price_for_sail_upgrade()
