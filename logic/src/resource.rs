@@ -8,6 +8,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use super::glm;
+use crate::terrain::Terrain;
 use crate::units::Elevation;
 use crate::units::Location;
 use crate::units::Tick;
@@ -40,6 +41,42 @@ pub enum ResourcePackContent {
 	Starfish4,
 	Grass0,
 	Grass1,
+}
+
+impl ResourcePackContent {
+	pub fn generate<R: Rng>(
+		self,
+		mut rng: R,
+		terrain: &Terrain,
+		amount: usize,
+	) -> Vec<ResourcePack> {
+		let mut current_set = Vec::new();
+
+		while current_set.len() < amount {
+			let loc = terrain.random_passable_location(&mut rng);
+			let loc_elev = terrain.get(loc.try_into().unwrap());
+			let school_size = rng.gen_range(self.schooling_size.clone());
+
+			if !self.spawn_location.contains(loc_elev) {
+				continue;
+			}
+
+			let org = ResourcePack::new(loc, self, &mut rng);
+
+			if org.elevation < *loc_elev {
+				continue;
+			}
+
+			current_set.extend((0..school_size).map(|_| {
+				let mut clone = org.clone();
+				clone.phase += rng.gen_range(0.0..TAU) / 20.;
+				clone.origin.0 += vec2(rng.gen(), rng.gen()) * 1.;
+				clone
+			}))
+		}
+
+		current_set
+	}
 }
 
 #[derive(Debug, Clone)]

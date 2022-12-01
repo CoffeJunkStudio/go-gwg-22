@@ -1,3 +1,4 @@
+use generator::Setting;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -106,6 +107,7 @@ impl World {
 #[derive(Debug, Clone)]
 #[derive(Serialize, Deserialize)]
 pub struct WorldInit {
+	pub terrain_setting: Setting,
 	/// Defines the map tiles
 	pub terrain: Terrain,
 	/// Random seed used for this game

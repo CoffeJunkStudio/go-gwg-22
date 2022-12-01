@@ -3,10 +3,12 @@ use std::f32::consts::TAU;
 use std::fmt;
 
 use enum_map::Enum;
+use enum_map::EnumMap;
 use nalgebra_glm::vec2;
 use nalgebra_glm::Vec2;
 use rand::distributions::Distribution;
 use rand::Rng;
+use rand::SeedableRng;
 use rand_distr::Beta;
 use serde::Deserialize;
 use serde::Serialize;
@@ -392,6 +394,8 @@ impl WorldState {
 			p.vehicle.velocity = head_velo + cross_velo;
 		}
 
+		let mut rng = self.rng_for_tick(&init);
+
 		let WorldState {
 			player,
 			resources,
@@ -402,6 +406,9 @@ impl WorldState {
 		{
 			let p = player;
 
+			let mut taken_types: EnumMap<ResourcePackContent, bool> = EnumMap::default();
+			let mut remaining_fish: EnumMap<ResourcePackContent, usize> = EnumMap::default();
+
 			resources.retain(|r| {
 				let dist = VEHICLE_SIZE / 2. + RESOURCE_PACK_FISH_SIZE / 2.;
 				let tor_dist = init.terrain.torus_distance(r.loc, p.vehicle.pos);
@@ -410,6 +417,9 @@ impl WorldState {
 					// Store the fish in the ship
 					p.vehicle.resource_weight += r.content.weight;
 					p.vehicle.resource_value += r.content.value;
+
+					// Mark resource type as taken
+					taken_types[r.content] = true;
 
 					// Emit event for sound effects
 					{
@@ -433,12 +443,39 @@ impl WorldState {
 					// Let the fish be removed from the world
 					false
 				} else {
+					// Count remaining
+					remaining_fish[r.content] += 1;
+
 					true
 				}
 			});
+
+			// Process resource respawning
+
+			let map_area = init.terrain_setting.edge_length as f32
+				* init.terrain_setting.edge_length as f32
+				* init.terrain_setting.resource_density;
+
+			for ty in taken_types
+				.iter()
+				.filter_map(|(ty, take)| if *take { Some(ty) } else { None })
+			{
+				let expected_amount = (map_area * ty.spawn_density) as usize;
+
+				if remaining_fish[ty] < expected_amount {
+					let needed = expected_amount - remaining_fish[ty];
+
+					self.resources
+						.extend(ty.generate(&mut rng, &init.terrain, needed));
+				}
+			}
 		}
 
 		events
+	}
+
+	pub fn rng_for_tick(&self, init: &WorldInit) -> impl Rng {
+		StdRng::seed_from_u64(init.seed ^ self.timestamp.0)
 	}
 
 	/// Get options for trading

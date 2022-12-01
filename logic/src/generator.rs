@@ -3,9 +3,10 @@
 
 use std::f32::consts::TAU;
 
-use nalgebra_glm::vec2;
 use noise::Seedable;
 use rand::Rng;
+use serde::Deserialize;
+use serde::Serialize;
 use strum::IntoEnumIterator;
 
 use crate::resource::ResourcePack;
@@ -23,6 +24,8 @@ const PERLIN_NOISE_FACTOR: f64 = 1. / core::f64::consts::PI / 2.;
 
 
 /// The basic map output settings
+#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct Setting {
 	/// Amount of tiles along each axis in tiles
 	pub edge_length: u16,
@@ -73,6 +76,7 @@ impl Generator for WhiteNoise {
 
 		World {
 			init: WorldInit {
+				terrain_setting: setting.clone(),
 				terrain,
 				seed,
 				dbg: Default::default(),
@@ -145,33 +149,8 @@ impl Generator for PerlinNoise {
 		for cnt in ResourcePackContent::iter() {
 			// One resource per tile (on average)
 			let resource_amount = map_area * cnt.spawn_density;
-			let school_size = rng.gen_range(cnt.schooling_size.clone());
 
-			let mut current_set = Vec::new();
-
-			while current_set.len() < resource_amount as usize {
-				let loc = terrain.random_passable_location(&mut rng);
-				let loc_elev = terrain.get(loc.try_into().unwrap());
-
-				if !cnt.spawn_location.contains(loc_elev) {
-					continue;
-				}
-
-				let org = ResourcePack::new(loc, cnt, &mut rng);
-
-				if org.elevation < *loc_elev {
-					continue;
-				}
-
-				current_set.extend((0..school_size).map(|_| {
-					let mut clone = org.clone();
-					clone.phase += rng.gen_range(0.0..TAU) / 20.;
-					clone.origin.0 += vec2(rng.gen(), rng.gen()) * 1.;
-					clone
-				}))
-			}
-
-			resources.extend(current_set);
+			resources.extend(cnt.generate(&mut rng, &terrain, resource_amount as usize));
 		}
 
 		let seed: u64 = rng.gen();
@@ -179,6 +158,7 @@ impl Generator for PerlinNoise {
 		World {
 			init: WorldInit {
 				terrain,
+				terrain_setting: setting.clone(),
 				seed,
 				dbg: Default::default(),
 			},
