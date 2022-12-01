@@ -1488,10 +1488,13 @@ impl Scene<GlobalState> for Game {
 			let text_color = Color::new(1.0, 1.0, 1.0, 0.85);
 			let inactive_color = Color::new(1.0, 1.0, 1.0, 0.4);
 
-			let harbor_dist = self.world.init.terrain.torus_distance(player_loc, t.get_harbor().loc);
+			let harbor_dist = self
+				.world
+				.init
+				.terrain
+				.torus_distance(player_loc, t.get_harbor().loc);
 			let player_loc_sc = nalgebra::Point2::new(screen_coords.w, screen_coords.h) * 0.5;
-			let harbor_loc_sc =
-				nalgebra::Point2::from(harbor_dist.0 * ppm + player_loc_sc.coords);
+			let harbor_loc_sc = nalgebra::Point2::from(harbor_dist.0 * ppm + player_loc_sc.coords);
 			if t.has_player_valid_speed() {
 				// Trading is possible
 

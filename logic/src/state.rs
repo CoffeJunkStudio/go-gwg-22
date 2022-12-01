@@ -307,8 +307,16 @@ impl WorldState {
 			// Harbor collision
 			for harbor in &self.harbors {
 				let coll_dist = (HARBOR_SIZE + VEHICLE_SIZE) * 0.5;
-				let distance = init.terrain.torus_distance(p.vehicle.pos,harbor.loc).0.norm();
-				let old_distance = init.terrain.torus_distance(Location(old_pos),harbor.loc).0.norm();
+				let distance = init
+					.terrain
+					.torus_distance(p.vehicle.pos, harbor.loc)
+					.0
+					.norm();
+				let old_distance = init
+					.terrain
+					.torus_distance(Location(old_pos), harbor.loc)
+					.0
+					.norm();
 				// Only check if the player isn't inside yet
 				if old_distance >= coll_dist {
 					// Check if the player went inside
@@ -437,7 +445,11 @@ impl WorldState {
 	pub fn get_trading(&mut self, init: &WorldInit) -> Option<TradeOption> {
 		let mut min_dist_n_idx: Option<(f32, usize)> = None;
 		for (idx, h) in self.harbors.iter().enumerate() {
-			let dist = init.terrain.torus_distance(self.player.vehicle.pos,h.loc).0.norm();
+			let dist = init
+				.terrain
+				.torus_distance(self.player.vehicle.pos, h.loc)
+				.0
+				.norm();
 			if dist < HARBOR_EFFECT_SIZE {
 				match min_dist_n_idx {
 					None => {
