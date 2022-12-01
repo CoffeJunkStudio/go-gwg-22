@@ -78,10 +78,7 @@ const METERS_PER_SCREEN_DIAGONAL: f32 = 30.;
 /// Also see: [Game::zoom_factor_exp]
 const DEFAULT_ZOOM_LEVEL: i32 = -1;
 
-/// The maximum harbor distance for which to display a harbor indicator. Harbors whose distance is smaller than this will be indicated.
-/// Unit: meters
-const MAX_HARBOR_DISTANCE: f32 = logic::VEHICLE_SIZE * 60.0;
-
+/// Probability of catching a compliment when catching a fish, in percent
 const COMPLIMENT_PROBABILITY: f64 = 0.01;
 
 trait Mix {
@@ -1068,7 +1065,7 @@ impl Scene<GlobalState> for Game {
 							.add(param);
 
 						// The rotation of the mask
-						let param_rot = param.clone();
+						let param_rot = param;
 
 						// Determine the mask to be used
 						if !se_eq {
@@ -1223,7 +1220,7 @@ impl Scene<GlobalState> for Game {
 						.terrain_batches
 						.tile_sprite(north_east)
 						.add(param);
-					let param_rot = param.clone();
+					let param_rot = param;
 					self.images
 						.terrain_batches
 						.tile_mask_c1(north_east)
@@ -1238,7 +1235,6 @@ impl Scene<GlobalState> for Game {
 						.tile_sprite(south_east)
 						.add(param);
 					let param_rot = param
-						.clone()
 						.rotation(std::f32::consts::PI / 2.)
 						.dest(dest + logic::glm::vec2(screen_size, 0.));
 					self.images
@@ -1255,7 +1251,6 @@ impl Scene<GlobalState> for Game {
 						.tile_sprite(south_west)
 						.add(param);
 					let param_rot = param
-						.clone()
 						.rotation(std::f32::consts::PI)
 						.dest(dest + logic::glm::vec2(screen_size, screen_size));
 					self.images
@@ -1272,7 +1267,6 @@ impl Scene<GlobalState> for Game {
 						.tile_sprite(north_west)
 						.add(param);
 					let param_rot = param
-						.clone()
 						.rotation(-std::f32::consts::PI / 2.)
 						.dest(dest + logic::glm::vec2(0., screen_size));
 					self.images
@@ -1306,7 +1300,7 @@ impl Scene<GlobalState> for Game {
 			draw_and_clear(ctx, quad_ctx, mask)?;
 
 			// The Tile canvas
-			graphics::set_canvas(ctx, Some(&trans_canvas));
+			graphics::set_canvas(ctx, Some(trans_canvas));
 			graphics::clear(ctx, quad_ctx, [0.0, 0.0, 0.0, 0.0].into());
 
 			// Drawing the tile
@@ -1839,16 +1833,15 @@ impl Game {
 
 
 		// -- Harbor indicators --
-		for harbor_loc in self
-			.world
-			.state
-			.harbors
-			.iter()
-			.flat_map(|harbor| self.torus_locations(harbor.loc))
-		{
+		for harbor_distance in self.world.state.harbors.iter().map(|harbor| {
+			self.world
+				.init
+				.terrain
+				.torus_distance(player_loc, harbor.loc)
+		}) {
 			let player_loc_sc = nalgebra::Point2::new(screen_coords.w, screen_coords.h) * 0.5;
 			let harbor_loc_sc = nalgebra::Point2::from(
-				(harbor_loc.0 - player_loc.0) * self.pixel_per_meter(ctx) + player_loc_sc.coords,
+				harbor_distance.0 * self.pixel_per_meter(ctx) + player_loc_sc.coords,
 			);
 
 			if !screen_coords.contains(harbor_loc_sc) {
@@ -1892,16 +1885,27 @@ impl Game {
 							screen_coords.y + screen_coords.h - inset,
 						),
 					);
-					let max_dist = MAX_HARBOR_DISTANCE * self.pixel_per_meter(ctx);
-					let harbor_dst =
-						logic::glm::distance(&draw_point.coords, &harbor_loc_sc.coords);
+					let max_dist = self.map_length() * 0.5;
+					let harbor_dst = harbor_distance.magnitude();
 					let harbor_closeness = (max_dist - harbor_dst).max(0.0) / max_dist;
 
 					let mut p = DrawParam::new()
 						.dest(draw_point)
 						.offset(Point2::new(0.5, 0.5));
-					p.color.a = harbor_closeness.powf(2.0);
+					p.color.a = harbor_closeness;
 					gwg::graphics::draw(ctx, quad_ctx, &self.images.ui.harbor_indicator, p)?;
+
+					let mut text = Text::new(format!("{}m", harbor_distance.magnitude().round()));
+					text.set_font(Default::default(), PxScale::from(18.));
+					graphics::draw(
+						ctx,
+						quad_ctx,
+						&text,
+						(
+							Point2::new(draw_point.x - text.width(ctx) * 0.5, draw_point.y),
+							p.color,
+						),
+					)?;
 				}
 			}
 		}
@@ -1981,45 +1985,5 @@ impl Game {
 
 	fn map_length(&self) -> f32 {
 		(u32::from(self.world.init.terrain.edge_length) * logic::TILE_SIZE) as f32
-	}
-
-	fn torus_locations(&self, loc: Location) -> [Location; 9] {
-		let l = self.map_length();
-
-		let normed_loc = self.world.init.terrain.map_loc_on_torus(loc);
-		let x0 = normed_loc.0.x;
-		let y0 = normed_loc.0.y;
-		let x1 = x0 + l;
-		let y1 = y0 + l;
-		let x2 = x1.rem_euclid(l);
-		let y2 = y1.rem_euclid(l);
-
-		[
-			Location::new(x0, y0),
-			Location::new(x0, y1),
-			Location::new(x0, y2),
-			Location::new(x1, y0),
-			Location::new(x1, y1),
-			Location::new(x1, y2),
-			Location::new(x2, y0),
-			Location::new(x2, y1),
-			Location::new(x2, y2),
-		]
-	}
-
-	/// Computes the squared distance for `source` to `target` taking the torus-ness of the map into account
-	///
-	/// Returns the squared distance between `source` and `target` and the (potentially wrapped) closest location of `target`
-	fn distance_squared(&self, source: &Location, target: Location) -> (f32, Location) {
-		self.torus_locations(target)
-			.into_iter()
-			.map(|loc| (logic::glm::distance2(&source.0, &loc.0), loc))
-			.min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
-			.unwrap()
-	}
-
-	fn distance(&self, source: &Location, target: Location) -> (f32, Location) {
-		let (dst_squared, log) = self.distance_squared(source, target);
-		(dst_squared.sqrt(), log)
 	}
 }
