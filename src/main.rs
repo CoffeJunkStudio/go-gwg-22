@@ -112,10 +112,12 @@ fn main() -> gwg::GameResult {
 }
 
 /// Draw the built version information
+///
+/// Returns the height of the text from the bottom of the screen
 fn draw_version(
 	ctx: &mut gwg::Context,
 	quad_ctx: &mut gwg::miniquad::Context,
-) -> gwg::GameResult<()> {
+) -> gwg::GameResult<f32> {
 	// The list of crate features active at compilation
 	let features = {
 		if !crate::built_info::FEATURES_STR.is_empty() {
@@ -209,9 +211,9 @@ fn draw_version(
 		h += centered_text(h, &f, 16)?;
 	}
 	h += centered_text(h, &time, 16)?;
-	centered_text(h, &version, 16)?;
+	h += centered_text(h, &version, 16)?;
 
-	Ok(())
+	Ok(h)
 }
 
 // Build-time information
