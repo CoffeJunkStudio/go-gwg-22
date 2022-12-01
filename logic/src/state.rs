@@ -11,6 +11,8 @@ use rand_distr::Beta;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::resource::ResourcePack;
+use crate::resource::ResourcePackContent;
 use crate::terrain::TileCoord;
 use crate::units::BiPolarFraction;
 use crate::units::Fraction;
@@ -18,8 +20,6 @@ use crate::units::Location;
 use crate::units::Tick;
 use crate::units::Wind;
 use crate::Input;
-use crate::ResourcePack;
-use crate::ResourcePackContent;
 use crate::StdRng;
 use crate::WorldInit;
 use crate::FRICTION_CROSS_SPEED_FACTOR;

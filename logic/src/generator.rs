@@ -8,12 +8,12 @@ use noise::Seedable;
 use rand::Rng;
 use strum::IntoEnumIterator;
 
+use crate::resource::ResourcePack;
+use crate::resource::ResourcePackContent;
 use crate::state::Harbor;
 use crate::state::WorldState;
 use crate::units::Elevation;
 use crate::units::TileType;
-use crate::ResourcePack;
-use crate::ResourcePackContent;
 use crate::Terrain;
 use crate::World;
 use crate::WorldInit;
