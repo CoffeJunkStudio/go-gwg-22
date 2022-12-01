@@ -1481,6 +1481,7 @@ impl Scene<GlobalState> for Game {
 		let ppm = self.pixel_per_meter(ctx);
 
 		let budget = self.world.state.player.money;
+		let value = self.world.state.player.vehicle.resource_value;
 
 		// The trading "interface"
 		if let Some(mut t) = self.world.state.get_trading(&self.world.init) {
@@ -1504,8 +1505,8 @@ impl Scene<GlobalState> for Game {
 					match (hull_upgrade, sail_upgrade, t.players_fish_amount()) {
 						(Some(hup), _, _) if budget >= hup => "Time to upgrade!".to_owned(),
 						(_, Some(sup), _) if budget >= sup => "Time to upgrade!".to_owned(),
-						(_, _, fam) if fam > 0 => "Sell your fish here!".to_owned(),
-						_ => "Go get some fish!".to_owned(),
+						(_, _, fam) if fam > 0 => "Fishy trade?".to_owned(),
+						_ => "Time to fish or cut bait!".to_owned(),
 					}
 				};
 
@@ -1531,24 +1532,11 @@ impl Scene<GlobalState> for Game {
 				} else {
 					inactive_color
 				};
-				let mut option_text = Text::new(format!("E: sell fish"));
-				let x_offset = option_text.width(ctx) * 0.5;
-				option_text.set_font(Default::default(), PxScale::from(20.));
-				graphics::draw(
-					ctx,
-					quad_ctx,
-					&option_text,
-					(
-						Point2::new(
-							harbor_loc_sc.x - x_offset,
-							harbor_loc_sc.y - option_text.height(ctx) + offset,
-						),
-						sell_color,
-					),
-				)?;
-				offset += option_text.height(ctx) * 1.3;
+				let mut sell_text = Text::new(format!("E: sell fish for {value} €"));
+				sell_text.set_font(Default::default(), PxScale::from(20.));
 
-				let (sail_color, sail_text) = if let Some(price) = t.get_price_for_sail_upgrade() {
+				let (sail_color, sail_message) = if let Some(price) = t.get_price_for_sail_upgrade()
+				{
 					let c = if budget >= price {
 						text_color
 					} else {
@@ -1559,23 +1547,11 @@ impl Scene<GlobalState> for Game {
 				} else {
 					(inactive_color, "Your sail is awesome!".to_owned())
 				};
-				let mut option_text = Text::new(sail_text);
-				option_text.set_font(Default::default(), PxScale::from(20.));
-				graphics::draw(
-					ctx,
-					quad_ctx,
-					&option_text,
-					(
-						Point2::new(
-							harbor_loc_sc.x - x_offset,
-							harbor_loc_sc.y - option_text.height(ctx) + offset,
-						),
-						sail_color,
-					),
-				)?;
-				offset += option_text.height(ctx) * 1.3;
+				let mut sail_text = Text::new(sail_message);
+				sail_text.set_font(Default::default(), PxScale::from(20.));
 
-				let (hull_color, hull_text) = if let Some(price) = t.get_price_of_hull_upgrade() {
+				let (hull_color, hull_message) = if let Some(price) = t.get_price_of_hull_upgrade()
+				{
 					let c = if budget >= price {
 						text_color
 					} else {
@@ -1586,16 +1562,50 @@ impl Scene<GlobalState> for Game {
 				} else {
 					(inactive_color, "Your hull is awesome!".to_owned())
 				};
-				let mut option_text = Text::new(hull_text);
-				option_text.set_font(Default::default(), PxScale::from(20.));
+				let mut hull_text = Text::new(hull_message);
+				hull_text.set_font(Default::default(), PxScale::from(20.));
+
+				let x_offset = sell_text
+					.width(ctx)
+					.max(sail_text.width(ctx))
+					.max(hull_text.width(ctx))
+					* 0.5;
 				graphics::draw(
 					ctx,
 					quad_ctx,
-					&option_text,
+					&sell_text,
 					(
 						Point2::new(
 							harbor_loc_sc.x - x_offset,
-							harbor_loc_sc.y - option_text.height(ctx) + offset,
+							harbor_loc_sc.y - sell_text.height(ctx) + offset,
+						),
+						sell_color,
+					),
+				)?;
+				offset += sell_text.height(ctx) * 1.3;
+
+				graphics::draw(
+					ctx,
+					quad_ctx,
+					&sail_text,
+					(
+						Point2::new(
+							harbor_loc_sc.x - x_offset,
+							harbor_loc_sc.y - sail_text.height(ctx) + offset,
+						),
+						sail_color,
+					),
+				)?;
+				offset += sail_text.height(ctx) * 1.3;
+
+				graphics::draw(
+					ctx,
+					quad_ctx,
+					&hull_text,
+					(
+						Point2::new(
+							harbor_loc_sc.x - x_offset,
+							harbor_loc_sc.y - hull_text.height(ctx) + offset,
 						),
 						hull_color,
 					),
@@ -1603,7 +1613,13 @@ impl Scene<GlobalState> for Game {
 			} else {
 				// Player is too fast for trading
 
-				let mut text = Text::new("\"Slow down, sailor!\"");
+				let mut text = Text::new(
+					if t.players_fish_amount() > 0 {
+						"\"Slow down, sailor!\""
+					} else {
+						"\"Time to fish or cut bait!\""
+					},
+				);
 				text.set_font(Default::default(), PxScale::from(32.));
 				graphics::draw(
 					ctx,
