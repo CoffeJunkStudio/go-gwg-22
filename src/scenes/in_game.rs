@@ -25,6 +25,7 @@ use gwg::graphics::Transform;
 use gwg::miniquad::KeyCode;
 use gwg::timer;
 use gwg::GameResult;
+use gwg::timer::time;
 use logic::generator::Generator;
 use logic::generator::PerlinNoise;
 use logic::generator::Setting;
@@ -79,7 +80,7 @@ const METERS_PER_SCREEN_DIAGONAL: f32 = 30.;
 const DEFAULT_ZOOM_LEVEL: i32 = -1;
 
 /// Probability of catching a compliment when catching a fish, in percent
-const COMPLIMENT_PROBABILITY: f64 = 0.01;
+const COMPLIMENT_PROBABILITY: f64 = 0.1;
 
 trait Mix {
 	fn mix(&self, other: &Self, mix_factor: f32) -> Self;
@@ -112,6 +113,54 @@ const COMPLIMENTS: &[&str] = &[
 	"You're a living legend!",
 ];
 
+
+const COMPLIMENT_COLOR: Color = Color::BLUE;
+const TOAST_ON_DURATION: f64 = 1.0;
+const TOAST_FADE_DURATION: f64 = 3.0;
+
+struct Toast {
+	text: String,
+	loc: Location,
+	color: Color,
+	on_duration: f64,
+	fade_duration: f64,
+	spawn_time: f64,
+}
+
+impl Toast {
+	fn new(
+	text: String,
+	loc: Location,
+	color: Color,)
+	 -> Self {
+		Self {
+
+			text,
+			loc,
+			color,
+			on_duration: TOAST_ON_DURATION,
+			fade_duration: TOAST_FADE_DURATION,
+			spawn_time: time(),
+		}
+	 }
+
+	 fn active(&self) -> bool {
+		time() < self.spawn_time + self.on_duration + self.fade_duration
+
+	 }
+
+	 fn color(&self) -> Color {
+		let elapsed = time() - self.spawn_time;
+		let fade_time = elapsed - self.on_duration;
+		let norm_fade = (fade_time / self.fade_duration).clamp(0.0, 1.0) as f32;
+
+		let mut color = self.color.to_owned();
+		color.a = 1.0 - norm_fade;
+		color
+	 }
+}
+
+
 // #[derive(Debug)] `audio::Source` dose not implement Debug!
 pub struct Game {
 	/// The drawables
@@ -137,8 +186,7 @@ pub struct Game {
 	/// True in the very first frame
 	init: bool,
 
-	available_compliments: Vec<&'static str>,
-	fished_compliments: Vec<&'static str>,
+	toasts: Vec<Toast>,
 }
 
 impl Game {
@@ -382,8 +430,7 @@ impl Game {
 			water_wave_offset: Default::default(),
 			water_wave_2_offset: Default::default(),
 			init: true,
-			available_compliments: COMPLIMENTS.to_owned(),
-			fished_compliments: Vec::new(),
+			toasts: Vec::new(),
 		};
 
 		println!(
@@ -628,6 +675,24 @@ impl Scene<GlobalState> for Game {
 			self.input.rudder = BiPolarFraction::from_f32(rudder).unwrap();
 			let events = self.world.state.update(&self.world.init, &self.input);
 
+			// Do event processing
+			for ev in &events {
+				match ev {
+					Event::Fishy => {
+						if rng.gen_bool(COMPLIMENT_PROBABILITY) {
+							let compliment = COMPLIMENTS.choose(&mut rng).unwrap();
+
+							self.toasts.push(
+								Toast::new(compliment.to_string(), self.world.state.player.vehicle.pos, COMPLIMENT_COLOR)
+							);
+						}
+					},
+					_ => {
+						// Nothing of interest
+					}
+				}
+			}
+
 			// Play event sounds
 			if audios.sound_enabled {
 				for ev in events {
@@ -639,16 +704,6 @@ impl Scene<GlobalState> for Game {
 								&audios.sound_fishy_3,
 							];
 							let sound = fishies.choose(&mut rng).unwrap();
-
-							if !self.available_compliments.is_empty()
-								&& rng.gen_bool(COMPLIMENT_PROBABILITY)
-							{
-								let compliment_index =
-									rng.gen_range(0..self.available_compliments.len());
-								let compliment =
-									self.available_compliments.swap_remove(compliment_index);
-								self.fished_compliments.push(compliment);
-							}
 
 							sound.play(ctx).unwrap();
 						},
@@ -747,6 +802,12 @@ impl Scene<GlobalState> for Game {
 			.water_sound_1
 			.set_volume(ctx, normalized_rel_water_speed * 2.)
 			.unwrap();
+
+
+		// Clean up toasts
+		self.toasts.retain(|toast| {
+			toast.active()
+		});
 
 		self.init = false;
 
@@ -1375,6 +1436,14 @@ impl Scene<GlobalState> for Game {
 				),
 		)?;
 
+		// Draw Toasts
+		for toast in &self.toasts {
+			let text = Text::new(toast.text.as_str());
+			let params = DrawParam::new().color(toast.color())
+				.dest(self.location_to_screen_coords(ctx, toast.loc) - vec2(text.width(ctx) * 0.5, 0.0));
+			graphics::draw(ctx, quad_ctx, &text, params)?;
+		}
+
 		// Draw some debugging stuff
 		self.draw_debugging(ctx, quad_ctx)?;
 
@@ -1954,31 +2023,6 @@ impl Game {
 			.color(Color::WHITE)
 			.offset(Point2::new(-0.5, -0.5));
 		self.draw_text_with_halo(ctx, quad_ctx, &money_text, p, Color::BLACK)?;
-
-		let mut total_height = 0.0;
-		for (i, compliment) in self.fished_compliments.iter().enumerate().rev() {
-			let mut compliment_text = Text::new(format!("{}. {compliment}", i + 1));
-			compliment_text.set_font(Default::default(), PxScale::from(22.0));
-			total_height += compliment_text.height(ctx) * 1.3;
-			let p = DrawParam::new()
-				.dest(Point2::new(40.0, screen_coords.h - total_height - 40.0))
-				.color(Color::WHITE)
-				.offset(Point2::new(-0.5, -0.5));
-			self.draw_text_with_halo(ctx, quad_ctx, &compliment_text, p, Color::BLACK)?;
-		}
-
-		let mut compliments_title = Text::new(format!(
-			"Fish for compliments! ({}/{})",
-			self.fished_compliments.len(),
-			COMPLIMENTS.len()
-		));
-		compliments_title.set_font(Default::default(), PxScale::from(26.0));
-		total_height += compliments_title.height(ctx) * 2.0;
-		let p = DrawParam::new()
-			.dest(Point2::new(40.0, screen_coords.h - total_height - 40.0))
-			.color(Color::WHITE)
-			.offset(Point2::new(-0.5, -0.5));
-		self.draw_text_with_halo(ctx, quad_ctx, &compliments_title, p, Color::BLACK)?;
 
 		Ok(())
 	}
