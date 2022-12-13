@@ -1283,6 +1283,7 @@ dependencies = [
  "num-rational 0.4.1",
  "rand 0.8.5",
  "structopt",
+ "strum",
  "tar",
  "toml",
  "wyhash",

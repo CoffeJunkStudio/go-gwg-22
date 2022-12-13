@@ -1,8 +1,10 @@
+use std::collections::HashMap;
 use std::ops::DerefMut;
 use std::path::Path;
 
 use cfg_if::cfg_if;
 use enum_map::enum_map;
+use enum_map::EnumMap;
 use good_web_game as gwg;
 use gwg::goodies::scene::Scene;
 use gwg::goodies::scene::SceneSwitch;
@@ -36,6 +38,7 @@ use logic::resource::ResourcePackContent;
 use logic::state::Event;
 use logic::state::SailKind;
 use logic::terrain::TileCoord;
+use logic::terrain::TileDirection;
 use logic::units::BiPolarFraction;
 use logic::units::Distance;
 use logic::units::Elevation;
@@ -49,6 +52,7 @@ use nalgebra::Point2;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use rand::SeedableRng;
+use strum::IntoEnumIterator;
 use wyhash::wyhash;
 
 use super::GlobalState;
@@ -1143,7 +1147,60 @@ impl Scene<GlobalState> for Game {
 						.add(solid_mask_param);
 				}
 
+				// Tile connections
+
+				// Small overview of tile neighborhood:
+				//
+				// This drawing shows the names for the neighbors as seen from
+				// the center tile called "C".
+				//
+				//         North
+				//       NW| N |NE
+				//      ---+---+---
+				// West  W | C | E   East
+				//      ---+---+---
+				//       SW| S |SE
+				//         South
+				//
+				// The connection tiles are draw starting at East, or
+				// North-East, in case of a corner.
+				// Corners are only drawn if there is no neighboring connecting
+				// edge tile of the same type, except for that corner.
+				// If more than one side has the same type (except if on
+				// opposite ends only), then there are special combined
+				// connection masks to be used.
+				//
+
 				// Sides
+
+				use TileDirection as Dir;
+				let dirs = Dir::iter();
+
+				// Gives the tile type towards the given tile direction of
+				// adjacent tiles
+				let adj_classes: HashMap<Dir, TileType> = dirs
+					.clone()
+					.map(|dir| {
+						(
+							dir,
+							terrain.get(terrain.tile_in_direction(dir, tc)).classify(),
+						)
+					})
+					.collect();
+
+				// Tells wether the given direct has the same tile type as next one in clock wise order
+				let cw_connected: HashMap<Dir, bool> = dirs
+					.clone()
+					.map(|dir| {
+						(
+							dir,
+							// Check equality for this and clock wise tile
+							adj_classes[&dir] == adj_classes[&dir.turn_cw()],
+						)
+					})
+					.collect();
+
+				let all_connected = cw_connected.iter().all(|c| *c.1);
 
 				let eastern = terrain.get(terrain.east_of(tc)).classify();
 				let southern = terrain.get(terrain.south_of(tc)).classify();
@@ -1155,7 +1212,7 @@ impl Scene<GlobalState> for Game {
 				let se_eq = southern == eastern;
 				let sw_eq = southern == western;
 
-				if class < eastern && ne_eq && nw_eq && se_eq && sw_eq {
+				if class < adj_classes[&Dir::East] && all_connected {
 					// Full four sides
 
 					// The base tile (to be made into a transition via mask)
@@ -1164,163 +1221,85 @@ impl Scene<GlobalState> for Game {
 					// TODO: how about randomizing the orientation?
 					self.images.terrain_batches.tile_mask_s4(eastern).add(param);
 				} else {
-					if class < eastern && !ne_eq {
+					for (i, dir) in dirs.clone().enumerate() {
 						// Other class
-						let other_class = eastern;
+						// E.g. assume it is East
+						let other_class = adj_classes[&dir];
 
-						// The base tile (to be made into a transition via mask)
-						self.images
-							.terrain_batches
-							.tile_sprite(other_class)
-							.add(param);
-
-						// The rotation of the mask
-						let param_rot = param;
-
-						// Determine the mask to be used
-						if !se_eq {
-							// Single edge, just a straight edge
+						// Check that the `other_class` is lower, and `dir` is the first to be connected, i.e. `dir` is not connected counter clock wise.
+						// E.g. The eastern one has a higher class and the North
+						// has a different class than the East, i.e. there is
+						// no N-E edge connection.
+						if class < other_class && !cw_connected[&dir.turn_ccw()] {
+							// The base tile (to be made into a transition via mask)
 							self.images
 								.terrain_batches
-								.tile_mask_s1(other_class)
-								.add(param_rot);
-						} else if !sw_eq {
-							// Double edge, aka an inner corner
-							self.images
-								.terrain_batches
-								.tile_mask_s2(other_class)
-								.add(param_rot);
-						} else {
-							// Since NE is not equal, NW must not as well
-							debug_assert!(!nw_eq);
+								.tile_sprite(other_class)
+								.add(param);
 
-							// Triple edge, aka a bay
-							self.images
-								.terrain_batches
-								.tile_mask_s3(other_class)
-								.add(param_rot);
-						}
-					}
-					if class < southern && !se_eq {
-						// Other class
-						let other_class = southern;
+							// The rotation of the mask
+							// The edge masks are all East oriented
+							let param_rot = match dir {
+								Dir::East => param,
+								Dir::South => {
+									param
+										.rotation(std::f32::consts::PI / 2.)
+										.dest(dest + logic::glm::vec2(screen_size, 0.))
+								},
+								Dir::West => {
+									param
+										.rotation(std::f32::consts::PI)
+										.dest(dest + logic::glm::vec2(screen_size, screen_size))
+								},
+								Dir::North => {
+									param
+										.rotation(-std::f32::consts::PI / 2.)
+										.dest(dest + logic::glm::vec2(0., screen_size))
+								},
+							};
 
-						// The base tile (to be made into a transition via mask)
-						self.images
-							.terrain_batches
-							.tile_sprite(other_class)
-							.add(param);
+							// Determine the mask to be used, by checking how
+							// connected that edge is, that is how many
+							// connected edges have the same class.
+							if !cw_connected[&dir] {
+								// Here, `dir` is not connected clock wise,
+								// thus it is a single unconnected edge.
+								// We checked counter clock wise way up.
+								// E.g. East and South do not have the same class
 
-						// The rotation of the mask
-						let param_rot = param
-							.rotation(std::f32::consts::PI / 2.)
-							.dest(dest + logic::glm::vec2(screen_size, 0.));
+								// Single edge, just a straight edge
+								self.images
+									.terrain_batches
+									.tile_mask_s1(other_class)
+									.add(param_rot);
+							} else if !cw_connected[&dir.turn_cw()] {
+								// Here, `dir` is connected one, but not twice.
 
-						// Determine the mask to be used
-						if !sw_eq {
-							// Single edge, just a straight edge
-							self.images
-								.terrain_batches
-								.tile_mask_s1(other_class)
-								.add(param_rot);
-						} else if !nw_eq {
-							// Double edge, aka an inner corner
-							self.images
-								.terrain_batches
-								.tile_mask_s2(other_class)
-								.add(param_rot);
-						} else {
-							// Since NE is not equal, NW must not as well
-							debug_assert!(!ne_eq);
+								// Double edge, aka an inner corner
+								self.images
+									.terrain_batches
+									.tile_mask_s2(other_class)
+									.add(param_rot);
+							} else {
+								// Here, `dir` is connected twice, combining three edges.
+								// It cannot be four edges, because we handled that above before the loop.
+								// Also we already tested that `dir` is not
+								// connected counter clock wise.
+								debug_assert!(!cw_connected[&dir.turn_cw().turn_cw()]);
 
-							// Triple edge, aka a bay
-							self.images
-								.terrain_batches
-								.tile_mask_s3(other_class)
-								.add(param_rot);
-						}
-					}
-					if class < western && !sw_eq {
-						// Other class
-						let other_class = western;
-
-						// The base tile (to be made into a transition via mask)
-						self.images
-							.terrain_batches
-							.tile_sprite(other_class)
-							.add(param);
-
-						// The rotation of the mask
-						let param_rot = param
-							.rotation(std::f32::consts::PI)
-							.dest(dest + logic::glm::vec2(screen_size, screen_size));
-
-						// Determine the mask to be used
-						if !nw_eq {
-							// Single edge, just a straight edge
-							self.images
-								.terrain_batches
-								.tile_mask_s1(other_class)
-								.add(param_rot);
-						} else if !ne_eq {
-							// Double edge, aka an inner corner
-							self.images
-								.terrain_batches
-								.tile_mask_s2(other_class)
-								.add(param_rot);
-						} else {
-							// Since NE is not equal, NW must not as well
-							debug_assert!(!se_eq);
-
-							// Triple edge, aka a bay
-							self.images
-								.terrain_batches
-								.tile_mask_s3(other_class)
-								.add(param_rot);
-						}
-					}
-					if class < northern && !nw_eq {
-						// Other class
-						let other_class = northern;
-
-						// The base tile (to be made into a transition via mask)
-						self.images
-							.terrain_batches
-							.tile_sprite(other_class)
-							.add(param);
-
-						// The rotation of the mask
-						let param_rot = param
-							.rotation(-std::f32::consts::PI / 2.)
-							.dest(dest + logic::glm::vec2(0., screen_size));
-
-						// Determine the mask to be used
-						if !ne_eq {
-							// Single edge, just a straight edge
-							self.images
-								.terrain_batches
-								.tile_mask_s1(other_class)
-								.add(param_rot);
-						} else if !se_eq {
-							// Double edge, aka an inner corner
-							self.images
-								.terrain_batches
-								.tile_mask_s2(other_class)
-								.add(param_rot);
-						} else {
-							// Since NE is not equal, NW must not as well
-							debug_assert!(!sw_eq);
-
-							// Triple edge, aka a bay
-							self.images
-								.terrain_batches
-								.tile_mask_s3(other_class)
-								.add(param_rot);
+								// Triple edge, aka a bay
+								self.images
+									.terrain_batches
+									.tile_mask_s3(other_class)
+									.add(param_rot);
+							}
 						}
 					}
 				}
 
 				// Corners
+
+
 
 				let north_east = terrain
 					.get(terrain.north_of(terrain.east_of(tc)))

@@ -35,6 +35,10 @@ miniquad = "=0.3.13"
 version = "0.31.0"
 features = [ "mint" ]
 
+[dependencies.strum]
+version = "0.24.0"
+features = [ "derive" ]
+
 
 [target.'cfg(any(target_family="unix", target_family="windows"))'.dependencies]
 # None yet
