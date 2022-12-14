@@ -1283,63 +1283,38 @@ impl Scene<GlobalState> for Game {
 
 				// Corners
 
+				for (i, dir) in dirs.clone().enumerate() {
+					let cc_dir = dir.turn_ccw();
 
+					let edge_len = terrain.edge_length;
 
-				let north_east = terrain
-					.get(terrain.north_of(terrain.east_of(tc)))
-					.classify();
-				if class < north_east && (north_east != northern && north_east != eastern) {
-					self.images
-						.terrain_batches
-						.tile_sprite(north_east)
-						.add(param);
-					let param_rot = param;
-					self.images
-						.terrain_batches
-						.tile_mask_c1(north_east)
-						.add(param_rot);
-				}
-				let south_east = terrain
-					.get(terrain.south_of(terrain.east_of(tc)))
-					.classify();
-				if class < south_east && (south_east != southern && south_east != eastern) {
-					self.images
-						.terrain_batches
-						.tile_sprite(south_east)
-						.add(param);
-					let param_rot = param.rotation(std::f32::consts::PI / 2.);
-					self.images
-						.terrain_batches
-						.tile_mask_c1(south_east)
-						.add(param_rot);
-				}
-				let south_west = terrain
-					.get(terrain.south_of(terrain.west_of(tc)))
-					.classify();
-				if class < south_west && (south_west != southern && south_west != western) {
-					self.images
-						.terrain_batches
-						.tile_sprite(south_west)
-						.add(param);
-					let param_rot = param.rotation(std::f32::consts::PI);
-					self.images
-						.terrain_batches
-						.tile_mask_c1(south_west)
-						.add(param_rot);
-				}
-				let north_west = terrain
-					.get(terrain.north_of(terrain.west_of(tc)))
-					.classify();
-				if class < north_west && (north_west != northern && north_west != western) {
-					self.images
-						.terrain_batches
-						.tile_sprite(north_west)
-						.add(param);
-					let param_rot = param.rotation(-std::f32::consts::PI / 2.);
-					self.images
-						.terrain_batches
-						.tile_mask_c1(north_west)
-						.add(param_rot);
+					let corner_tc = cc_dir.of(dir.of(tc, edge_len), edge_len);
+					let corner_class = terrain.get(corner_tc).classify();
+
+					// Check for a connected edge of the same class, in that
+					// case we should not draw the corner image above the edge
+					// image, because it causes bad artifacts in
+					// semi-transparent regions.
+					let same_class_on_edge =
+						corner_class == adj_classes[&dir] || corner_class == adj_classes[&cc_dir];
+
+					// Check that the corner is of a higher class, and there
+					// is no connected edge of the same class
+					if class < corner_class && !same_class_on_edge {
+						self.images
+							.terrain_batches
+							.tile_sprite(corner_class)
+							.add(param);
+
+						// The rotation of the mask
+						// The corner mask is North-East oriented, turning them clock-wise
+						let param_rot = param.rotation(i as f32 * std::f32::consts::PI / 2.);
+
+						self.images
+							.terrain_batches
+							.tile_mask_c1(corner_class)
+							.add(param_rot);
+					}
 				}
 			}
 		}
