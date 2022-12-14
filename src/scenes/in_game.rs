@@ -4,7 +4,6 @@ use std::path::Path;
 
 use cfg_if::cfg_if;
 use enum_map::enum_map;
-use enum_map::EnumMap;
 use good_web_game as gwg;
 use gwg::goodies::scene::Scene;
 use gwg::goodies::scene::SceneSwitch;
@@ -1203,18 +1202,10 @@ impl Scene<GlobalState> for Game {
 
 				let all_connected = cw_connected.iter().all(|c| *c.1);
 
-				let eastern = terrain.get(terrain.east_of(tc)).classify();
-				let southern = terrain.get(terrain.south_of(tc)).classify();
-				let western = terrain.get(terrain.west_of(tc)).classify();
-				let northern = terrain.get(terrain.north_of(tc)).classify();
+				let eastern = adj_classes[&Dir::East];
 
-				let ne_eq = northern == eastern;
-				let nw_eq = northern == western;
-				let se_eq = southern == eastern;
-				let sw_eq = southern == western;
-
-				if class < adj_classes[&Dir::East] && all_connected {
-					// Full four sides
+				if class < eastern && all_connected {
+					// Full four sides are the same class
 
 					// The base tile (to be made into a transition via mask)
 					self.images.terrain_batches.tile_sprite(eastern).add(param);
