@@ -1113,7 +1113,7 @@ impl Scene<GlobalState> for Game {
 
 				let screen_size = logic::TILE_SIZE as f32 * pixel_per_meter;
 				let scale = screen_size / tile_image_size;
-				let loc = remapped.0 - half_tile;
+				let loc = remapped.0;
 				let dest = self.location_to_screen_coords(ctx, Location(loc));
 
 				// Depth shading
@@ -1131,6 +1131,7 @@ impl Scene<GlobalState> for Game {
 
 				let param = DrawParam::new()
 					.dest(dest)
+					.offset(Point2::new(0.5, 0.5))
 					.scale(logic::glm::vec2(scale, scale))
 					.color(Color::new(c, c, c, 1.));
 
@@ -1238,25 +1239,8 @@ impl Scene<GlobalState> for Game {
 								.add(param);
 
 							// The rotation of the mask
-							// The edge masks are all East oriented
-							let param_rot = match dir {
-								Dir::East => param,
-								Dir::South => {
-									param
-										.rotation(std::f32::consts::PI / 2.)
-										.dest(dest + logic::glm::vec2(screen_size, 0.))
-								},
-								Dir::West => {
-									param
-										.rotation(std::f32::consts::PI)
-										.dest(dest + logic::glm::vec2(screen_size, screen_size))
-								},
-								Dir::North => {
-									param
-										.rotation(-std::f32::consts::PI / 2.)
-										.dest(dest + logic::glm::vec2(0., screen_size))
-								},
-							};
+							// The edge masks are all East oriented, turning them clock-wise
+							let param_rot = param.rotation(i as f32 * std::f32::consts::PI / 2.);
 
 							// Determine the mask to be used, by checking how
 							// connected that edge is, that is how many
@@ -1323,9 +1307,7 @@ impl Scene<GlobalState> for Game {
 						.terrain_batches
 						.tile_sprite(south_east)
 						.add(param);
-					let param_rot = param
-						.rotation(std::f32::consts::PI / 2.)
-						.dest(dest + logic::glm::vec2(screen_size, 0.));
+					let param_rot = param.rotation(std::f32::consts::PI / 2.);
 					self.images
 						.terrain_batches
 						.tile_mask_c1(south_east)
@@ -1339,9 +1321,7 @@ impl Scene<GlobalState> for Game {
 						.terrain_batches
 						.tile_sprite(south_west)
 						.add(param);
-					let param_rot = param
-						.rotation(std::f32::consts::PI)
-						.dest(dest + logic::glm::vec2(screen_size, screen_size));
+					let param_rot = param.rotation(std::f32::consts::PI);
 					self.images
 						.terrain_batches
 						.tile_mask_c1(south_west)
@@ -1355,9 +1335,7 @@ impl Scene<GlobalState> for Game {
 						.terrain_batches
 						.tile_sprite(north_west)
 						.add(param);
-					let param_rot = param
-						.rotation(-std::f32::consts::PI / 2.)
-						.dest(dest + logic::glm::vec2(0., screen_size));
+					let param_rot = param.rotation(-std::f32::consts::PI / 2.);
 					self.images
 						.terrain_batches
 						.tile_mask_c1(north_west)
