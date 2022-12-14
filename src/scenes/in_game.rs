@@ -1434,7 +1434,12 @@ impl Scene<GlobalState> for Game {
 
 		// Draw FPS, right top corner
 		let fps = timer::fps(ctx);
-		let fps_display = Text::new(format!("FPS: {:.0}", fps));
+		let fps_ex = 1. / timer::delta(ctx).as_secs_f32();
+		let fps_display = if fps_ex <= 10. {
+			Text::new(format!("FPS: {:.1}", fps_ex))
+		} else {
+			Text::new(format!("FPS: {:.0}", fps))
+		};
 		self.draw_text_with_halo(
 			ctx,
 			quad_ctx,
