@@ -26,7 +26,10 @@ jobs:
     - name: Check out git repo
       uses: actions/checkout@v3
     - name: Update submodules
-      run: git submodule update --init
+      run: |
+        # Since this runs without a container, this works without additional
+        # trusting all dirs.
+        git submodule update --init
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -46,7 +49,12 @@ jobs:
     - name: Check out git repo
       uses: actions/checkout@v3
     - name: Update submodules
-      run: git submodule update --init
+      run: |
+        # first trust all the directories, fails otherwise with:
+        #     fatal: detected dubious ownership in repository
+        # See: https://github.com/actions/runner-images/issues/6775
+        git config --global --add safe.directory "*"
+        git submodule update --init
     - name: Build binary
       run: cargo build --release --verbose
     - name: Archive binary
@@ -69,7 +77,12 @@ jobs:
     - name: Check out git repo
       uses: actions/checkout@v3
     - name: Update submodules
-      run: git submodule update --init
+      run: |
+        # first trust all the directories, fails otherwise with:
+        #     fatal: detected dubious ownership in repository
+        # See: https://github.com/actions/runner-images/issues/6775
+        git config --global --add safe.directory "*"
+        git submodule update --init
     - name: Install win target
       run: rustup target add x86_64-pc-windows-gnu
     - name: Build binary
@@ -94,11 +107,16 @@ jobs:
     - name: Check out git repo
       uses: actions/checkout@v3
     - name: Update submodules
-      run: git submodule update --init
+      run: |
+        # first trust all the directories, fails otherwise with:
+        #     fatal: detected dubious ownership in repository
+        # See: https://github.com/actions/runner-images/issues/6775
+        git config --global --add safe.directory "*"
+        git submodule update --init
     - name: Install web target
       run: rustup target add wasm32-unknown-unknown
     - name: Build binary
-      run: bash build-web.sh --release
+      run: bash game-gwg/build-web.sh --release
     - name: Archive web package
       uses: actions/upload-artifact@v3
       with:
@@ -120,9 +138,14 @@ jobs:
     - name: Check out git repo
       uses: actions/checkout@v3
     - name: Update submodules
-      run: git submodule update --init
+      run: |
+        # first trust all the directories, fails otherwise with:
+        #     fatal: detected dubious ownership in repository
+        # See: https://github.com/actions/runner-images/issues/6775
+        git config --global --add safe.directory "*"
+        git submodule update --init
     - name: Build binary
-      run: cargo quad-apk build --release
+      run: cargo quad-apk build -p plenty-of-fish-in-the-sea --release
     - name: Archive web package
       uses: actions/upload-artifact@v3
       with:
