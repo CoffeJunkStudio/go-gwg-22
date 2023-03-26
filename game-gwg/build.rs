@@ -33,7 +33,7 @@ fn package_assets() {
 
 	// Move all the asset stuff into the archive
 	tar_builder
-		.append_dir_all(".", "asset-repo/assets")
+		.append_dir_all(".", "../asset-repo/assets")
 		.unwrap();
 	// And write it.
 	tar_builder.finish().unwrap();
