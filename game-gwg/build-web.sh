@@ -31,7 +31,7 @@ done
 APP_NAME="plenty-of-fish-in-the-sea"
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-TARGET_DIR="$SCRIPT_DIR/target"
+TARGET_DIR="$SCRIPT_DIR/../target"
 OUT_DIR="$TARGET_DIR/web-pkg"
 ARCH="wasm32-unknown-unknown"
 FEAT=""

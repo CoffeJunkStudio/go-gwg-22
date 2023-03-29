@@ -20,7 +20,7 @@ pub mod audio;
 /// The location of the asset configuration file
 const ASSET_CONFIG_STR: &str = include_str!(concat!(
 	env!("CARGO_MANIFEST_DIR"),
-	"/asset-repo/render_assets.toml"
+	"/../asset-repo/render_assets.toml"
 ));
 
 /// UI assets bundle
