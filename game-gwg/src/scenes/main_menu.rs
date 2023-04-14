@@ -176,7 +176,7 @@ impl Scene<GlobalState> for MainMenu {
 		let mut heading = Text::new("Plenty of Fish in the Sea");
 		heading.set_font(Font::default(), (3. * Font::DEFAULT_FONT_SCALE).into());
 		heading.set_bounds(Point2::new(size.0, size.1), graphics::Align::Center);
-		let height = heading.dimensions(ctx).h;
+		let _height = heading.dimensions(ctx).h;
 		graphics::draw(
 			ctx,
 			quad_ctx,

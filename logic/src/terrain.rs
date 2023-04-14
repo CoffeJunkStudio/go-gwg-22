@@ -1,3 +1,4 @@
+use enum_map::Enum;
 use nalgebra_glm::Vec2;
 use rand::Rng;
 use serde::Deserialize;
@@ -122,6 +123,82 @@ impl From<TileCoord> for Location {
 	}
 }
 
+/// The direction of tile connections.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(strum::EnumIter)]
+#[derive(Enum)]
+pub enum TileDirection {
+	East,
+	South,
+	West,
+	North,
+}
+impl TileDirection {
+	/// Gives the tile direction turned clock wise.
+	pub const fn turn_cw(self) -> Self {
+		match self {
+			Self::East => Self::South,
+			Self::South => Self::West,
+			Self::West => Self::North,
+			Self::North => Self::East,
+		}
+	}
+
+	/// Gives the tile direction turned counter clock wise.
+	pub const fn turn_ccw(self) -> Self {
+		match self {
+			Self::East => Self::North,
+			Self::South => Self::East,
+			Self::West => Self::South,
+			Self::North => Self::West,
+		}
+	}
+
+	/// Gives the tile offset for going into this direction as `(x, y)` pair.
+	#[inline]
+	pub const fn tile_offsets(self) -> (i8, i8) {
+		match self {
+			Self::East => (1, 0),
+			Self::South => (0, 1),
+			Self::West => (-1, 0),
+			Self::North => (0, -1),
+		}
+	}
+
+	/// Gives the absolute tile Coordinate from `tc` in the direction of `self` wrapping around at the map edge like a torus.
+	pub const fn of(self, mut tc: TileCoord, edge_len: u16) -> TileCoord {
+		const fn wrapping_inc(a: u16, edge_len: u16) -> u16 {
+			if a >= edge_len - 1 {
+				0
+			} else {
+				a + 1
+			}
+		}
+		const fn wrapping_dec(a: u16, edge_len: u16) -> u16 {
+			if a == 0 {
+				edge_len - 1
+			} else {
+				a - 1
+			}
+		}
+		const fn apply_offset(a: u16, offset: i8, edge_len: u16) -> u16 {
+			match offset {
+				-1 => wrapping_dec(a, edge_len),
+				0 => a,
+				1 => wrapping_inc(a, edge_len),
+				_ => panic!("Invalid tile offset"),
+			}
+		}
+
+		let (x, y) = self.tile_offsets();
+
+		tc.x = apply_offset(tc.x, x, edge_len);
+		tc.y = apply_offset(tc.y, y, edge_len);
+
+		tc
+	}
+}
+
 /// Gives the tile coordinate of the given global index.
 fn coord(edge_len: u16, index: usize) -> TileCoord {
 	let x = index % usize::from(edge_len);
@@ -165,54 +242,28 @@ impl Terrain {
 		}
 	}
 
-	/// Returns the tile coord west of the given one
-	pub fn west_of(&self, mut tc: TileCoord) -> TileCoord {
-		tc.x = {
-			match tc.x {
-				0 => self.edge_length - 1,
-				x => x - 1,
-			}
-		};
+	pub const fn tile_in_direction(&self, dir: TileDirection, tc: TileCoord) -> TileCoord {
+		dir.of(tc, self.edge_length)
+	}
 
-		tc
+	/// Returns the tile coord west of the given one
+	pub fn west_of(&self, tc: TileCoord) -> TileCoord {
+		self.tile_in_direction(TileDirection::West, tc)
 	}
 
 	/// Returns the tile coord east of the given one
-	pub fn east_of(&self, mut tc: TileCoord) -> TileCoord {
-		tc.x = {
-			if tc.x >= self.edge_length - 1 {
-				0
-			} else {
-				tc.x + 1
-			}
-		};
-
-		tc
+	pub fn east_of(&self, tc: TileCoord) -> TileCoord {
+		self.tile_in_direction(TileDirection::East, tc)
 	}
 
 	/// Returns the tile coord north of the given one
-	pub fn north_of(&self, mut tc: TileCoord) -> TileCoord {
-		tc.y = {
-			match tc.y {
-				0 => self.edge_length - 1,
-				y => y - 1,
-			}
-		};
-
-		tc
+	pub fn north_of(&self, tc: TileCoord) -> TileCoord {
+		self.tile_in_direction(TileDirection::North, tc)
 	}
 
 	/// Returns the tile coord south of the given one
-	pub fn south_of(&self, mut tc: TileCoord) -> TileCoord {
-		tc.y = {
-			if tc.y >= self.edge_length - 1 {
-				0
-			} else {
-				tc.y + 1
-			}
-		};
-
-		tc
+	pub fn south_of(&self, tc: TileCoord) -> TileCoord {
+		self.tile_in_direction(TileDirection::South, tc)
 	}
 
 	/// Checks whether the given location is within the map boundary
